@@ -1,5 +1,6 @@
 package com.poly.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -32,6 +33,7 @@ public class OrderDetail {
     // Trỏ đến hóa đơn chứa chi tiết này
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
+    @JsonIgnore
     private Order order;
 
     // Trỏ đến sản phẩm được mua

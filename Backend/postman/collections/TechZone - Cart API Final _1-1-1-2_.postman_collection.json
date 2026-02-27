@@ -1,0 +1,139 @@
+{
+  "info": {
+    "_postman_id": "8f975fb3-77cb-41a3-a49d-b5135cfb7bb5",
+    "name": "TechZone - Cart API Final (1-1-1-2)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Thêm vào giỏ (POST)",
+      "id": "c37dc4b7-b291-4a74-a18c-ca8c114a3a2b",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"userId\": 1,\n    \"productId\": 1,\n    \"quantity\": 2\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/cart/add",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "cart",
+            "add"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Xem giỏ hàng (GET)",
+      "id": "0b18fe77-e0a9-48af-91b2-12670aacd304",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/cart/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "cart",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Đưa số lượng về 1 (PUT)",
+      "id": "8bc61fd4-8fca-4345-8ff7-6193b9fd8a58",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"userId\": 1,\n    \"productId\": 1,\n    \"quantity\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/cart/update",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "cart",
+            "update"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Xóa 1 vật phẩm (DELETE)",
+      "id": "518d485f-f3ee-4904-9749-89a9978ed749",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/cart/remove/THAY_CART_ID",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "cart",
+            "remove",
+            "THAY_CART_ID"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "5. Xóa sạch giỏ hàng (DELETE)",
+      "id": "e7e48799-ffdd-4de4-b177-16502d4410ba",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/cart/clear/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "cart",
+            "clear",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

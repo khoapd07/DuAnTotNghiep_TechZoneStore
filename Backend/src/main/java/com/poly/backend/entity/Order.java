@@ -1,5 +1,6 @@
 package com.poly.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -44,11 +46,10 @@ public class Order {
     private String orderCode;
 
     // --- RELATIONSHIPS ---
-
-    // Trỏ đến User (vai trò là Khách hàng mua)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
-    private User customer;
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "user"}) // Chặn đào sâu vào User của Customer
+    private Customer customer;
 
     // Trỏ đến User (vai trò là Nhân viên duyệt đơn)
     @ManyToOne(fetch = FetchType.LAZY)
@@ -64,5 +65,8 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "status_id")
     private OrderStatus status;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<OrderDetail> orderDetails;
 
 }
