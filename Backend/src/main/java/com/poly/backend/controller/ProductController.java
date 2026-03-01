@@ -14,12 +14,11 @@ import java.math.BigDecimal;
 @RestController
 @RequestMapping("/api/product")
 @RequiredArgsConstructor
-@CrossOrigin("*") // Mở CORS cho Frontend (VD: Vue.js)
+@CrossOrigin("*")
 public class ProductController {
 
     private final ProductService productService;
 
-    // 1. LẤY DANH SÁCH & TÌM KIẾM, PHÂN TRANG
     @GetMapping
     public ResponseEntity<Page<ProductDTO>> getAllProducts(
             @RequestParam(value = "keyword", required = false) String keyword,
@@ -34,15 +33,12 @@ public class ProductController {
         return ResponseEntity.ok(products);
     }
 
-    // 2. LẤY CHI TIẾT 1 SẢN PHẨM
     @GetMapping("/{id}")
     public ResponseEntity<ProductDTO> getProductById(@PathVariable Integer id) {
         ProductDTO productDTO = productService.getProductById(id);
         return ResponseEntity.ok(productDTO);
     }
 
-    // 3. THÊM MỚI SẢN PHẨM
-    // Lưu ý dùng @Valid để kích hoạt kiểm tra lỗi trong ProductDTO (NotBlank, Min...)
     @PostMapping
     public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody ProductDTO productDTO) {
         ProductDTO createdProduct = productService.createProduct(productDTO);

@@ -17,7 +17,6 @@ public class ProductDTO {
 
     private Integer productId;
 
-    // --- BASIC INFO ---
 
     @NotBlank(message = "Tên sản phẩm không được để trống")
     @Size(max = 255, message = "Tên sản phẩm không được quá 255 ký tự")
@@ -34,11 +33,10 @@ public class ProductDTO {
     @Min(value = 0, message = "Số lượng tồn kho không được âm")
     private Integer stockQuantity;
 
-    // description dùng NVARCHAR(MAX) nên không cần giới hạn @Size cứng,
-    // nhưng có thể check @NotBlank nếu muốn bắt buộc có mô tả
+
     private String description;
 
-    private String imageUrl; // Lưu link ảnh (String)
+    private String imageUrl;
 
     private Boolean active; // Trạng thái kinh doanh (Còn bán/Ngừng bán)
 

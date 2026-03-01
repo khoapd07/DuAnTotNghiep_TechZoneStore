@@ -27,7 +27,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryDAO categoryDAO; // Thêm DAO để query khóa ngoại
     private final BrandDAO brandDAO;       // Thêm DAO để query khóa ngoại
 
-    // --- CÁC HÀM CŨ GIỮ NGUYÊN ---
+
     @Override
     public List<Product> findAll() {
         return productDAO.findAll();
@@ -48,7 +48,7 @@ public class ProductServiceImpl implements ProductService {
         productDAO.deleteById(id);
     }
 
-    // --- CÁC HÀM XỬ LÝ DTO CHO API ---
+
     @Override
     public Page<ProductDTO> getProducts(String keyword, BigDecimal minPrice, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
@@ -67,7 +67,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public ProductDTO createProduct(ProductDTO dto) {
         Product product = new Product();
-        mapToEntity(dto, product); // Đổ dữ liệu từ DTO sang Entity rỗng
+        mapToEntity(dto, product);
 
         Product savedProduct = productDAO.save(product);
         return mapToDTO(savedProduct);
@@ -84,7 +84,7 @@ public class ProductServiceImpl implements ProductService {
         return mapToDTO(updatedProduct);
     }
 
-    // --- HÀM TIỆN ÍCH CHUYỂN ĐỔI ---
+
 
     // Hàm 1: Entity -> DTO (Dùng để xuất data)
     private ProductDTO mapToDTO(Product product) {
