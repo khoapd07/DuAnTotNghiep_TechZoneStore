@@ -52,7 +52,9 @@
                 Ghi nhớ đăng nhập
               </label>
             </div>
-            <a href="#" class="text-neon text-decoration-none fw-bold">Quên mật khẩu?</a>
+            <!-- <a href="" class="text-neon text-decoration-none fw-bold">Quên mật khẩu?</a> -->
+            <router-link class="text-neon text-decoration-none fw-bold" to="/reset-password">Quên mật khẩu?</router-link>
+            
           </div>
 
           <button type="submit" class="btn btn-neon w-100 fw-bold py-2 rounded-3 mb-4 d-flex justify-content-center align-items-center gap-2">

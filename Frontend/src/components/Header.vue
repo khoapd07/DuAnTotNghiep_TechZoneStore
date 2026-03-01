@@ -69,7 +69,7 @@
                       <i class="bi bi-speedometer2 me-2"></i>Trang quản trị
                     </router-link>
                 </li>
-                <li><router-link class="dropdown-item" to="/profile">Tài khoản</router-link></li>
+                <li><router-link class="dropdown-item" to="/my-account">Tài khoản</router-link></li>
                 <li><router-link class="dropdown-item" to="/orders">Đơn hàng</router-link></li>
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item text-danger fw-bold" href="#" @click.prevent="handleLogout">Đăng xuất</a></li>
