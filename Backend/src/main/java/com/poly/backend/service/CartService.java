@@ -1,15 +1,14 @@
 package com.poly.backend.service;
 
-import java.util.List;
+import com.poly.backend.dto.CartDTO;
 import com.poly.backend.entity.Cart;
+import java.util.List;
 
 public interface CartService {
+    List<CartDTO> findByCustomerId(Integer customerId);
+    void clearCartByCustomerId(Integer customerId);
+    void addItem(CartDTO cartDto);
+    void updateQuantity(CartDTO cartDto);
+    void deleteById(Integer cartId);
 
-    List<Cart> findAll();
-
-    Cart findById(Integer id);
-
-    Cart save(Cart cart);
-
-    void deleteById(Integer id);
 }

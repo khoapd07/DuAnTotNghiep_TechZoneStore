@@ -2,6 +2,7 @@ package com.poly.backend.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -9,14 +10,16 @@ import java.time.LocalDate;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
+@SuperBuilder
+@EqualsAndHashCode(callSuper = true)//
 @Entity
 @Table(name = "Employees")
-public class Employee {
+@PrimaryKeyJoinColumn(name = "user_id")
+public class Employee extends User {
 
-    @Id
-    @Column(name = "user_id")
-    private Integer userId;
+//    @Id
+//    @Column(name = "user_id")
+//    private Integer userId;
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId // Giống bảng Customer, khóa chính cũng là khóa ngoại trỏ tới User

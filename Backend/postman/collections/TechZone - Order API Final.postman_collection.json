@@ -1,0 +1,86 @@
+{
+  "info": {
+    "_postman_id": "9d85cffb-161d-41f0-a5b7-1e073e1e2478",
+    "name": "TechZone - Order API Final",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Đặt hàng (POST)",
+      "id": "741dfdf9-b37b-42b1-ac83-f55c9ce0902c",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"customerId\": 1,\n    \"note\": \"Test xóa đơn hàng\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/orders/checkout",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "orders",
+            "checkout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "2. Xem lịch sử (GET)",
+      "id": "2bdc7d11-37e4-4813-b4c1-cd10f843d3d6",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/orders/customer/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "orders",
+            "customer",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Hủy đơn - Xóa hẳn (DELETE)",
+      "id": "92b48d57-1eb3-4538-9b0e-56da916a1ee5",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/orders/cancel/1",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "orders",
+            "cancel",
+            "1"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}
