@@ -1,18 +1,17 @@
-
-<script setup>
-import Header from './components/Header.vue'
-import Footer from './components/Footer.vue'
-</script>
 <template>
-    <Header></Header>
-
-    <main>
-      <router-view />
-    </main>
-
-    <Footer></Footer>
+  <Header v-if="!isAdminRoute" /> 
+  
+  <router-view /> <Footer v-if="!isAdminRoute" />
 </template>
 
-<style scoped>
+<script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import Header from './components/Header.vue'
+import Footer from './components/Footer.vue'
 
-</style>
+const route = useRoute()
+
+// Kiểm tra xem đường dẫn hiện tại có bắt đầu bằng '/admin' không
+const isAdminRoute = computed(() => route.path.startsWith('/admin'))
+</script>
