@@ -13,15 +13,15 @@
                 <span class="fw-bold fs-7">Thông tin cá nhân</span>
               </a>
               
-              <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-dark">
+              <!-- <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-dark">
                 <i class="bi bi-bag fs-5"></i>
                 <span class="fw-bold fs-7">Đơn hàng của tôi</span>
-              </a>
+              </a> -->
               
-              <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-dark border-bottom">
+              <!-- <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-dark border-bottom">
                 <i class="bi bi-geo-alt fs-5"></i>
                 <span class="fw-bold fs-7">Sổ địa chỉ</span>
-              </a>
+              </a> -->
               
               <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-danger mt-2">
                 <i class="bi bi-box-arrow-right fs-5"></i>
