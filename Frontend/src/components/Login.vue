@@ -8,6 +8,10 @@
           <h3 class="fw-black text-dark">Đăng Nhập</h3>
         </div>
 
+        <div v-if="errorMessage" class="alert alert-danger py-2 fs-8 text-center" role="alert">
+          {{ errorMessage }}
+        </div>
+
         <form @submit.prevent="handleLogin">
           
           <div class="mb-3">
@@ -19,6 +23,7 @@
                 v-model="username" 
                 placeholder="Nhập tài khoản của bạn"
                 required
+                :disabled="isLoading"
               >
               <span class="input-group-text border-0 bg-transparent text-muted pe-3">
                 <i class="bi bi-person-fill"></i>
@@ -35,6 +40,7 @@
                 v-model="password" 
                 placeholder="••••••••"
                 required
+                :disabled="isLoading"
               >
               <span 
                 class="input-group-text border-0 bg-transparent text-muted pe-3 cursor-pointer"
@@ -47,18 +53,21 @@
 
           <div class="d-flex justify-content-between align-items-center mb-4 fs-8">
             <div class="form-check custom-checkbox mb-0">
-              <input class="form-check-input shadow-none" type="checkbox" id="rememberMe" v-model="rememberMe">
+              <input class="form-check-input shadow-none" type="checkbox" id="rememberMe" v-model="rememberMe" :disabled="isLoading">
               <label class="form-check-label text-muted" for="rememberMe">
                 Ghi nhớ đăng nhập
               </label>
             </div>
-            <!-- <a href="" class="text-neon text-decoration-none fw-bold">Quên mật khẩu?</a> -->
             <router-link class="text-neon text-decoration-none fw-bold" to="/reset-password">Quên mật khẩu?</router-link>
-            
           </div>
 
-          <button type="submit" class="btn btn-neon w-100 fw-bold py-2 rounded-3 mb-4 d-flex justify-content-center align-items-center gap-2">
-            Đăng Nhập <i class="bi bi-box-arrow-in-right fs-5"></i>
+          <button 
+            type="submit" 
+            class="btn btn-neon w-100 fw-bold py-2 rounded-3 mb-4 d-flex justify-content-center align-items-center gap-2"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span v-else>Đăng Nhập <i class="bi bi-box-arrow-in-right fs-5"></i></span>
           </button>
 
           <div class="divider d-flex align-items-center mb-4">
@@ -98,17 +107,66 @@ const password = ref('');
 const rememberMe = ref(false);
 const showPassword = ref(false);
 
-// Xử lý đăng nhập (Mock logic - Bạn cần thay bằng API thật của Spring Boot)
-const handleLogin = () => {
-  console.log('Logging in with:', username.value, password.value, rememberMe.value);
-  
-  // Giả lập thành công, set token và chuyển hướng
-  // localStorage.setItem('jwt_token', 'fake_token_123');
-  // localStorage.setItem('user_info', username.value);
-  // window.dispatchEvent(new Event('auth-change'));
-  // router.push('/');
-  
-  alert('Giao diện đã sẵn sàng! Chờ kết nối API.');
+// Trạng thái xử lý API
+const isLoading = ref(false);
+const errorMessage = ref('');
+
+// Xử lý đăng nhập gọi API thật
+const handleLogin = async () => {
+  // Reset thông báo lỗi và bật trạng thái loading
+  errorMessage.value = '';
+  isLoading.value = true;
+
+  try {
+    // Thay đổi URL theo cấu hình server Backend của bạn (thường là http://localhost:8080)
+    const response = await fetch('http://localhost:8080/api/auth/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username.value,
+        password: password.value
+      })
+    });
+
+    // Nếu Backend trả về lỗi (400 Bad Request, 401 Unauthorized, v.v.)
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Sai tài khoản hoặc mật khẩu. Vui lòng thử lại!');
+    }
+
+    // Nếu thành công (200 OK)
+    const data = await response.json();
+
+    // 1. Lưu JWT token vào localStorage
+    localStorage.setItem('jwt_token', data.token);
+
+    // 2. Lưu thông tin người dùng (Lưu ý: Không lưu mật khẩu)
+    const userInfo = {
+      userId: data.userId,
+      username: data.username,
+      role: data.role
+    };
+    localStorage.setItem('user_info', JSON.stringify(userInfo));
+
+    // 3. (Tùy chọn) Kích hoạt event để các component khác (như Header) biết trạng thái đăng nhập thay đổi
+    window.dispatchEvent(new Event('auth-change'));
+
+    // 4. Chuyển hướng người dùng dựa theo Role
+    if (data.role === 'Admin' || data.role === 'Staff') {
+      router.push('/admin'); // Hoặc trang quản trị tương ứng
+    } else {
+      router.push('/'); // Về trang chủ mua hàng
+    }
+
+  } catch (error) {
+    // Hiển thị lỗi ra UI
+    errorMessage.value = error.message;
+  } finally {
+    // Tắt trạng thái loading
+    isLoading.value = false;
+  }
 };
 </script>
 
@@ -116,7 +174,6 @@ const handleLogin = () => {
 /* Reset & Typography */
 .login-page {
   font-family: 'Inter', sans-serif;
-  /* Mô phỏng nền gradient mờ giống bản thiết kế */
   background: radial-gradient(circle at top left, #f1f8f3, #ffffff 40%, #f4f6f8 100%);
   min-height: 100vh;
 }
@@ -137,9 +194,9 @@ const handleLogin = () => {
   backdrop-filter: blur(10px);
 }
 
-/* Custom Input Box (Nền xám nhạt bao trọn cả input và icon) */
+/* Custom Input Box */
 .custom-input-group {
-  background-color: #F4F5F7; /* Màu nền xám cực nhạt */
+  background-color: #F4F5F7; 
   border: 1px solid transparent;
   transition: all 0.2s;
 }
@@ -150,6 +207,9 @@ const handleLogin = () => {
 .custom-input-group input::placeholder {
   color: #adb5bd;
   font-weight: 500;
+}
+.custom-input-group input:disabled {
+  background-color: #e9ecef !important;
 }
 
 /* Custom Checkbox */
@@ -176,10 +236,14 @@ const handleLogin = () => {
   border: none;
   transition: all 0.2s ease;
 }
-.btn-neon:hover {
+.btn-neon:hover:not(:disabled) {
   background-color: #00cc29;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 255, 51, 0.3);
+}
+.btn-neon:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 /* Nút Google */

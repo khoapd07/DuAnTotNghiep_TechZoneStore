@@ -8,6 +8,7 @@ import com.poly.backend.entity.User;
 import com.poly.backend.dao.RoleDAO;
 import com.poly.backend.dao.UserDAO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder; // Import thêm cái này
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,28 +20,28 @@ public class AuthService {
     @Autowired
     private RoleDAO roleDAO;
 
+    // Inject PasswordEncoder để mã hóa và giải mã
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // Đăng ký (Mặc định tạo Customer)
     public User register(RegisterRequest req) {
         if (userDAO.existsByUsername(req.getUsername())) {
-            throw new RuntimeException("Username đã tồn tại!");
-        }
-        if (userDAO.existsByEmail(req.getEmail())) {
-            throw new RuntimeException("Email đã tồn tại!");
+            throw new RuntimeException("Tài khoản đã tồn tại. Vui lòng chọn tên khác!");
         }
 
-        // Tạo Customer (sẽ tự động lưu vào cả bảng Users và Customers)
         Customer customer = new Customer();
         customer.setUsername(req.getUsername());
-        customer.setPassword(req.getPassword()); // TODO: Sau này nhớ mã hóa BCrypt ở đây
-        customer.setEmail(req.getEmail());
-        customer.setFullName(req.getFullName());
-        customer.setPhoneNumber(req.getPhoneNumber());
-        customer.setGender(req.getGender());
-        customer.setAddress(req.getAddress());
-        customer.setShippingAddress(req.getAddress()); // Mặc định địa chỉ giao hàng = địa chỉ nhà
+
+        // Mã hóa mật khẩu
+        customer.setPassword(passwordEncoder.encode(req.getPassword()));
+
+        // Gán dữ liệu mặc định để tránh lỗi NOT NULL trong Database
+        customer.setEmail(req.getUsername() + "@techzone.local"); // Tạo email ảo
+        customer.setFullName(req.getUsername()); // Lấy username làm tên hiển thị ban đầu
         customer.setStatus(true);
 
-        // Gán quyền User (Role ID = 0 theo file SQL)
+        // Gán quyền User (Role ID = 0)
         Role userRole = roleDAO.findById(0)
                 .orElseThrow(() -> new RuntimeException("Role User không tồn tại"));
         customer.setRole(userRole);
@@ -53,8 +54,10 @@ public class AuthService {
         User user = userDAO.findByUsername(req.getUsername())
                 .orElseThrow(() -> new RuntimeException("User không tồn tại"));
 
-        // So sánh pass (Đang để text thường để test, sau này dùng encoder.matches())
-        if (!user.getPassword().equals(req.getPassword())) {
+        // ĐÃ SỬA: Dùng hàm matches() của BCrypt để so sánh mật khẩu
+        // Tham số 1: Mật khẩu người dùng nhập (chuỗi thường)
+        // Tham số 2: Mật khẩu trong DB (chuỗi đã mã hóa)
+        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new RuntimeException("Sai mật khẩu");
         }
         return user;

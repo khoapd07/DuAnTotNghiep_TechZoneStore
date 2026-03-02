@@ -31,8 +31,9 @@ const routes = [
   { path: '/reset-password', name: 'ResetPassword', component: ResetPassword },
   { path: '/my-account', name: 'MyAccount', component: MyAccount },
   { path: '/products', name: 'Product', component: Product },
+
   { path: '/product/:id', name: 'ProductDetail', component: ProductDetail }, 
-  { path: '/ProductDetail', name: 'ProductDetail', component: ProductDetail },
+
   { path: '/cart', name: 'Cart', component: Cart },
   { path: '/orders', name: 'Order', component: Order },
   { path: '/order/:id', name: 'OrderDetail', component: OrderDetail },
