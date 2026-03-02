@@ -5,32 +5,45 @@
       <div class="register-card card border-0 shadow-lg rounded-4 p-4 p-md-5">
         
         <div class="text-center mb-4">
-          <h3 class="fw-black text-dark">Đăng Ký Tài khoản</h3> </div>
+          <h3 class="fw-black text-dark">Đăng Ký Tài Khoản</h3> 
+        </div>
+
+        <div v-if="errorMessage" class="alert alert-danger py-2 fs-8 text-center" role="alert">
+          {{ errorMessage }}
+        </div>
+        <div v-if="successMessage" class="alert alert-success py-2 fs-8 text-center" role="alert">
+          {{ successMessage }}
+        </div>
 
         <form @submit.prevent="handleRegister">
           
           <div class="mb-3">
-            <label class="form-label fs-8 fw-bold text-muted">Tên tài khoản & email</label> <div class="input-group custom-input-group rounded-3 overflow-hidden">
+            <label class="form-label fs-8 fw-bold text-muted">Tên tài khoản</label> 
+            <div class="input-group custom-input-group rounded-3 overflow-hidden">
               <input 
                 type="text" 
                 class="form-control border-0 shadow-none bg-transparent py-2 px-3 fs-7" 
                 v-model="username" 
                 placeholder="Nhập tài khoản của bạn" 
                 required
-              > <span class="input-group-text border-0 bg-transparent text-muted pe-3">
+                :disabled="isLoading"
+              > 
+              <span class="input-group-text border-0 bg-transparent text-muted pe-3">
                 <i class="bi bi-person-fill"></i>
               </span>
             </div>
           </div>
 
           <div class="mb-3">
-            <label class="form-label fs-8 fw-bold text-muted">Mật khẩu</label> <div class="input-group custom-input-group rounded-3 overflow-hidden">
+            <label class="form-label fs-8 fw-bold text-muted">Mật khẩu</label> 
+            <div class="input-group custom-input-group rounded-3 overflow-hidden">
               <input 
                 :type="showPassword ? 'text' : 'password'" 
                 class="form-control border-0 shadow-none bg-transparent py-2 px-3 fs-7" 
                 v-model="password" 
                 placeholder="••••••••"
                 required
+                :disabled="isLoading"
               >
               <span 
                 class="input-group-text border-0 bg-transparent text-muted pe-3 cursor-pointer"
@@ -42,13 +55,15 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label fs-8 fw-bold text-muted">Xác nhận mật khẩu</label> <div class="input-group custom-input-group rounded-3 overflow-hidden">
+            <label class="form-label fs-8 fw-bold text-muted">Xác nhận mật khẩu</label> 
+            <div class="input-group custom-input-group rounded-3 overflow-hidden">
               <input 
                 :type="showConfirmPassword ? 'text' : 'password'" 
                 class="form-control border-0 shadow-none bg-transparent py-2 px-3 fs-7" 
                 v-model="confirmPassword" 
                 placeholder="••••••••"
                 required
+                :disabled="isLoading"
               >
               <span 
                 class="input-group-text border-0 bg-transparent text-muted pe-3 cursor-pointer"
@@ -59,27 +74,27 @@
             </div>
           </div>
 
-          <div class="d-flex justify-content-between align-items-center mb-4 fs-8">
-            <div class="form-check custom-checkbox mb-0">
-              <input class="form-check-input shadow-none" type="checkbox" id="rememberMe" v-model="rememberMe">
-              <label class="form-check-label text-muted" for="rememberMe">
-                Ghi nhớ đăng nhập
-              </label> </div>
-          </div>
-
-          <button type="submit" class="btn btn-neon w-100 fw-bold py-2 rounded-3 mb-4 d-flex justify-content-center align-items-center gap-2">
-            Đăng kí <i class="bi bi-person-plus-fill fs-5"></i> </button>
+          <button 
+            type="submit" 
+            class="btn btn-neon w-100 fw-bold py-2 rounded-3 mb-4 d-flex justify-content-center align-items-center gap-2"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span v-else>Đăng ký <i class="bi bi-person-plus-fill fs-5"></i></span> 
+          </button>
 
           <div class="divider d-flex align-items-center mb-4">
             <hr class="flex-grow-1 text-muted opacity-25">
-            <span class="mx-3 text-muted fs-8">Hoặc tiếp tục với</span> <hr class="flex-grow-1 text-muted opacity-25">
+            <span class="mx-3 text-muted fs-8">Hoặc tiếp tục với</span> 
+            <hr class="flex-grow-1 text-muted opacity-25">
           </div>
 
-          <button type="button" class="btn btn-outline-light w-100 fw-bold py-2 rounded-3 text-dark d-flex justify-content-center align-items-center gap-2 border">
+          <button type="button" class="btn btn-outline-light w-100 fw-bold py-2 rounded-3 text-dark d-flex justify-content-center align-items-center gap-2 border" :disabled="isLoading">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-google" viewBox="0 0 16 16">
               <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z"/>
             </svg>
-            Google </button>
+            Google 
+          </button>
 
         </form>
 
@@ -103,29 +118,68 @@ const router = useRouter();
 const username = ref('');
 const password = ref('');
 const confirmPassword = ref('');
-const rememberMe = ref(false);
 
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 
-// Xử lý đăng ký
-const handleRegister = () => {
+const isLoading = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
+
+// Xử lý gọi API Đăng ký
+const handleRegister = async () => {
+  // Validate form
   if (password.value !== confirmPassword.value) {
-    alert('Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại!');
+    errorMessage.value = 'Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại!';
+    return;
+  }
+
+  if (password.value.length < 6) {
+    errorMessage.value = 'Mật khẩu phải có ít nhất 6 ký tự!';
     return;
   }
   
-  console.log('Registering with:', username.value, password.value, rememberMe.value);
-  alert('Đăng ký thành công! Chuyển hướng sang trang đăng nhập...');
-  router.push('/login');
+  errorMessage.value = '';
+  successMessage.value = '';
+  isLoading.value = true;
+
+  try {
+    const response = await fetch('http://localhost:8080/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        username: username.value,
+        password: password.value
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Đăng ký thất bại. Vui lòng thử lại!');
+    }
+
+    // Thành công
+    successMessage.value = 'Đăng ký thành công! Đang chuyển hướng sang trang đăng nhập...';
+    
+    // Đợi 2 giây rồi chuyển hướng sang trang Đăng Nhập
+    setTimeout(() => {
+      router.push('/login');
+    }, 2000);
+
+  } catch (error) {
+    errorMessage.value = error.message;
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
 
 <style scoped>
-/* Reset & Typography */
+/* Code CSS bạn giữ nguyên y hệt như cũ */
 .register-page {
   font-family: 'Inter', sans-serif;
-  /* Mô phỏng nền gradient mờ giống bản thiết kế Login/Register */
   background: radial-gradient(circle at top left, #f1f8f3, #ffffff 40%, #f4f6f8 100%);
   min-height: 100vh;
 }
@@ -135,10 +189,8 @@ const handleRegister = () => {
 .fs-8 { font-size: 0.75rem; }
 .cursor-pointer { cursor: pointer; }
 
-/* Biến màu thương hiệu */
 .text-neon { color: #00FF33 !important; }
 
-/* Thẻ Form (Card) */
 .register-card {
   width: 100%;
   max-width: 420px;
@@ -146,7 +198,6 @@ const handleRegister = () => {
   backdrop-filter: blur(10px);
 }
 
-/* Custom Input Box */
 .custom-input-group {
   background-color: #F4F5F7; 
   border: 1px solid transparent;
@@ -160,8 +211,10 @@ const handleRegister = () => {
   color: #adb5bd;
   font-weight: 500;
 }
+.custom-input-group input:disabled {
+  background-color: #e9ecef !important;
+}
 
-/* Custom Checkbox */
 .custom-checkbox .form-check-input {
   border-radius: 4px;
   border-color: #CCC;
@@ -178,20 +231,22 @@ const handleRegister = () => {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
 }
 
-/* Nút Neon */
 .btn-neon {
   background-color: #00FF33;
   color: #000;
   border: none;
   transition: all 0.2s ease;
 }
-.btn-neon:hover {
+.btn-neon:hover:not(:disabled) {
   background-color: #00cc29;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 255, 51, 0.3);
 }
+.btn-neon:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 
-/* Nút Google */
 .btn-outline-light.border {
   border-color: #EAEAEA !important;
   transition: all 0.2s;
@@ -201,7 +256,6 @@ const handleRegister = () => {
   border-color: #CCC !important;
 }
 
-/* Hover text */
 .hover-neon {
   transition: color 0.2s;
 }
