@@ -17,5 +17,5 @@ public class BrandController {
     @GetMapping
     public List<Brand> getAll() {
         return brandDAO.findAll();
-    }
+    }//
 }
