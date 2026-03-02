@@ -3,98 +3,116 @@
     <div class="container narrow-container">
       
       <div class="checkout-stepper d-flex justify-content-center align-items-center gap-4 mb-5 fs-7 fw-bold text-uppercase">
-        <div class="step-item text-muted">1. Giỏ hàng</div> <div class="step-divider"></div>
-        <div class="step-item text-neon">2. Thanh toán</div> <div class="step-divider"></div>
-        <div class="step-item text-muted">3. Hoàn tất</div> </div>
+        <div class="step-item text-muted">1. Giỏ hàng</div> 
+        <div class="step-divider"></div>
+        <div class="step-item text-neon">2. Thanh toán</div> 
+        <div class="step-divider"></div>
+        <div class="step-item text-muted">3. Hoàn tất</div> 
+      </div>
 
       <div class="row g-4">
         <div class="col-lg-7">
           <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
-            <h4 class="fw-black text-dark mb-4 text-uppercase">Thông tin nhận hàng</h4> <form>
+            <h4 class="fw-black text-dark mb-4 text-uppercase">Thông tin nhận hàng</h4>
+            <form @submit.prevent="handlePlaceOrder">
               <div class="row g-3">
                 <div class="col-12">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Họ và tên</label> <input type="text" class="form-control custom-input" placeholder="Nhập họ tên người nhận"> </div>
+                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Họ và tên</label>
+                  <input v-model="shippingInfo.fullName" type="text" class="form-control custom-input" placeholder="Nhập họ tên người nhận" required>
+                </div>
 
                 <div class="col-md-6">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Số điện thoại</label> <input type="text" class="form-control custom-input" placeholder="0xxx xxx XXX"> </div>
+                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Số điện thoại</label>
+                  <input v-model="shippingInfo.phone" type="text" class="form-control custom-input" placeholder="0xxx xxx XXX" required>
+                </div>
                 <div class="col-md-6">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Email (Tùy chọn)</label> <input type="email" class="form-control custom-input" placeholder="example@gmail.com"> </div>
+                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Email (Tùy chọn)</label>
+                  <input v-model="shippingInfo.email" type="email" class="form-control custom-input" placeholder="example@gmail.com">
+                </div>
 
                 <div class="col-12">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Địa chỉ chi tiết</label> <input type="text" class="form-control custom-input" placeholder="Số nhà, tên đường, Phường/Xã..."> </div>
+                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Địa chỉ chi tiết</label>
+                  <input v-model="shippingInfo.address" type="text" class="form-control custom-input" placeholder="Số nhà, tên đường, Phường/Xã..." required>
+                </div>
 
                 <div class="col-12">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Ghi chú đơn hàng</label> <textarea class="form-control custom-input" rows="3" placeholder="Ghi chú về thời gian giao hàng, chỉ dẫn địa chỉ..."></textarea> </div>
+                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Ghi chú đơn hàng</label>
+                  <textarea v-model="orderNote" class="form-control custom-input" rows="3" placeholder="Ghi chú về thời gian giao hàng, chỉ dẫn địa chỉ..."></textarea>
+                </div>
               </div>
             </form>
           </div>
         </div>
 
         <div class="col-lg-5">
-          
           <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-            <h5 class="fw-black text-uppercase mb-4">Đơn hàng của bạn (2)</h5> <div class="order-items-list d-flex flex-column gap-3 mb-4">
-              <div class="d-flex align-items-center gap-3">
+            <h5 class="fw-black text-uppercase mb-4">Đơn hàng của bạn ({{ cartData.items.length }})</h5>
+            
+            <div class="order-items-list d-flex flex-column gap-3 mb-4">
+              <div v-for="item in cartData.items" :key="item.productId" class="d-flex align-items-center gap-3">
                 <div class="bg-light rounded-3 p-1" style="width: 60px; height: 60px;">
-                  <img src="https://images.unsplash.com/photo-1595225476474-87563907a212?w=100" class="img-fluid object-fit-contain" alt="Product">
+                  <img :src="item.imageUrl" class="img-fluid object-fit-contain" alt="Product">
                 </div>
                 <div class="flex-grow-1">
-                  <h6 class="fw-bold fs-7 mb-0">Bàn phím cơ TechZone Pro K3</h6> <small class="text-muted fs-8">Số lượng: 1</small>
+                  <h6 class="fw-bold fs-7 mb-0 line-clamp-1">{{ item.productName }}</h6>
+                  <small class="text-muted fs-8">Số lượng: {{ item.quantity }}</small>
                 </div>
-                <div class="fw-bold fs-7">1.250.000₫</div> </div>
-              
-              <div class="d-flex align-items-center gap-3">
-                <div class="bg-light rounded-3 p-1" style="width: 60px; height: 60px;">
-                  <img src="https://images.unsplash.com/photo-1527814050087-379381547928?w=100" class="img-fluid object-fit-contain" alt="Product">
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="fw-bold fs-7 mb-0">Chuột Gaming Wireless Phantom</h6> <small class="text-muted fs-8">Số lượng: 1</small> </div>
-                <div class="fw-bold fs-7">890.000₫</div> </div>
+                <div class="fw-bold fs-7">{{ formatCurrency(item.subTotal) }}</div>
+              </div>
             </div>
 
-            <label class="form-label fs-8 fw-bold text-muted text-uppercase">Mã giảm giá</label> <div class="input-group mb-4">
-              <input type="text" class="form-control custom-input fs-7" placeholder="Nhập mã của bạn"> <button class="btn btn-dark fw-bold px-3 fs-7 border-0">ÁP DỤNG</button> </div>
+            <label class="form-label fs-8 fw-bold text-muted text-uppercase">Mã giảm giá</label>
+            <div class="input-group mb-4">
+              <input v-model="voucherCode" type="text" class="form-control custom-input fs-7" placeholder="Nhập mã của bạn">
+              <button @click="applyVoucher" class="btn btn-dark fw-bold px-3 fs-7 border-0" type="button">ÁP DỤNG</button>
+            </div>
 
             <div class="d-flex flex-column gap-2 fs-7 mb-3">
               <div class="d-flex justify-content-between">
-                <span class="text-muted">Tạm tính</span> <span class="fw-bold">2.140.000₫</span> </div>
+                <span class="text-muted">Tạm tính</span>
+                <span class="fw-bold">{{ formatCurrency(subtotal) }}</span>
+              </div>
               <div class="d-flex justify-content-between">
-                <span class="text-muted">Phí vận chuyển</span> <span class="text-success fw-bold">Miễn phí</span> </div>
+                <span class="text-muted">Phí vận chuyển</span>
+                <span class="text-success fw-bold">Miễn phí</span>
+              </div>
               <hr class="my-2 opacity-10">
               <div class="d-flex justify-content-between align-items-end">
-                <span class="fw-black text-uppercase">Tổng cộng</span> <h4 class="text-neon fw-black mb-0">2.140.000₫</h4> </div>
+                <span class="fw-black text-uppercase">Tổng cộng</span>
+                <h4 class="text-neon fw-black mb-0">{{ formatCurrency(subtotal) }}</h4>
+              </div>
             </div>
           </div>
 
           <div class="card border-0 shadow-sm rounded-4 p-4">
-            <h5 class="fw-black text-uppercase mb-4">Phương thức thanh toán</h5> <div class="payment-methods d-flex flex-column gap-3">
+            <h5 class="fw-black text-uppercase mb-4">Phương thức thanh toán</h5>
+            <div class="payment-methods d-flex flex-column gap-3">
               <div class="form-check custom-radio-payment border rounded-3 p-3 position-relative">
                 <input class="form-check-input ms-0 me-3 shadow-none" type="radio" name="payment" id="cod" checked>
                 <label class="form-check-label d-block cursor-pointer ps-4" for="cod">
-                  <span class="fw-bold fs-7 d-block">Thanh toán khi nhận hàng (COD)</span> <small class="text-muted fs-8">Nhận hàng rồi mới thanh toán tiền mặt</small>
+                  <span class="fw-bold fs-7 d-block">Thanh toán khi nhận hàng (COD)</span>
+                  <small class="text-muted fs-8">Nhận hàng rồi mới thanh toán tiền mặt</small>
                 </label>
               </div>
 
               <div class="form-check custom-radio-payment border rounded-3 p-3 position-relative">
                 <input class="form-check-input ms-0 me-3 shadow-none" type="radio" name="payment" id="bank">
                 <label class="form-check-label d-block cursor-pointer ps-4" for="bank">
-                  <span class="fw-bold fs-7 d-block">Chuyển khoản ngân hàng</span> <small class="text-muted fs-8">Miễn phí phí chuyển tiền liên ngân hàng</small> </label>
-              </div>
-
-              <div class="form-check custom-radio-payment border rounded-3 p-3 position-relative">
-                <input class="form-check-input ms-0 me-3 shadow-none" type="radio" name="payment" id="ewallet">
-                <label class="form-check-label d-block cursor-pointer ps-4" for="ewallet">
-                  <span class="fw-bold fs-7 d-block">Ví điện tử (MoMo/ZaloPay)</span> <small class="text-muted fs-8">Thanh toán nhanh chóng qua QR Code</small>
+                  <span class="fw-bold fs-7 d-block">Chuyển khoản ngân hàng</span>
+                  <small class="text-muted fs-8">Miễn phí phí chuyển tiền liên ngân hàng</small>
                 </label>
               </div>
             </div>
 
-            <button class="btn btn-neon w-100 fw-black py-3 rounded-3 mt-4 text-dark shadow-sm">
-              XÁC NHẬN ĐẶT HÀNG </button>
-            <router-link to="/cart" class="btn btn-link text-muted fw-bold fs-8 w-100 mt-2 text-decoration-none">
-              <i class="bi bi-arrow-left me-1"></i> Quay lại giỏ hàng </router-link>
+            <button @click="handlePlaceOrder" :disabled="loading || cartData.items.length === 0" class="btn btn-neon w-100 fw-black py-3 rounded-3 mt-4 text-dark shadow-sm">
+              <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
+              {{ loading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN ĐẶT HÀNG' }}
+            </button>
+            
+            <router-link to="/cart" class="btn btn-link text-muted fw-bold fs-8 w-100 mt-2 text-decoration-none text-center d-block">
+              <i class="bi bi-arrow-left me-1"></i> Quay lại giỏ hàng
+            </router-link>
           </div>
-
         </div>
       </div>
     </div>
@@ -102,7 +120,87 @@
 </template>
 
 <script setup>
-// Trang này tập trung vào giao diện, bạn có thể bổ sung logic thanh toán tại đây.
+import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
+
+const router = useRouter();
+
+// --- 1. STATE ---
+const CURRENT_USER_ID = 1; // Tạm thời để 1, sau này lấy từ Auth store
+const API_BASE = 'http://localhost:8080/api';
+
+const cartData = ref({ items: [], cartTotal: 0 });
+const loading = ref(false);
+const voucherCode = ref('');
+const orderNote = ref('');
+
+const shippingInfo = ref({
+  fullName: '',
+  phone: '',
+  email: '',
+  address: ''
+});
+
+// --- 2. FETCH DATA GIỎ HÀNG ---
+const fetchCart = async () => {
+  try {
+    const response = await axios.get(`${API_BASE}/cart/${CURRENT_USER_ID}`);
+    cartData.value = response.data;
+  } catch (error) {
+    console.error("Lỗi lấy giỏ hàng:", error);
+  }
+};
+
+onMounted(() => {
+  fetchCart();
+});
+
+// --- 3. TÍNH TOÁN ---
+const subtotal = computed(() => cartData.value.cartTotal || 0);
+
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value).replace('₫', 'đ');
+};
+
+// --- 4. ÁP DỤNG VOUCHER (MÔ PHỎNG) ---
+const applyVoucher = () => {
+  if (!voucherCode.value) return;
+  alert("Mã giảm giá đã được ghi nhận. Hệ thống sẽ kiểm tra và áp dụng khi bạn nhấn Đặt hàng.");
+};
+
+// --- 5. XỬ LÝ ĐẶT HÀNG (API CALL) ---
+const handlePlaceOrder = async () => {
+  // Validate sơ bộ
+  if (!shippingInfo.value.fullName || !shippingInfo.value.phone || !shippingInfo.value.address) {
+    alert("Vui lòng điền đầy đủ thông tin nhận hàng!");
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const payload = {
+      note: `Tên: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone}. Địa chỉ: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
+      voucherCode: voucherCode.value
+    };
+
+    // Gọi API placeOrder ở Backend
+    const response = await axios.post(`${API_BASE}/orders/${CURRENT_USER_ID}/place`, payload);
+    
+    // Nếu thành công
+    alert(`Đặt hàng thành công! Mã đơn của bạn là: ${response.data.orderCode}`);
+    
+    // Chuyển hướng về trang lịch sử đơn hàng
+    router.push('/Orders'); 
+    
+  } catch (error) {
+    // Bắt lỗi từ Backend (Ví dụ: hết hàng, sai voucher)
+    const errorMsg = error.response?.data || "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.";
+    alert(errorMsg);
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -110,20 +208,17 @@
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
 .cursor-pointer { cursor: pointer; }
+.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 
 .bg-light-gray { background-color: #F8F9FA; }
 .text-neon { color: #00FF33 !important; }
-.bg-neon-light { background-color: rgba(0, 255, 51, 0.1); }
 .btn-neon { background-color: #00FF33; color: #000; border: none; transition: all 0.2s; }
-.btn-neon:hover { background-color: #00cc29; transform: translateY(-2px); }
+.btn-neon:hover:not(:disabled) { background-color: #00cc29; transform: translateY(-2px); }
+.btn-neon:disabled { opacity: 0.7; cursor: not-allowed; }
 
-/* Custom Container */
 .narrow-container { max-width: 1000px !important; margin: 0 auto; }
-
-/* Checkout Stepper */
 .step-divider { width: 40px; height: 2px; background-color: #dee2e6; }
 
-/* Custom Inputs */
 .custom-input {
   background-color: #F9FAFB;
   border: 1px solid #EAEAEA;
@@ -137,11 +232,7 @@
   box-shadow: none;
 }
 
-/* Custom Payment Radios */
-.custom-radio-payment {
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
+.custom-radio-payment { transition: all 0.2s ease; cursor: pointer; }
 .custom-radio-payment:has(.form-check-input:checked) {
   border-color: #00FF33 !important;
   background-color: rgba(0, 255, 51, 0.05);

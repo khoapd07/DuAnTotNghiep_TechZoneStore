@@ -1,6 +1,6 @@
 package com.poly.backend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,13 +29,16 @@ public class Order {
     @Column(name = "order_date", updatable = false)
     private LocalDateTime orderDate;
 
+    // Tổng tiền hàng (Chưa trừ voucher)
     @Column(name = "total_money", precision = 18, scale = 2, nullable = false)
     private BigDecimal totalMoney;
 
+    // Tiền giảm từ Voucher
     @Column(name = "discount_amount", precision = 18, scale = 2)
     @Builder.Default
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    // Tiền khách thực trả
     @Column(name = "final_amount", precision = 18, scale = 2, nullable = false)
     private BigDecimal finalAmount;
 
@@ -46,27 +49,25 @@ public class Order {
     private String orderCode;
 
     // --- RELATIONSHIPS ---
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "user"}) // Chặn đào sâu vào User của Customer
-    private Customer customer;
+    private User customer;
 
-    // Trỏ đến User (vai trò là Nhân viên duyệt đơn)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "employee_id")
-    private User employee;
+    private User employee; // Người duyệt đơn
 
-    // Trỏ đến Voucher (nếu có sử dụng)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voucher_id")
     private Voucher voucher;
 
-    // Trỏ đến trạng thái đơn hàng (Mặc định sẽ được set khi save là trạng thái Pending = 0)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "status_id")
     private OrderStatus status;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    // Liên kết 1-N với OrderDetail (Lưu 1 Order tự động lưu các Detail)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<OrderDetail> orderDetails;
-
 }

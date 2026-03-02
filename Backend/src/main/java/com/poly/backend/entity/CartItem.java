@@ -6,26 +6,27 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
-@Table(name = "OrderDetails")
-public class OrderDetail {
+@Table(name = "CartItems")
+public class CartItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "order_detail_id")
-    private Integer orderDetailId;
+    @Column(name = "cart_item_id")
+    private Integer cartItemId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "cart_id", nullable = false)
     @JsonBackReference
-    private Order order;
+    private Cart cart;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
@@ -34,7 +35,7 @@ public class OrderDetail {
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
-    // Lưu lại giá bán lúc chốt đơn (Rất quan trọng)
-    @Column(name = "price", precision = 18, scale = 2, nullable = false)
-    private BigDecimal price;
+    @CreationTimestamp
+    @Column(name = "added_at", updatable = false)
+    private LocalDateTime addedAt;
 }

@@ -1,48 +1,61 @@
 package com.poly.backend.controller;
 
-import com.poly.backend.dto.OrderDTO;
+import com.poly.backend.dto.OrderRequestDTO;
+import com.poly.backend.dto.OrderResponseDTO;
 import com.poly.backend.service.OrderService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/orders")
-@CrossOrigin("*")
+@CrossOrigin(origins = "*") // Tránh lỗi CORS khi Vue.js gọi API
 public class OrderController {
 
     @Autowired
     private OrderService orderService;
 
-    // 1. Đặt hàng
-    @PostMapping("/checkout")
-    public ResponseEntity<?> checkout(@RequestBody OrderDTO orderDto) {
+    /**
+     * API 1: Khách hàng tiến hành đặt hàng (Checkout)
+     * Method: POST
+     * URL: http://localhost:8080/api/orders/{userId}/place
+     * Body JSON: { "note": "Giao giờ hành chính", "voucherCode": "OPENING" }
+     */
+    @PostMapping("/{userId}/place")
+    public ResponseEntity<?> placeOrder(
+            @PathVariable Integer userId,
+            @RequestBody OrderRequestDTO request) {
         try {
-            OrderDTO createdOrder = orderService.createOrder(orderDto);
-            return ResponseEntity.status(201).body(createdOrder);
+            // Gọi Service xử lý luồng: Check kho -> Trừ kho -> Lưu Bill -> Xóa giỏ hàng
+            OrderResponseDTO orderResponse = orderService.placeOrder(userId, request);
+            return ResponseEntity.ok(orderResponse);
+
+        } catch (ResponseStatusException e) {
+            // Bắt các lỗi nghiệp vụ từ Service (như Hết hàng, Sai Voucher) và trả đúng HTTP Status
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi đặt hàng: " + e.getMessage());
+            // Lỗi hệ thống bất ngờ
+            return ResponseEntity.badRequest().body("Lỗi hệ thống khi đặt hàng: " + e.getMessage());
         }
     }
 
-    // 2. Xem lịch sử
-    @GetMapping("/customer/{customerId}")
-    public ResponseEntity<?> getCustomerOrders(@PathVariable Integer customerId) {
-        return ResponseEntity.ok(orderService.findByCustomerId(customerId));
-    }
-
-    // 3. Xóa đơn hàng (Hủy vĩnh viễn)
-    @DeleteMapping("/cancel/{id}")
-    public ResponseEntity<?> cancelOrder(@PathVariable Integer id) {
+    /**
+     * API 2: Lấy danh sách lịch sử mua hàng của khách
+     * Method: GET
+     * URL: http://localhost:8080/api/orders/{userId}/history
+     */
+    @GetMapping("/{userId}/history")
+    public ResponseEntity<?> getOrderHistory(@PathVariable Integer userId) {
         try {
-            boolean isDeleted = orderService.deleteOrder(id);
-            if (isDeleted) {
-                return ResponseEntity.ok("Đã xóa vĩnh viễn đơn hàng ID: " + id);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+            List<OrderResponseDTO> history = orderService.getOrderHistory(userId);
+            return ResponseEntity.ok(history);
+
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body("Lỗi khi xóa đơn: " + e.getMessage());
+            return ResponseEntity.badRequest().body("Lỗi khi lấy lịch sử đơn hàng: " + e.getMessage());
         }
     }
 }

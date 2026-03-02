@@ -1,5 +1,6 @@
 package com.poly.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,7 +50,7 @@ public class User {
     private String avatar;
 
     @Column(name = "status")
-    @Builder.Default // Dùng Builder.Default kết hợp với gán giá trị mặc định khi xài Lombok
+    @Builder.Default
     private Boolean status = true; // 1: Active, 0: Locked
 
     @Column(name = "reset_password_token", length = 255)
@@ -61,9 +62,12 @@ public class User {
 
     // --- RELATIONSHIPS ---
 
-    // Khóa ngoại trỏ sang bảng Roles
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 
+    // THÊM MỚI: Liên kết 1-1 với Giỏ hàng
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore // Chặn lỗi lặp JSON khi gọi API
+    private Cart cart;
 }

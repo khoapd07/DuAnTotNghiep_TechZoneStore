@@ -1,113 +1,181 @@
 package com.poly.backend.service.impl;
 
-import java.util.List;
-import java.util.stream.Collectors;
-import java.math.BigDecimal;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import lombok.RequiredArgsConstructor;
-
 import com.poly.backend.dao.CartDAO;
+import com.poly.backend.dao.CartItemDAO;
 import com.poly.backend.dao.ProductDAO;
 import com.poly.backend.dao.UserDAO;
+import com.poly.backend.dto.CartItemRequestDTO;
+import com.poly.backend.dto.CartItemResponseDTO;
+import com.poly.backend.dto.CartResponseDTO;
 import com.poly.backend.entity.Cart;
+import com.poly.backend.entity.CartItem;
 import com.poly.backend.entity.Product;
 import com.poly.backend.entity.User;
-import com.poly.backend.dto.CartDTO;
 import com.poly.backend.service.CartService;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 @Service
-@RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
 
-    private final CartDAO cartDAO;
-    private final ProductDAO productDAO;
-    private final UserDAO userDAO;
+    @Autowired private CartDAO cartDAO;
+    @Autowired private CartItemDAO cartItemDAO;
+    @Autowired private ProductDAO productDAO;
+    @Autowired private UserDAO userDAO;
 
-    @Override
-    public List<CartDTO> findByCustomerId(Integer customerId) {
-        // 1. Lấy danh sách Entity từ DB
-        List<Cart> entities = cartDAO.findByCustomerId(customerId);
+    // ======================================================
+    // 1. HÀM CHUYỂN ĐỔI (MAPPING) & TÍNH TIỀN TỰ ĐỘNG
+    // ======================================================
+    private CartResponseDTO mapToDTO(Cart cart) {
+        List<CartItemResponseDTO> itemDTOs = new ArrayList<>();
+        BigDecimal cartTotal = BigDecimal.ZERO;
 
-        // 2. Ánh xạ (Map) sang CartDTO để hiển thị đầy đủ thông tin sản phẩm
-        return entities.stream().map(this::convertToDTO).collect(Collectors.toList());
-    }
+        if (cart.getCartItems() != null) {
+            for (CartItem item : cart.getCartItems()) {
+                Product p = item.getProduct();
 
-    @Override
-    @Transactional
-    public void addItem(CartDTO cartDto) {
-        // Tìm toàn bộ giỏ hàng của khách để kiểm tra trùng sản phẩm
-        List<Cart> cartItems = cartDAO.findByCustomerId(cartDto.getUserId());
+                // Logic chọn giá: Có Sale thì lấy giá Sale, không thì lấy giá gốc
+                BigDecimal applyPrice = (p.getSalePrice() != null && p.getSalePrice().compareTo(BigDecimal.ZERO) > 0)
+                        ? p.getSalePrice() : p.getPrice();
 
-        for (Cart item : cartItems) {
-            // Lấy ID sản phẩm trực tiếp từ Entity để tránh lỗi Lazy Loading
-            if (item.getProduct().getProductId().equals(cartDto.getProductId())) {
-                item.setQuantity(item.getQuantity() + cartDto.getQuantity());
-                cartDAO.saveAndFlush(item);
-                return;
+                // Thành tiền = Giá * Số lượng
+                BigDecimal subTotal = applyPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
+                cartTotal = cartTotal.add(subTotal);
+
+                itemDTOs.add(CartItemResponseDTO.builder()
+                        .cartItemId(item.getCartItemId())
+                        .productId(p.getProductId())
+                        .productName(p.getName())
+                        .imageUrl(p.getImageUrl())
+                        .price(p.getPrice())
+                        .salePrice(p.getSalePrice())
+                        .quantity(item.getQuantity())
+                        .subTotal(subTotal) // DTO tự lo hiển thị, UI không cần tính
+                        .build());
             }
         }
 
-        // Nếu chưa có sản phẩm trong giỏ, tạo mới
-        User user = userDAO.findById(cartDto.getUserId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng ID: " + cartDto.getUserId()));
-
-        Product product = productDAO.findById(cartDto.getProductId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + cartDto.getProductId()));
-
-        Cart newCart = Cart.builder()
-                .user(user)
-                .product(product)
-                .quantity(cartDto.getQuantity())
+        return CartResponseDTO.builder()
+                .cartId(cart.getCartId())
+                .userId(cart.getUser().getUserId())
+                .items(itemDTOs)
+                .cartTotal(cartTotal)
                 .build();
+    }
 
-        cartDAO.saveAndFlush(newCart);
+    // ======================================================
+    // 2. LOGIC NGHIỆP VỤ (THÊM, SỬA, XÓA, GỘP)
+    // ======================================================
+
+    // Lấy Entity Giỏ hàng (Tạo mới nếu User chưa có)
+    private Cart getEntityCart(Integer userId) {
+        return cartDAO.findByUser_UserId(userId).orElseGet(() -> {
+            User user = userDAO.findById(userId)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
+            return cartDAO.save(Cart.builder().user(user).build());
+        });
+    }
+
+    @Override
+    public CartResponseDTO getCartDTOByUserId(Integer userId) {
+        return mapToDTO(getEntityCart(userId));
     }
 
     @Override
     @Transactional
-    public void updateQuantity(CartDTO cartDto) {
-        Cart cart = cartDAO.findAll().stream()
-                .filter(c -> c.getUser().getUserId().equals(cartDto.getUserId()) &&
-                        c.getProduct().getProductId().equals(cartDto.getProductId()))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm này trong giỏ hàng của user: " + cartDto.getUserId()));
+    public CartResponseDTO addOrUpdateCartItem(Integer userId, CartItemRequestDTO request) {
+        Cart cart = getEntityCart(userId);
+        Product product = productDAO.findById(request.getProductId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm"));
 
-        cart.setQuantity(cartDto.getQuantity());
-        cartDAO.saveAndFlush(cart);
+        // CHỐT CHẶN: Ép kiểm tra số lượng tồn kho
+        if (request.getQuantity() > product.getStockQuantity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!#:" + product.getStockQuantity());
+        }
+
+        if (cart.getCartItems() == null) cart.setCartItems(new ArrayList<>());
+
+        Optional<CartItem> existingItem = cart.getCartItems().stream()
+                .filter(item -> item.getProduct().getProductId().equals(product.getProductId()))
+                .findFirst();
+
+        if (existingItem.isPresent()) {
+            CartItem item = existingItem.get();
+            if (request.getQuantity() <= 0) {
+                cart.getCartItems().remove(item);
+                cartItemDAO.delete(item);
+            } else {
+                item.setQuantity(request.getQuantity());
+            }
+        } else if (request.getQuantity() > 0) {
+            cart.getCartItems().add(CartItem.builder()
+                    .cart(cart)
+                    .product(product)
+                    .quantity(request.getQuantity())
+                    .build());
+        }
+
+        return mapToDTO(cartDAO.save(cart));
     }
 
     @Override
     @Transactional
-    public void clearCartByCustomerId(Integer customerId) {
-        cartDAO.deleteByCustomerId(customerId);
+    public CartResponseDTO mergeLocalCart(Integer userId, List<CartItemRequestDTO> localCartItems) {
+        // Gộp dữ liệu từ LocalStorage khi User vãng lai vừa đăng nhập
+        if (localCartItems != null && !localCartItems.isEmpty()) {
+            for (CartItemRequestDTO localItem : localCartItems) {
+                try {
+                    Cart cart = getEntityCart(userId);
+                    int currentQuantity = 0;
+
+                    if (cart.getCartItems() != null) {
+                        currentQuantity = cart.getCartItems().stream()
+                                .filter(i -> i.getProduct().getProductId().equals(localItem.getProductId()))
+                                .map(CartItem::getQuantity)
+                                .findFirst().orElse(0);
+                    }
+
+                    // Cộng dồn: Số lượng cũ trong DB + Số lượng dưới Local Storage
+                    localItem.setQuantity(currentQuantity + localItem.getQuantity());
+
+                    // Tái sử dụng hàm add để đi qua bộ lọc kiểm tra tồn kho
+                    addOrUpdateCartItem(userId, localItem);
+                } catch (ResponseStatusException e) {
+                    System.out.println("Bỏ qua món hàng gộp vượt tồn kho: " + e.getReason());
+                }
+            }
+        }
+        return getCartDTOByUserId(userId);
     }
 
     @Override
-    public void deleteById(Integer id) {
-        cartDAO.deleteById(id);
+    @Transactional
+    public CartResponseDTO removeCartItem(Integer userId, Integer productId) {
+        Cart cart = getEntityCart(userId);
+        if (cart.getCartItems() != null) {
+            cart.getCartItems().removeIf(item -> item.getProduct().getProductId().equals(productId));
+            cart = cartDAO.save(cart);
+        }
+        return mapToDTO(cart);
     }
 
-    // --- HÀM TRỢ GIÚP CHUYỂN ĐỔI DỮ LIỆU ---
-    private CartDTO convertToDTO(Cart entity) {
-        Product product = entity.getProduct();
-        BigDecimal price = product.getPrice();
-        BigDecimal quantity = BigDecimal.valueOf(entity.getQuantity());
-
-        return CartDTO.builder()
-                .cartId(entity.getCartId())
-                .quantity(entity.getQuantity())
-                .productId(product.getProductId())
-                .userId(entity.getUser().getUserId())
-
-                // Sửa lại 2 dòng này cho khớp với Product.java của bạn
-                .productName(product.getName())   // Trước là getProductName() bị lỗi
-                .productImage(product.getImageUrl()) // Trước là getImage() bị lỗi
-
-                .productPrice(price)
-                .productSalePrice(product.getSalePrice()) // Thêm giá sale nếu bạn muốn hiển thị
-                .totalPrice(price.multiply(quantity))
-                .updatedAt(entity.getUpdatedAt())
-                .build();
+    @Override
+    @Transactional
+    public CartResponseDTO clearCart(Integer userId) {
+        Cart cart = getEntityCart(userId);
+        if (cart.getCartItems() != null) {
+            cart.getCartItems().clear();
+            cart = cartDAO.save(cart);
+        }
+        return mapToDTO(cart);
     }
 }

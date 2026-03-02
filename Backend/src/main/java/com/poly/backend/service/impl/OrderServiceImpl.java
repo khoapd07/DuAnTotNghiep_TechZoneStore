@@ -1,108 +1,167 @@
 package com.poly.backend.service.impl;
 
 import com.poly.backend.dao.*;
-import com.poly.backend.dto.*;
+import com.poly.backend.dto.OrderDetailResponseDTO;
+import com.poly.backend.dto.OrderRequestDTO;
+import com.poly.backend.dto.OrderResponseDTO;
 import com.poly.backend.entity.*;
 import com.poly.backend.service.OrderService;
-import com.poly.backend.service.CartService;
-import lombok.RequiredArgsConstructor;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class OrderServiceImpl implements OrderService {
 
-    private final OrderDAO orderDao;
-    private final OrderDetailDAO orderDetailDao;
-    private final ProductDAO productDAO;
-    private final CustomerDAO customerDAO;
-    private final CartService cartService;
+    @Autowired private OrderDAO orderDAO;
+    @Autowired private OrderStatusDAO orderStatusDAO;
+    @Autowired private CartDAO cartDAO;
+    @Autowired private ProductDAO productDAO;
+    @Autowired private VoucherDAO voucherDAO;
+    @Autowired private UserDAO userDAO;
 
     @Override
-    @Transactional
-    public OrderDTO createOrder(OrderDTO orderDto) {
-        // 1. Lấy giỏ hàng (CartDTO)
-        List<CartDTO> cartItems = cartService.findByCustomerId(orderDto.getCustomerId());
-        if (cartItems.isEmpty()) throw new RuntimeException("Giỏ hàng đang trống!");
+    @Transactional // Rất quan trọng: Bị lỗi ở bất kỳ bước nào là Rollback toàn bộ, không trừ tiền oan
+    public OrderResponseDTO placeOrder(Integer userId, OrderRequestDTO request) {
 
-        // 2. Tính tổng tiền
-        BigDecimal totalMoney = cartItems.stream()
-                .map(item -> item.getTotalPrice() != null ? item.getTotalPrice() : BigDecimal.ZERO)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        // 1. Lấy Giỏ hàng & Kiểm tra rỗng
+        Cart cart = cartDAO.findByUser_UserId(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy giỏ hàng"));
 
-        // 3. Khởi tạo đơn hàng
+        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giỏ hàng đang trống!");
+        }
+
+        User customer = userDAO.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
+
+        // 2. Tạo đơn hàng mới
         Order order = new Order();
-
-        // 4. Lấy Customer
-        Customer customer = customerDAO.findById(orderDto.getCustomerId())
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy khách hàng!"));
-
         order.setCustomer(customer);
-        order.setNote(orderDto.getNote());
-        order.setOrderDate(LocalDateTime.now());
+        order.setNote(request.getNote());
 
-        // Tự sinh mã đơn hàng để tránh lỗi Unique Key
-        order.setOrderCode("ORD-" + System.currentTimeMillis());
+        // Random mã đơn hàng (VD: TZ-20260302-XXXX)
+        String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        order.setOrderCode("TZ-" + timeStamp + "-" + (int)(Math.random() * 10000));
 
-        // --- ĐOẠN FIX LỖI QUAN TRỌNG NHẤT ---
-        // Gán giá trị cho total_money để không bị lỗi NULL
+        // Mặc định trạng thái là 0 (Pending)
+        OrderStatus status = orderStatusDAO.findById(0)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái đơn hàng"));
+        order.setStatus(status);
+
+        // 3. Xử lý từng món hàng, Tính tiền & Trừ tồn kho
+        BigDecimal totalMoney = BigDecimal.ZERO;
+        List<OrderDetail> orderDetails = new ArrayList<>();
+
+        for (CartItem item : cart.getCartItems()) {
+            Product product = item.getProduct();
+
+            // Kéo data mới nhất từ DB để kiểm tra tồn kho lần cuối trước khi chốt đơn
+            Product currentProduct = productDAO.findById(product.getProductId()).get();
+            if (currentProduct.getStockQuantity() < item.getQuantity()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Sản phẩm '" + currentProduct.getName() + "' chỉ còn " + currentProduct.getStockQuantity() + " chiếc!");
+            }
+
+            // Trừ tồn kho
+            currentProduct.setStockQuantity(currentProduct.getStockQuantity() - item.getQuantity());
+            productDAO.save(currentProduct);
+
+            // Chốt giá bán (Có sale lấy sale, không có lấy giá gốc)
+            BigDecimal applyPrice = (currentProduct.getSalePrice() != null && currentProduct.getSalePrice().compareTo(BigDecimal.ZERO) > 0)
+                    ? currentProduct.getSalePrice() : currentProduct.getPrice();
+
+            totalMoney = totalMoney.add(applyPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
+
+            // Thêm vào chi tiết hóa đơn
+            orderDetails.add(OrderDetail.builder()
+                    .order(order)
+                    .product(currentProduct)
+                    .quantity(item.getQuantity())
+                    .price(applyPrice) // LƯU GIÁ THỰC TẾ LÚC MUA
+                    .build());
+        }
+
         order.setTotalMoney(totalMoney);
-        order.setFinalAmount(totalMoney);
-        order.setDiscountAmount(BigDecimal.ZERO);
-        // ------------------------------------
+        order.setOrderDetails(orderDetails);
 
-        // Lưu đơn hàng vào DB
-        final Order savedOrder = orderDao.save(order);
+        // 4. Áp dụng Voucher (Nếu khách có nhập)
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
+            Voucher voucher = voucherDAO.findByCode(request.getVoucherCode())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
 
-        // 5. Lưu chi tiết hóa đơn (OrderDetail)
-        for (CartDTO item : cartItems) {
-            OrderDetail detail = new OrderDetail();
-            detail.setOrder(savedOrder);
+            // Validate sơ bộ voucher
+            if (!voucher.getStatus() || voucher.getQuantity() <= 0 || voucher.getEndDate().isBefore(LocalDateTime.now())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá đã hết hạn hoặc hết lượt dùng");
+            }
+            if (totalMoney.compareTo(voucher.getMinOrderValue()) < 0) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã này");
+            }
 
-            Product product = productDAO.findById(item.getProductId())
-                    .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + item.getProductId()));
+            discountAmount = voucher.getDiscountAmount();
+            order.setVoucher(voucher);
 
-            detail.setProduct(product);
-            detail.setQuantity(item.getQuantity());
-            detail.setPrice(item.getProductPrice());
-            orderDetailDao.save(detail);
+            // Trừ lượt dùng voucher
+            voucher.setQuantity(voucher.getQuantity() - 1);
+            voucherDAO.save(voucher);
         }
 
-        // 6. Xóa giỏ hàng sau khi đặt thành công
-        cartService.clearCartByCustomerId(orderDto.getCustomerId());
+        order.setDiscountAmount(discountAmount);
 
-        orderDto.setOrderId(savedOrder.getOrderId());
-        orderDto.setTotalMoney(totalMoney);
-        orderDto.setOrderCode(savedOrder.getOrderCode());
+        // Tính tiền thực trả (Không để âm tiền)
+        BigDecimal finalAmount = totalMoney.subtract(discountAmount);
+        order.setFinalAmount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
 
-        return orderDto;
+        // 5. Lưu hóa đơn vào Database
+        Order savedOrder = orderDAO.save(order);
+
+        // 6. Dọn sạch Giỏ hàng
+        cart.getCartItems().clear();
+        cartDAO.save(cart);
+
+        return mapToDTO(savedOrder);
     }
 
     @Override
-    public List<Order> findByCustomerId(Integer customerId) {
-        return orderDao.findByCustomerId(customerId);
+    public List<OrderResponseDTO> getOrderHistory(Integer userId) {
+        return orderDAO.findByCustomer_UserIdOrderByOrderDateDesc(userId).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
-    @Override
-    public Order findById(Integer orderId) {
-        return orderDao.findById(orderId).orElse(null);
-    }
+    // Hàm Helper chuyển từ Entity -> DTO
+    private OrderResponseDTO mapToDTO(Order order) {
+        List<OrderDetailResponseDTO> detailDTOs = order.getOrderDetails().stream().map(detail ->
+                OrderDetailResponseDTO.builder()
+                        .productId(detail.getProduct().getProductId())
+                        .productName(detail.getProduct().getName())
+                        .imageUrl(detail.getProduct().getImageUrl())
+                        .quantity(detail.getQuantity())
+                        .price(detail.getPrice())
+                        .subTotal(detail.getPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
+                        .build()
+        ).collect(Collectors.toList());
 
-    @Override
-    @Transactional
-    public boolean deleteOrder(Integer orderId) {
-        // 1. Kiểm tra xem đơn hàng có tồn tại không
-        if (orderDao.existsById(orderId)) {
-            // 2. Xóa đơn hàng
-            // Lưu ý: Nhớ thêm cascade = CascadeType.ALL ở Entity Order để xóa luôn OrderDetail
-            orderDao.deleteById(orderId);
-            return true;
-        }
-        return false;
+        return OrderResponseDTO.builder()
+                .orderId(order.getOrderId())
+                .orderCode(order.getOrderCode())
+                .orderDate(order.getOrderDate())
+                .totalMoney(order.getTotalMoney())
+                .discountAmount(order.getDiscountAmount())
+                .finalAmount(order.getFinalAmount())
+                .note(order.getNote())
+                .statusName(order.getStatus() != null ? order.getStatus().getStatusName() : "Unknown")
+                .orderDetails(detailDTOs)
+                .build();
     }
 }

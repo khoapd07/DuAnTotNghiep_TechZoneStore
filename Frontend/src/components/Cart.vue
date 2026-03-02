@@ -24,7 +24,7 @@
           </div>
 
           <div class="d-flex flex-column gap-3">
-            <div v-for="(item, index) in cartItems" :key="item.id" class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div v-for="item in cartItems" :key="item.productId" class="card border-0 shadow-sm rounded-3 overflow-hidden">
               <div class="card-body p-4 d-flex align-items-center gap-4">
                 
                 <div class="form-check custom-checkbox">
@@ -41,11 +41,11 @@
                   
                   <div class="d-flex align-items-center gap-3">
                     <div class="quantity-selector d-flex align-items-center bg-light border rounded-2">
-                      <button class="btn btn-sm border-0 px-2 fw-bold text-muted" @click="item.quantity > 1 && item.quantity--">-</button>
-                      <input type="number" v-model="item.quantity" class="form-control form-control-sm border-0 text-center fw-bold bg-transparent p-0" style="width: 35px;" min="1">
-                      <button class="btn btn-sm border-0 px-2 fw-bold text-muted" @click="item.quantity++">+</button>
+                      <button class="btn btn-sm border-0 px-2 fw-bold text-muted" @click="decreaseQty(item)">-</button>
+                      <input type="number" v-model="item.quantity" @change="updateQty(item)" class="form-control form-control-sm border-0 text-center fw-bold bg-transparent p-0" style="width: 35px;" min="1">
+                      <button class="btn btn-sm border-0 px-2 fw-bold text-muted" @click="increaseQty(item)">+</button>
                     </div>
-                    <button class="btn btn-link text-muted p-0 fs-5 hover-danger" @click="removeItem(index)">
+                    <button class="btn btn-link text-muted p-0 fs-5 hover-danger" @click="removeItem(item.productId)">
                       <i class="bi bi-trash3"></i>
                     </button>
                   </div>
@@ -125,55 +125,58 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios'; // Nhớ chạy lệnh: npm install axios
 
-// Mock data giỏ hàng
-const cartItems = ref([
-  {
-    id: 1,
-    name: 'Bàn phím cơ Apex Pro TKL',
-    desc: 'Gaming / RGB / OmniPoint Switches',
-    price: 4590000,
-    oldPrice: 5200000,
-    quantity: 1,
-    selected: true,
-    img: 'https://images.unsplash.com/photo-1595225476474-87563907a212?w=300'
-  },
-  {
-    id: 2,
-    name: 'Chuột Gaming G-Pro Wireless',
-    desc: 'Wireless / Ultra Lightweight / 25K Sensor',
-    price: 2190000,
-    oldPrice: null,
-    quantity: 1,
-    selected: true,
-    img: 'https://images.unsplash.com/photo-1527814050087-379381547928?w=300'
-  },
-  {
-    id: 3,
-    name: 'Màn hình UltraWide 34” QHD',
-    desc: '144Hz / 1ms / HDR400 / Curved',
-    price: 12500000,
-    oldPrice: null,
-    quantity: 1,
-    selected: false,
-    img: 'https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?w=300'
-  }
-]);
+// Thay ID này bằng logic lấy ID User đang đăng nhập từ LocalStorage/Vuex/Pinia
+const CURRENT_USER_ID = 1; 
+const API_URL = 'http://localhost:8080/api/cart';
 
+const cartItems = ref([]);
 const selectAll = ref(false);
 
-// Logic chọn tất cả
+// -----------------------------------------
+// 1. KẾT NỐI API: LẤY DỮ LIỆU GIỎ HÀNG
+// -----------------------------------------
+const fetchCart = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/${CURRENT_USER_ID}`);
+    const backendItems = response.data.items;
+
+    // Map dữ liệu DTO Backend về đúng format UI đang dùng
+    cartItems.value = backendItems.map(bItem => {
+      // Giữ lại trạng thái checkbox "selected" nếu SP này đã có trên UI
+      const existingItem = cartItems.value.find(i => i.productId === bItem.productId);
+      
+      return {
+        productId: bItem.productId,
+        name: bItem.productName,
+        desc: 'Sản phẩm chính hãng TechZone', // Backend ko trả desc, ta gán mặc định
+        price: bItem.salePrice || bItem.price, // Ưu tiên giá sale
+        oldPrice: bItem.salePrice ? bItem.price : null,
+        quantity: bItem.quantity,
+        selected: existingItem ? existingItem.selected : true, // Mặc định là check
+        img: bItem.imageUrl
+      };
+    });
+  } catch (error) {
+    console.error('Lỗi khi tải giỏ hàng:', error);
+  }
+};
+
+onMounted(() => {
+  fetchCart(); // Gọi API ngay khi mở trang
+});
+
+// -----------------------------------------
+// 2. LOGIC GIAO DIỆN (CHECKBOX & TÍNH TIỀN)
+// -----------------------------------------
 const toggleSelectAll = () => {
   cartItems.value.forEach(item => item.selected = selectAll.value);
 };
 
-// Đếm số lượng SP đang được chọn
-const selectedCount = computed(() => {
-  return cartItems.value.filter(item => item.selected).length;
-});
+const selectedCount = computed(() => cartItems.value.filter(item => item.selected).length);
 
-// Tính toán tiền bạc dựa trên các SP được chọn
 const subtotal = computed(() => {
   return cartItems.value
     .filter(item => item.selected)
@@ -183,27 +186,80 @@ const subtotal = computed(() => {
 const tax = computed(() => subtotal.value * 0.1);
 const total = computed(() => subtotal.value + tax.value);
 
-// Xóa 1 item
-const removeItem = (index) => {
-  if(confirm('Bạn muốn xóa sản phẩm này khỏi giỏ hàng?')) {
-    cartItems.value.splice(index, 1);
+// -----------------------------------------
+// 3. LOGIC API + DEBOUNCE: CẬP NHẬT SỐ LƯỢNG
+// -----------------------------------------
+let debounceTimer;
+
+const syncQuantityWithBackend = (productId, newQuantity) => {
+  clearTimeout(debounceTimer); // Hủy request cũ nếu người dùng bấm quá nhanh
+  
+  // Chờ 1 giây (1000ms) sau khi người dùng ngừng bấm mới gửi API
+  debounceTimer = setTimeout(async () => {
+    try {
+      await axios.post(`${API_URL}/${CURRENT_USER_ID}/add`, {
+        productId: productId,
+        quantity: newQuantity
+      });
+      // Backend thành công thì lôi lại data để khớp DB
+      await fetchCart();
+    } catch (error) {
+      // Bắt lỗi 400 (Vượt tồn kho) và Rollback giao diện
+      alert(error.response?.data || 'Cập nhật thất bại');
+      fetchCart(); // Kéo lại giỏ hàng từ Server để phục hồi số lượng hợp lệ
+    }
+  }, 1000); 
+};
+
+const increaseQty = (item) => {
+  item.quantity++; // Cập nhật UI ngay lập tức (Zero Lag)
+  syncQuantityWithBackend(item.productId, item.quantity);
+};
+
+const decreaseQty = (item) => {
+  if (item.quantity > 1) {
+    item.quantity--; // Cập nhật UI ngay lập tức
+    syncQuantityWithBackend(item.productId, item.quantity);
   }
 };
 
-// Xóa sạch giỏ
-const clearCart = () => {
-  if(confirm('Làm trống toàn bộ giỏ hàng?')) {
-    cartItems.value = [];
+const updateQty = (item) => {
+  if (item.quantity < 1) item.quantity = 1;
+  syncQuantityWithBackend(item.productId, item.quantity);
+};
+
+// -----------------------------------------
+// 4. LOGIC API: XÓA SẢN PHẨM
+// -----------------------------------------
+const removeItem = async (productId) => {
+  if (confirm('Bạn muốn xóa sản phẩm này khỏi giỏ hàng?')) {
+    try {
+      await axios.delete(`${API_URL}/${CURRENT_USER_ID}/remove/${productId}`);
+      await fetchCart(); // Cập nhật lại list sau khi xóa
+    } catch (error) {
+      console.error('Lỗi xóa sản phẩm:', error);
+    }
   }
 };
 
-// Format tiền tệ
+const clearCart = async () => {
+  if (confirm('Làm trống toàn bộ giỏ hàng?')) {
+    try {
+      await axios.delete(`${API_URL}/${CURRENT_USER_ID}/clear`);
+      cartItems.value = [];
+    } catch (error) {
+      console.error('Lỗi dọn giỏ hàng:', error);
+    }
+  }
+};
+
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value).replace('₫', 'đ');
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
 };
 </script>
 
 <style scoped>
+/* Toàn bộ CSS của bạn được giữ nguyên không mất một dòng nào */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
@@ -213,26 +269,14 @@ const formatCurrency = (value) => {
 .bg-neon-light { background-color: rgba(0, 255, 51, 0.1); }
 .btn-neon { background-color: #00FF33; color: #000; border: none; }
 .btn-neon:hover { background-color: #00cc29; transform: translateY(-2px); transition: all 0.2s; }
-
-/* Custom Container */
 .narrow-container { max-width: 1100px !important; margin: 0 auto; }
-
-/* Custom Checkbox */
-.custom-checkbox .form-check-input {
-  width: 20px; height: 20px; border-radius: 4px; border-color: #ccc; cursor: pointer;
-}
-.custom-checkbox .form-check-input:checked {
-  background-color: #00FF33; border-color: #00FF33;
-}
+.custom-checkbox .form-check-input { width: 20px; height: 20px; border-radius: 4px; border-color: #ccc; cursor: pointer; }
+.custom-checkbox .form-check-input:checked { background-color: #00FF33; border-color: #00FF33; }
 .custom-checkbox .form-check-input:checked[type=checkbox] {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
 }
-
-/* Hover effects */
 .hover-danger:hover { color: #dc3545 !important; }
 .hover-dark:hover { color: #000 !important; }
-
-/* Input number hidden arrow */
 input[type=number]::-webkit-inner-spin-button, 
 input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 </style>

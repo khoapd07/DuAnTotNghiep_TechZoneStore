@@ -1,12 +1,13 @@
 package com.poly.backend.service;
 
-import com.poly.backend.dto.OrderDTO;
-import com.poly.backend.entity.Order;
+import com.poly.backend.dto.OrderRequestDTO;
+import com.poly.backend.dto.OrderResponseDTO;
 import java.util.List;
 
 public interface OrderService {
-    OrderDTO createOrder(OrderDTO orderDto);
-    List<Order> findByCustomerId(Integer customerId);
-    Order findById(Integer orderId);
-    boolean deleteOrder(Integer orderId);
+    // Chức năng Đặt hàng (Checkout)
+    OrderResponseDTO placeOrder(Integer userId, OrderRequestDTO request);
+
+    // Lấy lịch sử mua hàng
+    List<OrderResponseDTO> getOrderHistory(Integer userId);
 }
