@@ -1,9 +1,8 @@
 package com.poly.backend.dao;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import com.poly.backend.entity.Review;
+import org.springframework.data.jpa.repository.JpaRepository;
 
-@Repository
 public interface ReviewDAO extends JpaRepository<Review, Integer> {
+    // Các phương thức CRUD cơ bản đã có sẵn trong JpaRepository
 }
