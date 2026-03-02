@@ -6,7 +6,7 @@
         <nav aria-label="breadcrumb" class="mb-2">
           <ol class="breadcrumb fs-8 fw-medium mb-0">
             <li class="breadcrumb-item"><router-link to="/" class="text-muted text-decoration-none">Trang chủ</router-link></li>
-            <li class="breadcrumb-item"><a href="#" class="text-muted text-decoration-none">Thiết bị Gaming</a></li>
+            <li class="breadcrumb-item"><a href="#" class="text-muted text-decoration-none">Thiết thiết bị Gaming</a></li>
             <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">Tất cả sản phẩm</li>
           </ol>
         </nav>
@@ -14,15 +14,14 @@
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3">
           <div>
             <h1 class="fw-black text-uppercase fs-3 mb-1">DANH MỤC SẢN PHẨM</h1>
-            <p class="text-muted m-0 fs-8">Thiết bị ngoại vi được chế tạo chính xác cho lợi thế cạnh tranh tối thượng.</p>
+            <p class="text-muted m-0 fs-8">Tìm thấy {{ totalElements }} sản phẩm từ hệ thống.</p>
           </div>
           <div class="d-flex align-items-center gap-2">
             <span class="text-muted fw-bold fs-8 text-nowrap">SẮP XẾP:</span>
-            <select class="form-select form-select-sm border-0 bg-light fw-bold custom-select-width shadow-none fs-8">
-              <option value="1">Nổi bật</option>
-              <option value="2">Giá tăng dần</option>
-              <option value="3">Giá giảm dần</option>
-              <option value="4">Mới nhất</option>
+            <select v-model="filters.sortBy" @change="handleFilterChange" class="form-select form-select-sm border-0 bg-light fw-bold custom-select-width shadow-none fs-8">
+              <option value="createdAt">Mới nhất</option>
+              <option value="price">Giá tăng dần</option>
+              <option value="name">Tên A-Z</option>
             </select>
           </div>
         </div>
@@ -30,91 +29,80 @@
 
       <div class="row g-4">
         <div class="col-lg-3">
-          
           <div class="filter-box border rounded-3 p-3 mb-3">
-            <h6 class="fw-bold fs-8 d-flex justify-content-between align-items-center mb-3">
-              KHOẢNG GIÁ <i class="bi bi-chevron-up text-muted"></i>
-            </h6>
-            <select class="form-select form-select-sm mb-3 shadow-none bg-light border-0 fs-8">
-              <option>Chọn khoảng giá...</option>
-              <option>Dưới 1 triệu</option>
-              <option>1 - 3 triệu</option>
-              <option>Trên 3 triệu</option>
-            </select>
-            <label class="form-label fs-8 text-muted fw-bold mb-1">GIÁ TỐI ĐA TÙY CHỈNH</label>
-            <div class="input-group input-group-sm">
-              <span class="input-group-text bg-white border-end-0 text-muted px-2 py-1 fs-8">$</span>
-              <input type="number" class="form-control border-start-0 shadow-none px-2 py-1 fs-8" placeholder="2000">
+            <h6 class="fw-bold fs-8 mb-3 text-uppercase">Tìm kiếm sản phẩm</h6>
+            <input type="text" v-model="filters.keyword" @input="handleFilterChange" class="form-control form-control-sm fs-8 shadow-none" placeholder="Nhập tên sản phẩm...">
+          </div>
+
+          <div class="filter-box border rounded-3 p-3 mb-3">
+            <h6 class="fw-bold fs-8 mb-3 text-uppercase">Khoảng giá</h6>
+            <div class="d-flex flex-column gap-2 fs-8">
+              <div class="form-check custom-checkbox">
+                <input class="form-check-input" type="radio" name="priceRange" :value="null" v-model="selectedPriceRange" @change="setPriceRange(null)" id="priceAll">
+                <label class="form-check-label text-muted" for="priceAll">Tất cả khoảng giá</label>
+              </div>
+              <div v-for="(range, index) in priceRanges" :key="index" class="form-check custom-checkbox">
+                <input class="form-check-input" type="radio" name="priceRange" :value="index" v-model="selectedPriceRange" @change="setPriceRange(range)" :id="'price' + index">
+                <label class="form-check-label text-muted" :for="'price' + index">{{ range.label }}</label>
+              </div>
             </div>
           </div>
 
           <div class="filter-box border rounded-3 p-3 mb-3">
-            <h6 class="fw-bold fs-8 d-flex justify-content-between align-items-center mb-3">
-              DANH MỤC <i class="bi bi-chevron-up text-muted"></i>
-            </h6>
+            <h6 class="fw-bold fs-8 mb-3 text-uppercase">DANH MỤC</h6>
             <div class="d-flex flex-column gap-2 fs-8">
               <div class="form-check custom-checkbox">
-                <input class="form-check-input shadow-none" type="checkbox" id="cat1">
-                <label class="form-check-label text-muted" for="cat1">Chuột (12)</label>
+                <input class="form-check-input" type="radio" v-model="filters.categoryId" :value="null" @change="handleFilterChange" id="allCat">
+                <label class="form-check-label text-muted" for="allCat">Tất cả danh mục</label>
               </div>
-              <div class="form-check custom-checkbox">
-                <input class="form-check-input shadow-none" type="checkbox" id="cat2" checked>
-                <label class="form-check-label text-dark fw-bold" for="cat2">Bàn phím (8)</label>
-              </div>
-              <div class="form-check custom-checkbox">
-                <input class="form-check-input shadow-none" type="checkbox" id="cat3">
-                <label class="form-check-label text-muted" for="cat3">Tai nghe (15)</label>
+              <div v-for="cat in categories" :key="cat.categoryId" class="form-check custom-checkbox">
+                <input class="form-check-input" type="radio" v-model="filters.categoryId" :value="cat.categoryId" @change="handleFilterChange" :id="'cat' + cat.categoryId">
+                <label class="form-check-label text-muted" :for="'cat' + cat.categoryId">{{ cat.categoryName }}</label>
               </div>
             </div>
           </div>
 
           <div class="filter-box border rounded-3 p-3">
-            <h6 class="fw-bold fs-8 d-flex justify-content-between align-items-center mb-3">
-              THƯƠNG HIỆU <i class="bi bi-chevron-up text-muted"></i>
-            </h6>
+            <h6 class="fw-bold fs-8 mb-3 text-uppercase">THƯƠNG HIỆU</h6>
             <div class="d-flex flex-column gap-2 fs-8">
               <div class="form-check custom-checkbox">
-                <input class="form-check-input shadow-none" type="checkbox" id="brand1">
-                <label class="form-check-label text-muted" for="brand1">ApexGear</label>
+                <input class="form-check-input" type="radio" v-model="filters.brandId" :value="null" @change="handleFilterChange" id="allBrand">
+                <label class="form-check-label text-muted" for="allBrand">Tất cả thương hiệu</label>
               </div>
-              <div class="form-check custom-checkbox">
-                <input class="form-check-input shadow-none" type="checkbox" id="brand2">
-                <label class="form-check-label text-muted" for="brand2">Titan</label>
-              </div>
-              <div class="form-check custom-checkbox">
-                <input class="form-check-input shadow-none" type="checkbox" id="brand3">
-                <label class="form-check-label text-muted" for="brand3">Phantom Labs</label>
+              <div v-for="b in brands" :key="b.brandId" class="form-check custom-checkbox">
+                <input class="form-check-input" type="radio" v-model="filters.brandId" :value="b.brandId" @change="handleFilterChange" :id="'brand' + b.brandId">
+                <label class="form-check-label text-muted" :for="'brand' + b.brandId">{{ b.brandName }}</label>
               </div>
             </div>
           </div>
-
         </div>
 
         <div class="col-lg-9">
-          <div class="row g-3"> <div class="col-md-6 col-lg-4" v-for="product in products" :key="product.id">
+          <div class="row g-3" v-if="products.length > 0">
+            <div class="col-md-6 col-lg-4" v-for="product in products" :key="product.productId">
               <div class="card h-100 border-0 product-card custom-card-hover rounded-3 overflow-hidden">
-                
-                <div class="img-wrapper position-relative d-flex justify-content-center align-items-center p-3">
-                  <span v-if="product.badge === 'MỚI'" class="badge bg-neon text-dark position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">{{ product.badge }}</span>
-                  <span v-else-if="product.badge === 'BÁN CHẠY'" class="badge bg-dark text-white border border-secondary position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">{{ product.badge }}</span>
-                  <span v-else-if="product.badge === '-20%'" class="badge bg-danger text-white position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">{{ product.badge }}</span>
-                  
-                  <i class="bi bi-heart position-absolute top-0 end-0 m-2 fs-6 text-white cursor-pointer heart-icon"></i>
-                  
-                  <img :src="product.img" class="img-fluid object-fit-contain" style="height: 140px;" :alt="product.name">
-                </div>
+                <router-link :to="'/product/' + product.productId" class="text-decoration-none text-dark">
+                  <div class="img-wrapper position-relative d-flex justify-content-center align-items-center p-3">
+                    <span v-if="product.salePrice" class="badge bg-danger text-white position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">GIẢM GIÁ</span>
+                    <span v-if="product.stockQuantity <= 0" class="badge bg-secondary text-white position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">HẾT HÀNG</span>
+                    <i class="bi bi-heart position-absolute top-0 end-0 m-2 fs-6 text-white cursor-pointer heart-icon"></i>
+                    <img :src="product.imageUrl || 'https://via.placeholder.com/150'" class="img-fluid object-fit-contain" style="height: 140px;" :alt="product.name">
+                  </div>
+                </router-link>
 
                 <div class="info-wrapper p-3 d-flex flex-column flex-grow-1">
-                  <h6 class="fw-bold mb-1 text-uppercase fs-8 line-clamp-1" :title="product.name">{{ product.name }}</h6>
-                  <small class="text-muted mb-2 d-block fs-9">{{ product.desc }}</small>
+                  <router-link :to="'/product/' + product.productId" class="text-decoration-none text-dark">
+                    <h6 class="fw-bold mb-1 text-uppercase fs-8 line-clamp-1" :title="product.name">{{ product.name }}</h6>
+                  </router-link>
+                  <small class="text-muted mb-2 d-block fs-9">{{ product.categoryName }} • {{ product.brandName }}</small>
                   
                   <div class="mt-auto mb-2">
-                    <h6 class="fw-black m-0 d-inline-block fs-7">{{ formatCurrency(product.price) }}</h6>
-                    <span v-if="product.oldPrice" class="text-muted text-decoration-line-through ms-2 fs-9">{{ formatCurrency(product.oldPrice) }}</span>
+                    <h6 class="fw-black m-0 d-inline-block fs-7 text-neon">{{ formatCurrency(product.salePrice || product.price) }}</h6>
+                    <span v-if="product.salePrice" class="text-muted text-decoration-line-through ms-2 fs-9">{{ formatCurrency(product.price) }}</span>
                   </div>
-
+                  
                   <div class="d-flex gap-2">
-                    <button class="btn btn-outline-dark btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1" title="Thêm vào giỏ">
+                    <button class="btn btn-outline-dark btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1">
                       <i class="bi bi-cart2 fs-6"></i>
                     </button>
                     <button class="btn btn-neon fw-bold flex-grow-1 fs-8 p-1 rounded-2 text-dark">
@@ -122,209 +110,162 @@
                     </button>
                   </div>
                 </div>
-
               </div>
             </div>
-
           </div>
 
-          <div class="d-flex justify-content-center mt-4">
-            <nav aria-label="Page navigation">
-              <ul class="pagination pagination-sm gap-1 mb-0"> <li class="page-item disabled">
-                  <a class="page-link border-0 rounded-2 text-muted px-2 py-1" href="#" tabindex="-1"><i class="bi bi-chevron-left fs-8"></i></a>
+          <div v-else class="text-center py-5">
+            <div class="spinner-border text-success mb-3" role="status" v-if="loading"></div>
+            <p class="text-muted">{{ loading ? 'Đang tải sản phẩm...' : 'Không tìm thấy sản phẩm nào khớp với bộ lọc.' }}</p>
+          </div>
+
+          <div class="d-flex justify-content-center mt-4" v-if="totalPages > 1">
+            <nav>
+              <ul class="pagination pagination-sm gap-1 mb-0">
+                <li class="page-item" :class="{ disabled: filters.page === 0 }">
+                  <button class="page-link border-0 rounded-2" @click="changePage(filters.page - 1)"><i class="bi bi-chevron-left"></i></button>
                 </li>
-                <li class="page-item"><a class="page-link border-0 rounded-2 active-page text-dark fw-bold px-2 py-1 fs-8" href="#">1</a></li>
-                <li class="page-item"><a class="page-link border-0 rounded-2 text-muted fw-bold px-2 py-1 fs-8" href="#">2</a></li>
-                <li class="page-item"><a class="page-link border-0 rounded-2 text-muted fw-bold px-2 py-1 fs-8" href="#">3</a></li>
-                <li class="page-item"><span class="page-link border-0 bg-transparent text-muted px-2 py-1 fs-8">...</span></li>
-                <li class="page-item"><a class="page-link border-0 rounded-2 text-muted fw-bold px-2 py-1 fs-8" href="#">12</a></li>
-                <li class="page-item">
-                  <a class="page-link border-0 rounded-2 text-dark px-2 py-1" href="#"><i class="bi bi-chevron-right fs-8"></i></a>
+                <li v-for="p in totalPages" :key="p" class="page-item">
+                  <button class="page-link border-0 rounded-2 fs-8" :class="{ 'active-page': filters.page === p - 1 }" @click="changePage(p - 1)">{{ p }}</button>
+                </li>
+                <li class="page-item" :class="{ disabled: filters.page === totalPages - 1 }">
+                  <button class="page-link border-0 rounded-2" @click="changePage(filters.page + 1)"><i class="bi bi-chevron-right"></i></button>
                 </li>
               </ul>
             </nav>
           </div>
-
         </div>
       </div>
-
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
 
-// Hàm format tiền tệ (mô phỏng)
+const router = useRouter();
+const products = ref([]);
+const categories = ref([]);
+const brands = ref([]);
+const totalPages = ref(0);
+const totalElements = ref(0);
+const loading = ref(false);
+
+// Biến lưu trữ index của khoảng giá đang chọn
+const selectedPriceRange = ref(null);
+
+// Danh sách khoảng giá theo yêu cầu
+const priceRanges = [
+  { label: '0 - 10 triệu', min: 0, max: 10000000 },
+  { label: '10 - 20 triệu', min: 10000000, max: 20000000 },
+  { label: '20 - 30 triệu', min: 20000000, max: 30000000 },
+  { label: '30 - 50 triệu', min: 30000000, max: 50000000 },
+  { label: '50 - 100 triệu', min: 50000000, max: 100000000 },
+  { label: 'Trên 100 triệu', min: 100000000, max: 999999999 },
+];
+
+const filters = reactive({
+  keyword: '',
+  categoryId: null,
+  brandId: null,
+  minPrice: null,
+  maxPrice: null,
+  page: 0,
+  size: 15, // Đã sửa từ 6 lên 15
+  sortBy: 'createdAt',
+  sortDir: 'desc'
+});
+
 const formatCurrency = (value) => {
-  return value.toLocaleString('vi-VN') + ' VNĐ'; // Theo thiết kế dùng chữ VNĐ
+  if (!value) return "0 VNĐ";
+  return value.toLocaleString('vi-VN') + ' VNĐ';
 };
 
-// Dữ liệu mô phỏng dựa trên ảnh
-const products = ref([
-  {
-    id: 1,
-    name: 'CYBERBLADE PRO WIRELESS',
-    desc: '20K DPI • Pin 70h',
-    price: 999999,
-    oldPrice: null,
-    badge: 'MỚI',
-    img: 'https://images.unsplash.com/photo-1527814050087-379381547928?w=400' 
-  },
-  {
-    id: 2,
-    name: 'MECHSTRIKE K90 ELITE',
-    desc: 'Blue Switch • Khung Nhôm',
-    price: 999999,
-    oldPrice: null,
-    badge: 'BÁN CHẠY',
-    img: 'https://images.unsplash.com/photo-1595225476474-87563907a212?w=400'
-  },
-  {
-    id: 3,
-    name: 'VOIDSOUND 7.1 SURROUND',
-    desc: 'Chống Ồn • Driver 50mm',
-    price: 999999,
-    oldPrice: null,
-    badge: null,
-    img: 'https://images.unsplash.com/photo-1618366712010-f4ae9c647dcb?w=400'
-  },
-  {
-    id: 4,
-    name: 'X-STREAM ULTRAWIDE',
-    desc: '165Hz • 1ms',
-    price: 999999,
-    oldPrice: 1290000,
-    badge: '-20%',
-    img: 'https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?w=400'
+const fetchProducts = async () => {
+  loading.value = true;
+  try {
+    const response = await axios.get('http://localhost:8080/api/product', { params: filters });
+    products.value = response.data.content;
+    totalPages.value = response.data.totalPages;
+    totalElements.value = response.data.totalElements;
+  } catch (error) {
+    console.error("Lỗi tải sản phẩm:", error);
+  } finally {
+    loading.value = false;
   }
-]);
+};
+
+// Hàm xử lý khi chọn khoảng giá
+const setPriceRange = (range) => {
+  if (range) {
+    filters.minPrice = range.min;
+    filters.maxPrice = range.max;
+  } else {
+    filters.minPrice = null;
+    filters.maxPrice = null;
+  }
+  handleFilterChange();
+};
+
+const fetchCategories = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/categories');
+    categories.value = response.data;
+  } catch (error) { console.error("Lỗi tải danh mục:", error); }
+};
+
+const fetchBrands = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/brands');
+    brands.value = response.data;
+  } catch (error) { console.error("Lỗi tải thương hiệu:", error); }
+};
+
+const handleFilterChange = () => {
+  filters.page = 0;
+  fetchProducts();
+};
+
+const changePage = (p) => {
+  filters.page = p;
+  fetchProducts();
+  window.scrollTo(0, 0);
+};
+
+onMounted(() => {
+  fetchProducts();
+  fetchCategories();
+  fetchBrands();
+});
 </script>
 
 <style scoped>
-/* Typography & Utilities */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
-.fs-9 { font-size: 0.65rem; } /* Thêm fs-9 cho text rất nhỏ */
+.fs-9 { font-size: 0.65rem; }
 .cursor-pointer { cursor: pointer; }
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;  
-  overflow: hidden;
-}
-
-/* Biến màu chủ đạo */
+.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .text-neon { color: #00FF33 !important; }
 .bg-neon { background-color: #00FF33 !important; }
-
-/* Custom Container - Đã thu hẹp xuống 1000px */
-.narrow-container {
-  max-width: 1000px !important; 
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.custom-select-width {
-  width: 110px; /* Thu hẹp select một chút */
-}
-
-/* ------ CUSTOM SIDEBAR FILTERS ------ */
-.filter-box {
-  background-color: #FFFFFF;
-}
-
-/* Custom Checkbox TechZone Style */
-.custom-checkbox .form-check-input {
-  border-radius: 3px; /* Bo góc nhỏ hơn */
-  border-color: #CCC;
-  cursor: pointer;
-  width: 14px; /* Thu nhỏ checkbox */
-  height: 14px;
-  margin-top: 0.15rem;
-}
+.narrow-container { max-width: 1000px !important; margin: 0 auto; }
+.custom-select-width { width: 120px; }
+.filter-box { background-color: #FFFFFF; }
+.product-card { background-color: transparent; }
+.img-wrapper { background-color: #111111; height: 180px; }
+.heart-icon { opacity: 0.5; transition: 0.2s; }
+.heart-icon:hover { opacity: 1; color: #00FF33 !important; }
+.info-wrapper { background-color: #F4F6F8; }
+.custom-card-hover { transition: 0.3s; }
+.custom-card-hover:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
+.btn-neon { background-color: #00FF33; border: none; }
+.btn-cart-icon { width: 32px; height: 32px; border-color: #333; }
+.active-page { background-color: #00FF33 !important; color: #000 !important; font-weight: bold; }
+/* Thêm style cho checkbox/radio để giống mockup */
 .custom-checkbox .form-check-input:checked {
   background-color: #00FF33;
   border-color: #00FF33;
-}
-/* Đổi màu dấu tick thành màu đen cho dễ nhìn trên nền xanh neon */
-.custom-checkbox .form-check-input:checked[type=checkbox] {
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
-}
-
-/* Loại bỏ nút tăng giảm của input number */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
-}
-
-/* ------ CUSTOM PRODUCT CARD ------ */
-.product-card {
-  background-color: transparent;
-}
-/* Phần ảnh nền đen nhám - Đã giảm chiều cao */
-.img-wrapper {
-  background-color: #111111; 
-  height: 180px; /* Từ 250px xuống 180px */
-}
-/* Nút thả tim */
-.heart-icon {
-  opacity: 0.5;
-  transition: opacity 0.2s, color 0.2s;
-}
-.heart-icon:hover {
-  opacity: 1;
-  color: #00FF33 !important;
-}
-
-/* Phần thông tin nền xám nhạt */
-.info-wrapper {
-  background-color: #F4F6F8;
-}
-
-/* Hover Effect cho Card */
-.custom-card-hover {
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.custom-card-hover:hover {
-  transform: translateY(-4px); /* Nhấc lên ít hơn */
-  box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; /* Bóng đổ nhẹ hơn */
-}
-
-/* Nút Mua và Giỏ hàng */
-.btn-neon {
-  background-color: #00FF33;
-  color: #000;
-  border: none;
-  transition: all 0.2s ease;
-}
-.btn-neon:hover {
-  background-color: #00cc29;
-}
-.btn-cart-icon {
-  width: 32px; /* Từ 42px xuống 32px */
-  height: 32px;
-  border-color: #333;
-  color: #333;
-}
-.btn-cart-icon:hover {
-  background-color: #333;
-  color: #FFF;
-}
-
-/* ------ CUSTOM PAGINATION ------ */
-.pagination .page-link {
-  color: #333;
-  background-color: #F8F9FA;
-  /* padding đã được set bằng các class px-2 py-1 ở HTML */
-}
-.pagination .page-link:hover {
-  background-color: #EAEAEA;
-}
-.pagination .active-page {
-  background-color: #00FF33 !important;
-  color: #000 !important;
 }
 </style>

@@ -12,15 +12,17 @@ import java.math.BigDecimal;
 
 @Repository
 public interface ProductDAO extends JpaRepository<Product, Integer> {
-    // Lọc theo tên, khoảng giá (ưu tiên sale_price) và phân trang
     @Query("SELECT p FROM Product p WHERE " +
-            "(:keyword IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
-            "(:minPrice IS NULL OR COALESCE(p.salePrice, p.price) >= :minPrice) AND " +
-            "(:maxPrice IS NULL OR COALESCE(p.salePrice, p.price) <= :maxPrice) AND " +
-            "(p.active = true)")
+            "(:kw IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :kw, '%'))) AND " +
+            "(:cId IS NULL OR p.category.categoryId = :cId) AND " +
+            "(:bId IS NULL OR p.brand.brandId = :bId) AND " +
+            "(:min IS NULL OR p.price >= :min) AND " +
+            "(:max IS NULL OR p.price <= :max)")
     Page<Product> searchAndFilterProducts(
-            @Param("keyword") String keyword,
-            @Param("minPrice") BigDecimal minPrice,
-            @Param("maxPrice") BigDecimal maxPrice,
+            @Param("kw") String keyword,
+            @Param("cId") Integer categoryId,
+            @Param("bId") Integer brandId,
+            @Param("min") BigDecimal minPrice,
+            @Param("max") BigDecimal maxPrice,
             Pageable pageable);
 }

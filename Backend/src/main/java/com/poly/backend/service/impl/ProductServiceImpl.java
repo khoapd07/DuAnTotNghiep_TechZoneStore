@@ -50,10 +50,12 @@ public class ProductServiceImpl implements ProductService {
 
 
     @Override
-    public Page<ProductDTO> getProducts(String keyword, BigDecimal minPrice, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir) {
+    public Page<ProductDTO> getProducts(String keyword, Integer categoryId, Integer brandId, BigDecimal minPrice, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Product> productPage = productDAO.searchAndFilterProducts(keyword, minPrice, maxPrice, pageable);
+
+        // Bạn cần cập nhật hàm searchAndFilterProducts trong ProductDAO để nhận thêm 2 tham số này
+        Page<Product> productPage = productDAO.searchAndFilterProducts(keyword, categoryId, brandId, minPrice, maxPrice, pageable);
         return productPage.map(this::mapToDTO);
     }
 
