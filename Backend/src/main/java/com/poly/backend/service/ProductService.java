@@ -14,7 +14,7 @@ public interface ProductService {
     void deleteById(Integer id);
 
     // --- CÁC HÀM MỚI DÀNH CHO API (Chỉ dùng DTO) ---
-    Page<ProductDTO> getProducts(String keyword, BigDecimal minPrice, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir);
+    Page<ProductDTO> getProducts(String keyword, Integer categoryId, Integer brandId, BigDecimal minPrice, BigDecimal maxPrice, int page, int size, String sortBy, String sortDir);
     ProductDTO getProductById(Integer id);
 
     // Thêm mới và Cập nhật

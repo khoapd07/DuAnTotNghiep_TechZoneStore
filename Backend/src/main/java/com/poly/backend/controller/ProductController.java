@@ -22,6 +22,8 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<Page<ProductDTO>> getAllProducts(
             @RequestParam(value = "keyword", required = false) String keyword,
+            @RequestParam(value = "categoryId", required = false) Integer categoryId, // Thêm mới
+            @RequestParam(value = "brandId", required = false) Integer brandId,       // Thêm mới
             @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -29,7 +31,8 @@ public class ProductController {
             @RequestParam(value = "sortBy", defaultValue = "createdAt") String sortBy,
             @RequestParam(value = "sortDir", defaultValue = "desc") String sortDir
     ) {
-        Page<ProductDTO> products = productService.getProducts(keyword, minPrice, maxPrice, page, size, sortBy, sortDir);
+        // Truyền thêm categoryId và brandId vào service
+        Page<ProductDTO> products = productService.getProducts(keyword, categoryId, brandId, minPrice, maxPrice, page, size, sortBy, sortDir);
         return ResponseEntity.ok(products);
     }
 
