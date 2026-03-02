@@ -100,11 +100,26 @@ const isAdmin = ref(false);
 const checkLoginStatus = () => {
   const token = localStorage.getItem('jwt_token');
   const userRolesString = localStorage.getItem('user_role'); 
+  const userInfoString = localStorage.getItem('user_info'); // Lấy chuỗi JSON
 
   if (token) {
     isLoggedIn.value = true;
-    userInfo.value = localStorage.getItem('user_info') || 'User';
     
+    // XỬ LÝ LẤY TÊN HIỂN THỊ
+    if (userInfoString) {
+      try {
+        const parsedUser = JSON.parse(userInfoString);
+        // Ưu tiên hiển thị fullName, nếu không có thì lấy username, không có nữa thì để 'User'
+        userInfo.value = parsedUser.fullName || parsedUser.username || 'User';
+      } catch (e) {
+        console.error("Lỗi đọc thông tin user:", e);
+        userInfo.value = 'User';
+      }
+    } else {
+      userInfo.value = 'User';
+    }
+    
+    // XỬ LÝ QUYỀN (ROLE)
     if (userRolesString) {
       try {
         const roles = JSON.parse(userRolesString);
@@ -113,9 +128,18 @@ const checkLoginStatus = () => {
         console.error("Lỗi đọc quyền user:", e);
         isAdmin.value = false;
       }
+    } else if (userInfoString) {
+      // Bổ sung: Nếu bạn lưu role chung trong user_info thay vì user_role
+      try {
+        const parsedUser = JSON.parse(userInfoString);
+        isAdmin.value = parsedUser.role === 'Admin' || parsedUser.role === 'Staff';
+      } catch (e) {
+        isAdmin.value = false;
+      }
     } else {
       isAdmin.value = false;
     }
+    
     fetchMiniCart(); 
   } else {
     isLoggedIn.value = false;
@@ -128,9 +152,26 @@ const checkLoginStatus = () => {
 const fetchMiniCart = async () => {
   try {
     const token = localStorage.getItem('jwt_token');
-    const response = await axios.get('http://localhost:8080/api/cart', {
+    const userInfoString = localStorage.getItem('user_info');
+    
+    // Nếu không có token hoặc thông tin user thì không gọi API
+    if (!token || !userInfoString) return;
+
+    // Phân tích chuỗi JSON để lấy ra userId
+    const parsedUser = JSON.parse(userInfoString);
+    const customerId = parsedUser.userId; 
+
+    // Kiểm tra xem có lấy được ID không
+    if (!customerId) {
+        console.error("Không tìm thấy userId trong thông tin đăng nhập!");
+        return;
+    }
+
+    // Nối customerId vào cuối URL
+    const response = await axios.get(`http://localhost:8080/api/cart/${customerId}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
+    
     cartItems.value = response.data;
   } catch (error) {
     console.error("Lỗi tải mini cart:", error);
@@ -166,6 +207,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Phần CSS bạn cứ giữ nguyên giống file cũ của bạn */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
@@ -173,19 +215,14 @@ onUnmounted(() => {
 .bg-neon { background-color: #00FF33 !important; }
 .text-neon-dark { color: #00cc29 !important; }
 
-/* Custom Container */
 .narrow-container {
   max-width: 1200px !important; 
   margin-left: auto;
   margin-right: auto;
 }
 
-/* Ẩn mũi tên mặc định của Dropdown User */
-.dropdown-toggle-hide-arrow::after {
-  display: none !important;
-}
+.dropdown-toggle-hide-arrow::after { display: none !important; }
 
-/* CSS Mini Cart */
 .cart-dropdown { position: relative; }
 .cart-content {
   display: none;
@@ -202,31 +239,22 @@ onUnmounted(() => {
 }
 .cart-dropdown:hover .cart-content { display: block; }
 
-/* Fix lỗi di chuột bị mất menu Dropdown */
-.dropdown {
-  position: relative; /* Đảm bảo menu con căn theo thẻ cha này */
-}
-
+.dropdown { position: relative; }
 .dropdown:hover > .dropdown-menu {
   display: block;
-  margin-top: 0; /* Xóa margin mặc định của Bootstrap gây ra khoảng hở */
-  top: 100%; /* Ép menu dính sát ngay mép dưới của header */
+  margin-top: 0; 
+  top: 100%; 
 }
 
-/* Tùy chọn: Thêm một vùng đệm tàng hình để nối liền icon và menu */
 .dropdown-menu::before {
   content: "";
   position: absolute;
-  top: -15px; /* Kéo vùng cảm ứng lên trên 15px */
+  top: -15px; 
   left: 0;
   width: 100%;
   height: 15px;
   background: transparent;
 }
-.nav-link {
-  transition: color 0.2s;
-}
-.nav-link:hover {
-  color: #00FF33 !important;
-}
+.nav-link { transition: color 0.2s; }
+.nav-link:hover { color: #00FF33 !important; }
 </style>
