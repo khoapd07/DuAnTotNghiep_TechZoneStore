@@ -100,41 +100,28 @@ const isAdmin = ref(false);
 const checkLoginStatus = () => {
   const token = localStorage.getItem('jwt_token');
   const userRolesString = localStorage.getItem('user_role'); 
-  const userInfoString = localStorage.getItem('user_info'); // Lấy chuỗi JSON
+  const userInfoString = localStorage.getItem('user_info');
 
-  if (token) {
+  if (token && token !== "undefined" && token !== "null") {
     isLoggedIn.value = true;
     
-    // XỬ LÝ LẤY TÊN HIỂN THỊ
-    if (userInfoString) {
+    // XỬ LÝ LẤY TÊN
+    if (userInfoString && userInfoString !== "undefined" && userInfoString !== "null") {
       try {
         const parsedUser = JSON.parse(userInfoString);
-        // Ưu tiên hiển thị fullName, nếu không có thì lấy username, không có nữa thì để 'User'
         userInfo.value = parsedUser.fullName || parsedUser.username || 'User';
-      } catch (e) {
-        console.error("Lỗi đọc thông tin user:", e);
-        userInfo.value = 'User';
-      }
-    } else {
-      userInfo.value = 'User';
+      } catch (e) { userInfo.value = userInfoString; } // Nếu không phải JSON, lấy chuỗi gốc
     }
     
-    // XỬ LÝ QUYỀN (ROLE)
-    if (userRolesString) {
+    // XỬ LÝ QUYỀN (ROLE) - FIX LỖI "u"
+    if (userRolesString && userRolesString !== "undefined" && userRolesString !== "null") {
       try {
+        // Cố gắng parse nếu là JSON (ví dụ ["ROLE_ADMIN"])
         const roles = JSON.parse(userRolesString);
-        isAdmin.value = roles.includes('ROLE_ADMIN') || roles.includes('ROLE_STAFF');
+        isAdmin.value = Array.isArray(roles) && (roles.includes('ROLE_ADMIN') || roles.includes('ROLE_STAFF'));
       } catch (e) {
-        console.error("Lỗi đọc quyền user:", e);
-        isAdmin.value = false;
-      }
-    } else if (userInfoString) {
-      // Bổ sung: Nếu bạn lưu role chung trong user_info thay vì user_role
-      try {
-        const parsedUser = JSON.parse(userInfoString);
-        isAdmin.value = parsedUser.role === 'Admin' || parsedUser.role === 'Staff';
-      } catch (e) {
-        isAdmin.value = false;
+        // NẾU LỖI PARSE (do là chuỗi thuần 'ROLE_ADMIN'), kiểm tra trực tiếp chuỗi
+        isAdmin.value = userRolesString.includes('ROLE_ADMIN') || userRolesString.includes('ROLE_STAFF');
       }
     } else {
       isAdmin.value = false;
@@ -145,7 +132,6 @@ const checkLoginStatus = () => {
     isLoggedIn.value = false;
     userInfo.value = '';
     isAdmin.value = false;
-    cartItems.value = [];
   }
 };
 
