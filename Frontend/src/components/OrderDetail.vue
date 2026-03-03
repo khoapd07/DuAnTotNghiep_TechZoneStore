@@ -114,36 +114,95 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import axios from 'axios';
 
 const route = useRoute();
+const router = useRouter();
 
-// MOCK DATA: Chờ ráp API thực tế
-// Status: 0 (Pending), 1 (Confirmed), 2 (Shipping), 3 (Delivered), 4 (Cancelled)
+// Dữ liệu ban đầu (Sẽ bị ghi đè khi gọi API thành công)
 const orderData = ref({
-  orderCode: route.params.id || '#TZ-7798124',
-  orderDate: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
-  totalAmount: 25490000,
-  status: 0, // SỬA Ở ĐÂY: Đổi từ 2 thành 0 để mặc định là "Chờ xác nhận"
-  estimatedDelivery: 'Đang cập nhật', // Đơn mới đặt thường chưa có ngày dự kiến chính xác
+  orderCode: route.params.id,
+  orderDate: 'Đang tải...',
+  totalAmount: 0,
+  status: 0, 
+  estimatedDelivery: 'Đang cập nhật',
   shippingInfo: {
-    name: 'Nguyễn Minh Quân',
-    phone: '0908 XXX 123',
-    address: 'Số 45, Ngõ 123, Đường Xuân Thủy, Phường Dịch Vọng Hậu, Quận Cầu Giấy, Hà Nội'
+    name: 'Đang tải...',
+    phone: '...',
+    address: '...'
   },
   carrier: {
-    name: 'Đang chờ điều phối', // Chưa có đơn vị vận chuyển
+    name: 'Đang chờ điều phối',
     trackingCode: 'Chưa có'
   }
 });
 
+// Hàm lấy chi tiết đơn hàng từ Backend
+const fetchOrderDetail = async () => {
+  try {
+    const response = await axios.get(`http://localhost:8080/api/orders/code/${route.params.id}`);
+    const data = response.data;
+    
+    // Bóc tách thông tin Tên, SĐT, Địa chỉ từ chuỗi Note
+    // Mẫu: "Người nhận: A - SĐT: 0123 - Đ/C: HN. Ghi chú KH: abc"
+    let extName = 'Khách hàng';
+    let extPhone = 'Đang cập nhật';
+    let extAddress = data.note || 'Đang cập nhật';
+    
+    if (data.note && data.note.includes(' - SĐT:')) {
+      try {
+        const parts = data.note.split(' - ');
+        extName = parts[0].replace('Người nhận: ', '').replace('Khách vãng lai: ', '').trim();
+        extPhone = parts[1].replace('SĐT: ', '').trim();
+        extAddress = parts[2].replace('Đ/C: ', '').split('. Ghi chú')[0].trim();
+      } catch (e) { console.error("Lỗi bóc tách note", e); }
+    }
+
+    // Ghi đè dữ liệu lên giao diện
+    orderData.value = {
+      orderCode: data.orderCode,
+      orderDate: new Date(data.orderDate).toLocaleString('vi-VN', { 
+        hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' 
+      }),
+      totalAmount: data.finalAmount, // Lấy số tiền thực trả cuối cùng
+      status: parseStatusToNumber(data.statusName),
+      estimatedDelivery: 'Đang cập nhật',
+      shippingInfo: {
+        name: extName,
+        phone: extPhone,
+        address: extAddress
+      },
+      carrier: {
+        name: 'Đang chờ điều phối',
+        trackingCode: 'Chưa có'
+      }
+    };
+
+  } catch (error) {
+    console.error("Lỗi lấy chi tiết đơn hàng:", error);
+    alert("Không tìm thấy đơn hàng hợp lệ!");
+    router.push('/');
+  }
+};
+
 onMounted(() => {
-  // Tương lai bạn sẽ gọi API ở đây:
-  // axios.get(`http://localhost:8080/api/orders/${route.params.id}`).then(...)
+  fetchOrderDetail();
 });
 
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value).replace('₫', 'đ');
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
+};
+
+// Hàm chuyển đổi Status Text từ DB thành Số để thanh Stepper chạy
+const parseStatusToNumber = (statusName) => {
+  const s = String(statusName).toLowerCase();
+  if (s === 'pending' || s === 'chờ xác nhận') return 0;
+  if (s === 'confirmed' || s === 'đã xác nhận') return 1;
+  if (s === 'shipping' || s === 'đang giao hàng') return 2;
+  if (s === 'delivered' || s === 'giao hàng thành công') return 3;
+  if (s === 'cancelled' || s === 'đã hủy') return 4;
+  return 0; // Mặc định nếu không map được
 };
 
 // Tính toán thanh tiến trình (Progress bar width)

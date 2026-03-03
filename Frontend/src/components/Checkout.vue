@@ -139,7 +139,7 @@ const shippingInfo = ref({
   address: ''
 });
 
-// Hàm lấy User ID từ localStorage (Giống hệt bên Cart.vue)
+// Hàm lấy User ID từ localStorage
 const getCurrentUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
   if (userInfoString) {
@@ -150,26 +150,59 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// --- FETCH DATA GIỎ HÀNG ---
-const fetchCart = async () => {
+// Hàm hỗ trợ lấy Headers chứa Token (Copy từ MyAccount)
+const getAuthConfig = () => {
+  const token = localStorage.getItem('jwt_token'); 
+  return {
+    headers: { Authorization: `Bearer ${token}` }
+  };
+};
+
+// --- HÀM LẤY THÔNG TIN PROFILE ĐỂ AUTO-FILL ---
+const fetchUserProfile = async () => {
   const userId = getCurrentUserId();
-  if (!userId) {
-    alert("Phiên đăng nhập hết hạn!");
-    router.push('/login');
-    return;
-  }
+  if (!userId) return; // Nếu là khách vãng lai thì bỏ qua, để form trống
 
   try {
-    const response = await axios.get(`${API_BASE}/cart/${userId}`);
-    // Đảm bảo dữ liệu trả về gán đúng cấu trúc { items: [...], cartTotal: ... }
-    cartData.value = response.data;
+    const response = await axios.get(`http://localhost:8080/api/profile/${userId}`, getAuthConfig());
+    const user = response.data;
+    
+    // Gán dữ liệu từ DB vào form (Khớp với các trường bên MyAccount)
+    shippingInfo.value.fullName = user.fullName || '';
+    shippingInfo.value.phone = user.phoneNumber || '';
+    shippingInfo.value.email = user.email || '';
+    shippingInfo.value.address = user.address || '';
   } catch (error) {
-    console.error("Lỗi lấy giỏ hàng:", error);
+    console.error('Lỗi khi tải thông tin user:', error);
   }
 };
 
+// --- LẤY DỮ LIỆU TỪ SESSION STORAGE ---
 onMounted(() => {
-  fetchCart();
+  // 1. Gọi hàm lấy thông tin user điền vào form
+  fetchUserProfile();
+
+  // 2. Lấy dữ liệu giỏ hàng cần thanh toán
+  const checkoutDataStr = sessionStorage.getItem('checkout_data');
+  
+  if (checkoutDataStr) {
+    const parsedData = JSON.parse(checkoutDataStr);
+    
+    // Đổi key (name, img) từ Cart.vue sang chuẩn (productName, imageUrl) cho Checkout
+    cartData.value.items = parsedData.items.map(item => ({
+      productId: item.productId,
+      productName: item.name,
+      imageUrl: item.img,
+      quantity: item.quantity,
+      price: item.price,
+      subTotal: item.price * item.quantity
+    }));
+    
+    cartData.value.cartTotal = parsedData.subtotal;
+  } else {
+    alert("Không có sản phẩm nào để thanh toán!");
+    router.push('/cart');
+  }
 });
 
 // --- TÍNH TOÁN ---
@@ -195,21 +228,43 @@ const handlePlaceOrder = async () => {
   loading.value = true;
   
   try {
-    const payload = {
-      note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú KH: ${orderNote.value}`,
-      voucherCode: voucherCode.value
-    };
-
-    const response = await axios.post(`${API_BASE}/orders/${userId}/place`, payload);
+    let response;
     
+    // 1. DÀNH CHO KHÁCH ĐÃ ĐĂNG NHẬP
+    if (userId) {
+      const payload = {
+        note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú KH: ${orderNote.value}`,
+        voucherCode: voucherCode.value,
+        email: shippingInfo.value.email
+      };
+      // Nhớ truyền token khi gọi API placeOrder nếu backend của bạn yêu cầu bảo mật
+      response = await axios.post(`${API_BASE}/orders/${userId}/place`, payload, getAuthConfig());
+    } 
+    // 2. DÀNH CHO KHÁCH VÃNG LAI
+    else {
+      const payload = {
+        note: `Khách vãng lai: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú KH: ${orderNote.value}`,
+        voucherCode: voucherCode.value,
+        guestFullName: shippingInfo.value.fullName,
+        guestPhone: shippingInfo.value.phone,
+        guestEmail: shippingInfo.value.email,
+        guestAddress: shippingInfo.value.address,
+        items: cartData.value.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      };
+      response = await axios.post(`${API_BASE}/orders/guest/place`, payload);
+      
+      localStorage.removeItem('guest_cart');
+    }
+
     alert(`🎉 Đặt hàng thành công! Mã đơn của bạn là: ${response.data.orderCode}`);
     
-    // Báo cho các component khác (như Header) biết giỏ hàng đã trống để cập nhật lại số lượng
+    sessionStorage.removeItem('checkout_data');
     window.dispatchEvent(new Event('cart-updated'));
-    
-    //chuyển hướng
-    const orderCode = response.data.orderCode; 
-    router.push(`/order/${orderCode}`);
+    router.push(`/order/${response.data.orderCode}`);
     
   } catch (error) {
     const errorMsg = error.response?.data || "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.";

@@ -1,5 +1,6 @@
 package com.poly.backend.controller;
 
+import com.poly.backend.dto.GuestOrderRequestDTO;
 import com.poly.backend.dto.OrderRequestDTO;
 import com.poly.backend.dto.OrderResponseDTO;
 import com.poly.backend.service.OrderService;
@@ -56,6 +57,40 @@ public class OrderController {
 
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Lỗi khi lấy lịch sử đơn hàng: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API 3: Khách vãng lai tiến hành đặt hàng (Guest Checkout)
+     * URL: http://localhost:8080/api/orders/guest/place
+     */
+    @PostMapping("/guest/place")
+    public ResponseEntity<?> placeGuestOrder(@RequestBody GuestOrderRequestDTO request) {
+        try {
+            // Service xử lý: Lưu Bill với customer_id = null -> Lưu OrderDetails từ mảng items
+            OrderResponseDTO orderResponse = orderService.placeGuestOrder(request);
+            return ResponseEntity.ok(orderResponse);
+
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi hệ thống khi đặt hàng: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API 4: Lấy chi tiết đơn hàng theo Order Code (Dùng cho cả user & vãng lai)
+     * URL: http://localhost:8080/api/orders/code/{orderCode}
+     */
+    @GetMapping("/code/{orderCode}")
+    public ResponseEntity<?> getOrderByCode(@PathVariable String orderCode) {
+        try {
+            OrderResponseDTO order = orderService.getOrderByCode(orderCode);
+            return ResponseEntity.ok(order);
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi khi lấy đơn hàng: " + e.getMessage());
         }
     }
 }
