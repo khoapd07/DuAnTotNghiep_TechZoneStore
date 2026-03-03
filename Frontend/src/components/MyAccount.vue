@@ -13,16 +13,6 @@
                 <span class="fw-bold fs-7">Thông tin cá nhân</span>
               </a>
               
-              <!-- <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-dark">
-                <i class="bi bi-bag fs-5"></i>
-                <span class="fw-bold fs-7">Đơn hàng của tôi</span>
-              </a> -->
-              
-              <!-- <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-dark border-bottom">
-                <i class="bi bi-geo-alt fs-5"></i>
-                <span class="fw-bold fs-7">Sổ địa chỉ</span>
-              </a> -->
-              
               <a href="#" class="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-danger mt-2">
                 <i class="bi bi-box-arrow-right fs-5"></i>
                 <span class="fw-bold fs-7">Đăng xuất</span>
@@ -45,19 +35,19 @@
                 <div class="row g-4 mb-4">
                   <div class="col-md-6">
                     <label class="form-label fw-bold fs-8 text-dark">Họ và tên</label>
-                    <input type="text" class="form-control custom-input" v-model="profileForm.name" placeholder="Nhập họ và tên">
+                    <input type="text" class="form-control custom-input" v-model="profileForm.fullName" placeholder="Nhập họ và tên" required>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold fs-8 text-dark">Số điện thoại</label>
-                    <input type="text" class="form-control custom-input" v-model="profileForm.phone" placeholder="Nhập số điện thoại">
+                    <input type="text" class="form-control custom-input" v-model="profileForm.phoneNumber" placeholder="Nhập số điện thoại" required>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold fs-8 text-dark">Email</label>
-                    <input type="email" class="form-control custom-input" v-model="profileForm.email" placeholder="Nhập email">
+                    <input type="email" class="form-control custom-input" v-model="profileForm.email" placeholder="Nhập email" required>
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold fs-8 text-dark">Địa chỉ</label>
-                    <input type="text" class="form-control custom-input" v-model="profileForm.address" placeholder="Nhập địa chỉ">
+                    <input type="text" class="form-control custom-input" v-model="profileForm.address" placeholder="Nhập địa chỉ" required>
                   </div>
                 </div>
                 <button type="submit" class="btn btn-neon fw-bold px-4 py-2 fs-7 rounded-2 text-dark">
@@ -82,7 +72,7 @@
                   <div class="col-12">
                     <label class="form-label fw-bold fs-8 text-dark">Mật khẩu hiện tại</label>
                     <div class="input-group">
-                      <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.current" placeholder="••••••••">
+                      <input :type="showCurrentPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.currentPassword" placeholder="••••••••" required>
                       <span class="input-group-text custom-input bg-white border-start-0 cursor-pointer" @click="showCurrentPassword = !showCurrentPassword">
                         <i :class="showCurrentPassword ? 'bi bi-eye-slash text-muted' : 'bi bi-eye text-neon'"></i>
                       </span>
@@ -92,7 +82,7 @@
                   <div class="col-md-6">
                     <label class="form-label fw-bold fs-8 text-dark">Mật khẩu mới</label>
                     <div class="input-group">
-                      <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.new" placeholder="Mật khẩu ít nhất 8 ký tự">
+                      <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.newPassword" placeholder="Mật khẩu ít nhất 8 ký tự" required>
                       <span class="input-group-text custom-input bg-white border-start-0 cursor-pointer" @click="showNewPassword = !showNewPassword">
                         <i :class="showNewPassword ? 'bi bi-eye-slash text-muted' : 'bi bi-eye text-neon'"></i>
                       </span>
@@ -102,7 +92,7 @@
                   <div class="col-md-6">
                     <label class="form-label fw-bold fs-8 text-dark">Xác nhận mật khẩu mới</label>
                     <div class="input-group">
-                      <input :type="showConfirmPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.confirm" placeholder="Nhập lại mật khẩu mới">
+                      <input :type="showConfirmPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.confirmPassword" placeholder="Nhập lại mật khẩu mới" required>
                       <span class="input-group-text custom-input bg-white border-start-0 cursor-pointer" @click="showConfirmPassword = !showConfirmPassword">
                         <i :class="showConfirmPassword ? 'bi bi-eye-slash text-muted' : 'bi bi-eye text-neon'"></i>
                       </span>
@@ -155,39 +145,122 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from 'axios';
+
+const router = useRouter();
 
 // State ẩn/hiện mật khẩu
 const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
 
-// Mock data form profile
+// State data từ form
 const profileForm = ref({
-  name: 'Nguyễn Văn A',
-  phone: '0987 654 321',
-  email: 'nguyenvana@techzone.vn',
-  address: 'Số 123, Đường ABC, Quận 1, TP. HCM'
+  fullName: '',
+  phoneNumber: '',
+  email: '',
+  address: ''
 });
 
-// Data form đổi mật khẩu
 const pwdForm = ref({
-  current: '',
-  new: '',
-  confirm: ''
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: ''
 });
 
-// Hàm xử lý (Mock)
-const saveProfile = () => {
-  console.log('Lưu profile:', profileForm.value);
-  alert('Đã lưu thông tin hồ sơ!');
+// Hàm hỗ trợ lấy Headers
+const getAuthConfig = () => {
+  const token = localStorage.getItem('jwt_token'); 
+  return {
+    headers: { Authorization: `Bearer ${token}` }
+  };
 };
 
-const updatePassword = () => {
-  console.log('Đổi pass:', pwdForm.value);
-  // Thêm logic check pass trùng khớp ở đây
-  alert('Đã cập nhật mật khẩu!');
+// Hàm lấy userId từ localStorage (Giống Header.vue)
+const getUserId = () => {
+  const userInfoString = localStorage.getItem('user_info');
+  if (userInfoString) {
+    try {
+      const parsedUser = JSON.parse(userInfoString);
+      return parsedUser.userId;
+    } catch (e) {
+      console.error('Lỗi parse user_info');
+    }
+  }
+  return null;
 };
+
+// Fetch dữ liệu hồ sơ cá nhân
+const fetchProfile = async () => {
+  const userId = getUserId();
+  if (!userId) {
+    alert("Vui lòng đăng nhập để xem thông tin!");
+    router.push('/login');
+    return;
+  }
+
+  try {
+    const response = await axios.get(`http://localhost:8080/api/profile/${userId}`, getAuthConfig());
+    profileForm.value = response.data;
+  } catch (error) {
+    console.error('Lỗi khi tải thông tin cá nhân:', error);
+    if (error.response && error.response.status === 401) {
+      alert("Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại!");
+      localStorage.clear();
+      router.push('/login');
+    }
+  }
+};
+
+// Lưu Profile
+const saveProfile = async () => {
+  const userId = getUserId();
+  if (!userId) return;
+
+  try {
+    const response = await axios.put(`http://localhost:8080/api/profile/${userId}`, profileForm.value, getAuthConfig());
+    alert(response.data); // Hoặc dùng toast
+  } catch (error) {
+    console.error('Lưu profile thất bại:', error);
+    alert(error.response?.data || 'Đã xảy ra lỗi hệ thống!');
+  }
+};
+
+// Đổi Mật Khẩu
+const updatePassword = async () => {
+  if (pwdForm.value.newPassword !== pwdForm.value.confirmPassword) {
+    alert("Mật khẩu xác nhận không khớp!");
+    return;
+  }
+
+  const userId = getUserId();
+  if (!userId) return;
+
+  try {
+    const response = await axios.put(`http://localhost:8080/api/profile/${userId}/password`, pwdForm.value, getAuthConfig());
+    alert(response.data);
+    pwdForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' };
+  } catch (error) {
+    console.error('Đổi mật khẩu thất bại:', error);
+    alert(error.response?.data || 'Mật khẩu hiện tại không đúng hoặc lỗi hệ thống!');
+  }
+};
+
+// Xử lý Đăng xuất (Dùng chung icon đăng xuất bên Sidebar)
+const handleLogout = () => {
+  localStorage.removeItem('jwt_token');
+  localStorage.removeItem('user_role');
+  localStorage.removeItem('user_info');
+  
+  window.dispatchEvent(new Event('auth-change'));
+  router.push('/login');
+};
+
+onMounted(() => {
+  fetchProfile();
+});
 </script>
 
 <style scoped>
@@ -221,9 +294,9 @@ const updatePassword = () => {
   background-color: #f1f1f1;
 }
 .active-tab {
-  background-color: rgba(0, 255, 51, 0.1) !important; /* Nền xanh lá cực nhạt */
+  background-color: rgba(0, 255, 51, 0.1) !important;
   color: #00FF33 !important;
-  border-left: 4px solid #00FF33 !important; /* Vạch xanh lá đậm bên trái */
+  border-left: 4px solid #00FF33 !important;
 }
 .active-tab i {
   color: #00FF33 !important;
@@ -231,7 +304,7 @@ const updatePassword = () => {
 
 /* ------ FORM INPUTS STYLE ------ */
 .custom-input {
-  background-color: #F9FAFB; /* Nền input xám rất nhạt */
+  background-color: #F9FAFB;
   border: 1px solid #EAEAEA;
   padding: 0.6rem 1rem;
   border-radius: 8px;
@@ -251,7 +324,6 @@ const updatePassword = () => {
 }
 
 /* ------ BUTTONS STYLE ------ */
-/* Nút xanh lá đặc */
 .btn-neon {
   background-color: #00FF33;
   color: #000;
@@ -262,7 +334,6 @@ const updatePassword = () => {
   background-color: #00cc29;
 }
 
-/* Nút viền xanh lá (Cập nhật mật khẩu) */
 .btn-outline-neon {
   background-color: transparent;
   color: #00FF33;

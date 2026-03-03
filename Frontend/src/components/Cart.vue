@@ -28,7 +28,7 @@
               <div class="card-body p-4 d-flex align-items-center gap-4">
                 
                 <div class="form-check custom-checkbox">
-                  <input class="form-check-input shadow-none" type="checkbox" v-model="item.selected">
+                  <input class="form-check-input shadow-none" type="checkbox" v-model="item.selected" @change="saveGuestCartState">
                 </div>
 
                 <div class="product-img-box bg-light rounded-3 d-flex align-items-center justify-content-center p-2" style="width: 100px; height: 100px;">
@@ -159,7 +159,14 @@ const fetchCart = async () => {
     // KHÁCH VÃNG LAI: Lấy từ localStorage
     const guestCart = localStorage.getItem('guest_cart');
     if (guestCart) {
-      cartItems.value = JSON.parse(guestCart);
+      const parsedCart = JSON.parse(guestCart);
+      
+      // SỬA LỖI Ở ĐÂY: Gắn mặc định selected = true cho các item từ localStorage
+      cartItems.value = parsedCart.map(item => ({
+        ...item,
+        // Nếu đã có trạng thái selected lưu trước đó thì lấy, không thì mặc định là true (được tích sẵn)
+        selected: item.selected !== undefined ? item.selected : true 
+      }));
     } else {
       cartItems.value = [];
     }
@@ -196,8 +203,16 @@ onMounted(() => {
 // -----------------------------------------
 // 2. LOGIC GIAO DIỆN (CHECKBOX & TÍNH TIỀN)
 // -----------------------------------------
+// Hàm lưu lại trạng thái selected vào localStorage cho khách vãng lai
+const saveGuestCartState = () => {
+  if (!getCurrentUserId()) {
+    localStorage.setItem('guest_cart', JSON.stringify(cartItems.value));
+  }
+};
+
 const toggleSelectAll = () => {
   cartItems.value.forEach(item => item.selected = selectAll.value);
+  saveGuestCartState(); // Lưu lại khi nhấn chọn tất cả
 };
 
 const selectedCount = computed(() => cartItems.value.filter(item => item.selected).length);
@@ -319,11 +334,11 @@ const formatCurrency = (value) => {
 const goToCheckout = () => {
   const userId = getCurrentUserId();
   
-  if (!userId) {
-    alert('Vui lòng đăng nhập để tiến hành thanh toán!');
-    // router.push('/login'); // Chuyển sang trang đăng nhập nếu cần
-    return;
-  }
+  // if (!userId) {
+  //   alert('Vui lòng đăng nhập để tiến hành thanh toán!');
+  //   // router.push('/login'); // Chuyển sang trang đăng nhập nếu cần
+  //   return;
+  // }
 
   // Kiểm tra xem có sản phẩm nào được chọn không (dựa trên biến computed selectedCount của bạn)
   if (selectedCount.value === 0) {
@@ -331,9 +346,21 @@ const goToCheckout = () => {
     return;
   }
 
+  // Lưu thông tin tóm tắt đơn hàng vào sessionStorage
+  const selectedItems = cartItems.value.filter(item => item.selected);
+  const checkoutData = {
+    items: selectedItems,
+    subtotal: subtotal.value,
+    tax: tax.value,
+    total: total.value
+  };
+  sessionStorage.setItem('checkout_data', JSON.stringify(checkoutData));
+
   // Chuyển hướng sang trang Thanh toán
   router.push('/checkout');
 };
+
+
 </script>
 
 <style scoped>
