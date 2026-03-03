@@ -71,14 +71,14 @@
                 <span class="fw-bold px-3">{{ quantity }}</span>
                 <button class="btn btn-sm btn-link text-dark text-decoration-none fw-bold px-2 shadow-none" @click="quantity++">+</button>
               </div>
-             <button class="btn btn-neon fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2 shadow-sm text-dark">
-    <i class="bi bi-cart-plus fs-5"></i> THÊM VÀO GIỎ HÀNG
-</button>
+             <button @click="addToCartMain" :disabled="product.stockQuantity <= 0" class="btn btn-neon fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2 shadow-sm text-dark">
+                <i class="bi bi-cart-plus fs-5"></i> THÊM VÀO GIỎ HÀNG
+              </button>
               <button class="btn btn-outline-dark rounded-2 px-3 d-flex align-items-center justify-content-center shadow-none">
                 <i class="bi bi-heart"></i>
               </button>
             </div>
-            <button class="btn btn-neon fw-bold w-100 py-3 fs-6 text-dark shadow-sm">
+            <button @click="buyNowMain" :disabled="product.stockQuantity <= 0" class="btn btn-neon fw-bold w-100 py-3 fs-6 text-dark shadow-sm">
               MUA NGAY
             </button>
           </div>
@@ -135,8 +135,12 @@
                   <h6 class="fw-black m-0 d-inline-block fs-6 text-white">{{ formatCurrency(item.salePrice || item.price) }}</h6>
                 </div>
                 <div class="d-flex gap-2">
-                  <button class="btn btn-outline-light btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1" style="width: 40px;"><i class="bi bi-cart-plus fs-6"></i></button>
-                  <button class="btn btn-neon fw-bold flex-grow-1 fs-8 p-2 rounded-2 text-dark">MUA NGAY</button>
+                  <button @click="addToCartSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-outline-light btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1" style="width: 40px;">
+                    <i class="bi bi-cart-plus fs-6"></i>
+                  </button>
+                  <button @click="buyNowSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-neon fw-bold flex-grow-1 fs-8 p-2 rounded-2 text-dark">
+                    MUA NGAY
+                  </button>
                 </div>
               </div>
             </div>
@@ -149,7 +153,7 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
 const route = useRoute();
@@ -192,6 +196,70 @@ const fetchReviews = async () => {
     const res = await axios.get(`http://localhost:8080/api/reviews/product/${product.value.productId || product.value.id}`);
     reviews.value = res.data;
   } catch (e) { reviews.value = []; }
+};
+
+//thêm vào giỏ hàng
+const getCurrentUserId = () => {
+  const userInfoString = localStorage.getItem('user_info');
+  if (userInfoString) {
+    try {
+      return JSON.parse(userInfoString).userId;
+    } catch (e) { return null; }
+  }
+  return null;
+};
+
+const handleAddToCart = async (productObj, qtyToAdd) => {
+  if (!productObj) return;
+  const pId = productObj.productId || productObj.id;
+  const userId = getCurrentUserId();
+
+  if (userId) {
+    // ĐÃ ĐĂNG NHẬP: GỌI API BACKEND
+    try {
+      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, { 
+        productId: pId, 
+        quantity: qtyToAdd 
+      });
+      alert("Đã thêm sản phẩm vào giỏ hàng!");
+      window.dispatchEvent(new Event('cart-updated')); 
+    } catch (error) {
+      alert(error.response?.data || "Không thể thêm vào giỏ hàng");
+    }
+  } else {
+    // KHÁCH VÃNG LAI: LƯU LOCALSTORAGE
+    let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
+    const existingItemIndex = guestCart.findIndex(i => i.productId === pId);
+
+    if (existingItemIndex !== -1) {
+      guestCart[existingItemIndex].quantity += qtyToAdd;
+    } else {
+      guestCart.push({
+        productId: pId,
+        name: productObj.name,
+        price: productObj.salePrice || productObj.price,
+        quantity: qtyToAdd,
+        img: productObj.imageUrl || 'https://via.placeholder.com/150'
+      });
+    }
+    localStorage.setItem('guest_cart', JSON.stringify(guestCart));
+    alert("Đã thêm sản phẩm vào giỏ hàng!");
+    window.dispatchEvent(new Event('cart-updated'));
+  }
+};
+
+// --- ÁP DỤNG CHO SẢN PHẨM CHÍNH (Lấy số lượng từ input) ---
+const addToCartMain = () => handleAddToCart(product.value, quantity.value);
+const buyNowMain = async () => {
+  await addToCartMain();
+  router.push('/cart');
+};
+
+// --- ÁP DỤNG CHO SẢN PHẨM TƯƠNG TỰ (Mặc định số lượng = 1) ---
+const addToCartSimilar = (item) => handleAddToCart(item, 1);
+const buyNowSimilar = async (item) => {
+  await addToCartSimilar(item);
+  router.push('/cart');
 };
 
 watch(() => route.params.id, (newId) => { if (newId) fetchProductDetail(newId); });

@@ -46,7 +46,14 @@ public class UserServiceImpl implements UserService {
         User user = findByUsername(username);
         user.setFullName(dto.getFullName());
         user.setPhoneNumber(dto.getPhoneNumber());
-        user.setEmail(dto.getEmail());
+//        user.setEmail(dto.getEmail());
+        if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+            // Kiểm tra xem email này có bị User KHÁC (khác userId hiện tại) chiếm dụng chưa
+            if (userDAO.existsByEmailAndUserIdNot(dto.getEmail(), user.getUserId())) {
+                throw new RuntimeException("Email này đã được sử dụng bởi tài khoản khác! Vui lòng dùng email khác.");
+            }
+            user.setEmail(dto.getEmail());
+        }
         user.setAddress(dto.getAddress());
         // Các trường khác giữ nguyên
         return userDAO.save(user);

@@ -16,4 +16,6 @@ public interface CartService {
     CartResponseDTO removeCartItem(Integer userId, Integer productId);
 
     CartResponseDTO clearCart(Integer userId);
+
+    CartResponseDTO updateItemQuantity(Integer userId, CartItemRequestDTO request);
 }

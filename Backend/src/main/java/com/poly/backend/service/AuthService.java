@@ -37,8 +37,8 @@ public class AuthService {
         customer.setPassword(passwordEncoder.encode(req.getPassword()));
 
         // Gán dữ liệu mặc định để tránh lỗi NOT NULL trong Database
-        customer.setEmail(req.getUsername() + "@techzone.local"); // Tạo email ảo
-        customer.setFullName(req.getUsername()); // Lấy username làm tên hiển thị ban đầu
+//        customer.setEmail(req.getUsername() + "@techzone.local"); // Tạo email ảo
+//        customer.setFullName(req.getUsername()); // Lấy username làm tên hiển thị ban đầu
         customer.setStatus(true);
 
         // Gán quyền User (Role ID = 0)

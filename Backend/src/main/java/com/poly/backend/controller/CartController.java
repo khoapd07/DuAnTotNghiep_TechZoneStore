@@ -73,4 +73,18 @@ public class CartController {
             return ResponseEntity.badRequest().body("Lỗi khi làm sạch giỏ hàng: " + e.getMessage());
         }
     }
+
+    // API MỚI: 6. Cập nhật chính xác số lượng (Dùng cho nút +/- trong Giỏ hàng)
+    @PutMapping("/{userId}/update")
+    public ResponseEntity<?> updateQuantity(
+            @PathVariable Integer userId,
+            @RequestBody CartItemRequestDTO request) {
+        try {
+            return ResponseEntity.ok(cartService.updateItemQuantity(userId, request));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Đã xảy ra lỗi: " + e.getMessage());
+        }
+    }
 }

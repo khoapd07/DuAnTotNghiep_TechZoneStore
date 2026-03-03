@@ -109,14 +109,19 @@ public class CartServiceImpl implements CartService {
                 .findFirst();
 
         if (existingItem.isPresent()) {
+            // NẾU ĐÃ CÓ -> THỰC HIỆN CỘNG DỒN
             CartItem item = existingItem.get();
-            if (request.getQuantity() <= 0) {
-                cart.getCartItems().remove(item);
-                cartItemDAO.delete(item);
-            } else {
-                item.setQuantity(request.getQuantity());
+            int newQuantity = item.getQuantity() + request.getQuantity();
+
+            if (newQuantity > product.getStockQuantity()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
             }
-        } else if (request.getQuantity() > 0) {
+            item.setQuantity(newQuantity);
+        } else {
+            // NẾU CHƯA CÓ -> TẠO MỚI
+            if (request.getQuantity() > product.getStockQuantity()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
+            }
             cart.getCartItems().add(CartItem.builder()
                     .cart(cart)
                     .product(product)
@@ -129,25 +134,38 @@ public class CartServiceImpl implements CartService {
 
     @Override
     @Transactional
+    public CartResponseDTO updateItemQuantity(Integer userId, CartItemRequestDTO request) {
+        Cart cart = getEntityCart(userId);
+        Product product = productDAO.findById(request.getProductId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm"));
+
+        if (request.getQuantity() > product.getStockQuantity()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
+        }
+
+        Optional<CartItem> existingItem = cart.getCartItems().stream()
+                .filter(item -> item.getProduct().getProductId().equals(product.getProductId()))
+                .findFirst();
+
+        if (existingItem.isPresent()) {
+            CartItem item = existingItem.get();
+            if (request.getQuantity() <= 0) {
+                cart.getCartItems().remove(item);
+                cartItemDAO.delete(item);
+            } else {
+                item.setQuantity(request.getQuantity()); // Ghi đè tuyệt đối
+            }
+        }
+        return mapToDTO(cartDAO.save(cart));
+    }
+
+    @Override
+    @Transactional
     public CartResponseDTO mergeLocalCart(Integer userId, List<CartItemRequestDTO> localCartItems) {
-        // Gộp dữ liệu từ LocalStorage khi User vãng lai vừa đăng nhập
         if (localCartItems != null && !localCartItems.isEmpty()) {
             for (CartItemRequestDTO localItem : localCartItems) {
                 try {
-                    Cart cart = getEntityCart(userId);
-                    int currentQuantity = 0;
-
-                    if (cart.getCartItems() != null) {
-                        currentQuantity = cart.getCartItems().stream()
-                                .filter(i -> i.getProduct().getProductId().equals(localItem.getProductId()))
-                                .map(CartItem::getQuantity)
-                                .findFirst().orElse(0);
-                    }
-
-                    // Cộng dồn: Số lượng cũ trong DB + Số lượng dưới Local Storage
-                    localItem.setQuantity(currentQuantity + localItem.getQuantity());
-
-                    // Tái sử dụng hàm add để đi qua bộ lọc kiểm tra tồn kho
+                    // Vì hàm addOrUpdateCartItem giờ đã là CỘNG DỒN, nên code gộp giỏ hàng trở nên siêu ngắn!
                     addOrUpdateCartItem(userId, localItem);
                 } catch (ResponseStatusException e) {
                     System.out.println("Bỏ qua món hàng gộp vượt tồn kho: " + e.getReason());

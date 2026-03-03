@@ -248,7 +248,7 @@ const syncQuantityWithBackend = (productId, newQuantity) => {
   debounceTimer = setTimeout(async () => {
     try {
       // ĐÃ SỬA: URL có thêm /${userId}/add
-      await axios.post(`${API_URL}/${userId}/add`, { 
+      await axios.put(`${API_URL}/${userId}/update`, { 
         productId: productId,
         quantity: newQuantity
       });
