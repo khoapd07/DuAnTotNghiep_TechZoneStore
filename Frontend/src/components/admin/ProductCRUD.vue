@@ -1,5 +1,6 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
+    
     <aside class="sidebar bg-white border-end d-flex flex-column sticky-top" style="width: 220px; height: 100vh;">
       <div class="p-3 border-bottom">
         <h4 class="fw-black text-dark m-0 d-flex align-items-center gap-1 fs-5">
@@ -30,7 +31,27 @@
               <i class="bi bi-people"></i> <span class="fw-bold fs-7">Khách hàng</span>
             </router-link>
           </li>
+          <li class="nav-item mt-2">
+            <router-link to="/admin/report" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
+              <i class="bi bi-bar-chart-line"></i> <span class="fw-bold fs-7">Báo cáo</span>
+            </router-link>
+          </li>
         </ul>
+      </div>
+
+      <div class="p-3 border-top">
+        <a href="#" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark mb-3 px-2">
+          <i class="bi bi-gear"></i> <span class="fw-bold fs-7">Cài đặt</span>
+        </a>
+        <div class="d-flex align-items-center gap-2 px-1">
+          <div class="avatar bg-neon text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 0.85rem;">
+            A
+          </div>
+          <div>
+            <h6 class="m-0 fw-bold fs-7">Admin TechZone</h6>
+            <small class="text-muted" style="font-size: 0.65rem;">admin@techzone.vn</small>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -59,7 +80,7 @@
       <div class="row g-4 mb-4">
         <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
-            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng sản phẩm</p><h2 class="fw-black text-dark m-0">{{ stats.total }}</h2></div>
+            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng số lượng SP</p><h2 class="fw-black text-dark m-0">{{ stats.total }}</h2></div>
             <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-box-seam fs-4"></i></div>
           </div>
         </div>
@@ -127,7 +148,6 @@
             <div class="row g-3">
               <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm</label><input type="text" v-model="form.name" class="form-control fs-7"></div>
               
-              <!-- DANH MỤC (bind bằng ID) -->
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Danh mục</label>
                 <select v-model="form.categoryId" class="form-select fs-7 shadow-none">
@@ -136,7 +156,6 @@
                 </select>
               </div>
 
-              <!-- THƯƠNG HIỆU (bind bằng ID) -->
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Thương hiệu</label>
                 <select v-model="form.brandId" class="form-select fs-7 shadow-none">
@@ -177,8 +196,8 @@ const currentId = ref(null);
 
 const form = reactive({ 
   name: '', 
-  categoryId: null,      // ← SỬA: bind bằng ID
-  brandId: null,         // ← SỬA: bind bằng ID
+  categoryId: null,
+  brandId: null,
   price: 0, 
   stockQuantity: 0, 
   imageUrl: '', 
@@ -213,7 +232,8 @@ const fetchBrands = async () => {
 };
 
 const stats = computed(() => ({
-  total: productList.value.length,
+  // Sửa chỗ này: Tính tổng số lượng của tất cả sản phẩm thay vì đếm số dòng
+  total: productList.value.reduce((sum, p) => sum + (Number(p.stockQuantity) || 0), 0),
   lowStock: productList.value.filter(p => p.stockQuantity <= 15).length,
   categories: [...new Set(productList.value.map(p => p.categoryName))].filter(Boolean).length
 }));
@@ -239,9 +259,9 @@ const openAddModal = () => {
 const openEditModal = (p) => {
   isEditing.value = true;
   currentId.value = p.id || p.productId; 
-  Object.assign(form, p);                    // copy hết dữ liệu cũ
-  form.categoryId = p.categoryId;            // ← ép bind ID đúng
-  form.brandId = p.brandId;                  // ← ép bind ID đúng
+  Object.assign(form, p); 
+  form.categoryId = p.categoryId; 
+  form.brandId = p.brandId; 
   showModal.value = true;
 };
 
@@ -281,3 +301,48 @@ onMounted(() => {
   fetchBrands(); 
 });
 </script>
+
+<style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+.admin-layout { 
+  font-family: 'Inter', system-ui, sans-serif; 
+}
+.bg-light-gray { background-color: #F4F6F8; }
+.fw-black { font-weight: 900; }
+.fs-7 { font-size: 0.85rem; }
+.fs-8 { font-size: 0.75rem; }
+
+/* Custom Colors */
+.text-neon { color: #00FF33 !important; }
+.bg-neon { background-color: #00FF33 !important; }
+.btn-neon { background-color: #00FF33; border: none; }
+.btn-neon:hover { background-color: #00e62e; }
+
+/* Sidebar Nav */
+.custom-nav .nav-link {
+  padding: 0.6rem 1rem;
+  transition: all 0.2s ease;
+}
+.custom-nav .nav-link.active {
+  background-color: rgba(0, 255, 51, 0.1);
+  color: #00FF33 !important;
+  border-left: 4px solid #00FF33;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+.custom-nav .nav-link:hover:not(.active) {
+  background-color: #f8f9fa;
+}
+
+/* Bảng dữ liệu */
+.table th { letter-spacing: 0.5px; }
+.border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
+.border-bottom-dashed:last-child { border-bottom: none; }
+.cursor-pointer { cursor: pointer; }
+
+/* Tránh giật UI khi hover dòng bảng */
+.table-hover tbody tr:hover td {
+  background-color: #f8f9fa;
+}
+</style>
