@@ -29,24 +29,24 @@
           <li class="nav-item dropdown cart-dropdown">
             <router-link to="/cart" class="nav-link position-relative text-dark p-0">
               <i class="bi bi-cart2 fs-5"></i>
-              <span v-if="isLoggedIn && cartCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-neon text-dark" style="font-size: 0.6rem;">
+              <span v-if="cartCount > 0" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-neon text-dark" style="font-size: 0.6rem;">
                 {{ cartCount }}
               </span>
             </router-link>
 
-            <div class="cart-content" v-if="isLoggedIn">
+            <div class="cart-content">
               <div v-if="cartItems.length === 0" class="text-center py-4 text-muted fs-7">
                 Giỏ hàng trống 😢
               </div>
 
               <div v-else>
-                <div v-for="item in cartItems" :key="item.maGH" class="cart-item d-flex align-items-center py-2 border-bottom">
-                  <img :src="item.sanPham.imgUrl" class="rounded object-fit-cover me-2" style="width: 50px; height: 50px;" alt="SP">
+                <div v-for="item in cartItems" :key="item.maGH || item.id" class="cart-item d-flex align-items-center py-2 border-bottom">
+                  <img :src="item.img" class="rounded object-fit-cover me-2" style="width: 50px; height: 50px;" alt="SP">
                   <div class="flex-grow-1">
-                    <div class="fw-bold fs-7 text-truncate" style="max-width: 180px;">{{ item.sanPham.tenSP }}</div>
+                    <div class="fw-bold fs-7 text-truncate" style="max-width: 180px;">{{ item.name }}</div>
                     <div class="d-flex justify-content-between align-items-center mt-1">
-                      <small class="text-muted fs-8">SL: {{ item.soLuong }}</small>
-                      <div class="text-neon fw-bold fs-7">{{ formatCurrency(item.sanPham.donGiaBan * item.soLuong) }}</div>
+                      <small class="text-muted fs-8">SL: {{ item.quantity }}</small>
+                      <div class="text-neon fw-bold fs-7">{{ formatCurrency(item.price * item.quantity) }}</div>
                     </div>
                   </div>
                 </div>
@@ -100,7 +100,7 @@ const isAdmin = ref(false);
 const checkLoginStatus = () => {
   const token = localStorage.getItem('jwt_token');
   const userRolesString = localStorage.getItem('user_role'); 
-  const userInfoString = localStorage.getItem('user_info'); // Lấy chuỗi JSON
+  const userInfoString = localStorage.getItem('user_info'); 
 
   if (token) {
     isLoggedIn.value = true;
@@ -109,10 +109,8 @@ const checkLoginStatus = () => {
     if (userInfoString) {
       try {
         const parsedUser = JSON.parse(userInfoString);
-        // Ưu tiên hiển thị fullName, nếu không có thì lấy username, không có nữa thì để 'User'
         userInfo.value = parsedUser.fullName || parsedUser.username || 'User';
       } catch (e) {
-        console.error("Lỗi đọc thông tin user:", e);
         userInfo.value = 'User';
       }
     } else {
@@ -125,11 +123,9 @@ const checkLoginStatus = () => {
         const roles = JSON.parse(userRolesString);
         isAdmin.value = roles.includes('ROLE_ADMIN') || roles.includes('ROLE_STAFF');
       } catch (e) {
-        console.error("Lỗi đọc quyền user:", e);
         isAdmin.value = false;
       }
     } else if (userInfoString) {
-      // Bổ sung: Nếu bạn lưu role chung trong user_info thay vì user_role
       try {
         const parsedUser = JSON.parse(userInfoString);
         isAdmin.value = parsedUser.role === 'Admin' || parsedUser.role === 'Staff';
@@ -140,41 +136,59 @@ const checkLoginStatus = () => {
       isAdmin.value = false;
     }
     
-    fetchMiniCart(); 
   } else {
+    // KHÁCH VÃNG LAI
     isLoggedIn.value = false;
     userInfo.value = '';
     isAdmin.value = false;
-    cartItems.value = [];
   }
+  
+  // LƯU Ý MỚI: Dù đăng nhập hay chưa đều phải gọi hàm lấy giỏ hàng
+  fetchMiniCart(); 
 };
 
 const fetchMiniCart = async () => {
   try {
     const token = localStorage.getItem('jwt_token');
-    const userInfoString = localStorage.getItem('user_info');
     
-    // Nếu không có token hoặc thông tin user thì không gọi API
-    if (!token || !userInfoString) return;
+    if (token) {
+      // 1. NẾU CÓ TOKEN (Đã đăng nhập) => Gọi API lên Backend
+      const userInfoString = localStorage.getItem('user_info');
+      if (!userInfoString) return;
 
-    // Phân tích chuỗi JSON để lấy ra userId
-    const parsedUser = JSON.parse(userInfoString);
-    const customerId = parsedUser.userId; 
+      const parsedUser = JSON.parse(userInfoString);
+      const customerId = parsedUser.userId; 
 
-    // Kiểm tra xem có lấy được ID không
-    if (!customerId) {
-        console.error("Không tìm thấy userId trong thông tin đăng nhập!");
-        return;
+      if (!customerId) return;
+
+      const response = await axios.get(`http://localhost:8080/api/cart/${customerId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // ĐÃ SỬA: Lấy mảng items từ response giống bên Cart.vue
+      const backendItems = response.data.items || response.data; // Phòng hờ nếu trả về thẳng list
+      
+      // Map dữ liệu cho giống với template mới sửa ở trên
+      cartItems.value = backendItems.map(bItem => ({
+        productId: bItem.productId,
+        name: bItem.productName,
+        price: bItem.salePrice || bItem.price, // Ưu tiên giá sale
+        quantity: bItem.quantity,
+        img: bItem.imageUrl
+      }));
+
+    } else {
+      // 2. NẾU KHÔNG CÓ TOKEN (Khách vãng lai) => Lấy từ localStorage Frontend
+      const guestCart = localStorage.getItem('guest_cart');
+      if (guestCart) {
+        cartItems.value = JSON.parse(guestCart);
+      } else {
+        cartItems.value = [];
+      }
     }
-
-    // Nối customerId vào cuối URL
-    const response = await axios.get(`http://localhost:8080/api/cart/${customerId}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    cartItems.value = response.data;
   } catch (error) {
     console.error("Lỗi tải mini cart:", error);
+    cartItems.value = []; 
   }
 };
 
@@ -186,8 +200,12 @@ const handleLogout = () => {
   localStorage.removeItem('jwt_token');
   localStorage.removeItem('user_role');
   localStorage.removeItem('user_info');
+  
   isLoggedIn.value = false;
-  cartItems.value = [];
+  
+  // Chuyển về load giỏ hàng khách thay vì clear sạch
+  fetchMiniCart(); 
+  
   window.dispatchEvent(new Event('auth-change'));
   router.push('/login');
 };
@@ -199,14 +217,21 @@ const formatCurrency = (value) => {
 onMounted(() => {
   checkLoginStatus();
   window.addEventListener('auth-change', checkLoginStatus);
+  window.addEventListener('cart-updated', fetchMiniCart);
 });
 
 onUnmounted(() => {
   window.removeEventListener('auth-change', checkLoginStatus);
+  window.removeEventListener('cart-updated', fetchMiniCart);
 });
 </script>
 
 <style scoped>
+nav.navbar {
+  position: sticky; /* Giữ thanh header đứng yên khi cuộn trang */
+  top: 0;
+  z-index: 1050 !important; /* Đảm bảo luôn đè lên mọi thứ (kể cả cột tóm tắt đơn hàng z-index 1020) */
+}
 /* Phần CSS bạn cứ giữ nguyên giống file cũ của bạn */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }

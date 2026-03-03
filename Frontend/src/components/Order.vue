@@ -80,7 +80,9 @@
             </div>
             
             <div class="d-flex flex-wrap justify-content-end gap-2 order-0 order-sm-1">
-              <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2">Xem chi tiết</button>
+              <router-link :to="`/order/${order.orderCode}`" class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2 text-decoration-none">
+                Xem chi tiết
+              </router-link>
               
               <template v-if="translateStatus(order.statusName) === 'Giao hàng thành công'">
                 <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2">Mua lại</button>
@@ -111,21 +113,38 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router'; // Thêm router để chuyển hướng nếu chưa đăng nhập
 import axios from 'axios';
 
+const router = useRouter();
 const activeTab = ref('Tất cả');
 const tabs = ['Tất cả', 'Chờ xác nhận', 'Đang giao', 'Đã giao', 'Đã hủy'];
 const orders = ref([]);
 const loading = ref(true);
 
-// Mock USER_ID - Sau này lấy từ Auth Store
-const CURRENT_USER_ID = 1;
+// 1. Hàm lấy User ID đang đăng nhập
+const getCurrentUserId = () => {
+  const userInfoString = localStorage.getItem('user_info');
+  if (userInfoString) {
+    try {
+      return JSON.parse(userInfoString).userId;
+    } catch (e) { return null; }
+  }
+  return null;
+};
 
-// 1. Lấy dữ liệu từ Backend
+// 2. Lấy dữ liệu từ Backend
 const fetchOrders = async () => {
+  const userId = getCurrentUserId();
+  if (!userId) {
+    alert("Vui lòng đăng nhập để xem lịch sử đơn hàng!");
+    router.push('/login');
+    return;
+  }
+
   loading.value = true;
   try {
-    const response = await axios.get(`http://localhost:8080/api/orders/${CURRENT_USER_ID}/history`);
+    const response = await axios.get(`http://localhost:8080/api/orders/${userId}/history`);
     orders.value = response.data;
   } catch (error) {
     console.error("Lỗi khi lấy lịch sử đơn hàng:", error);
@@ -138,9 +157,9 @@ onMounted(() => {
   fetchOrders();
 });
 
-// 2. Hàm bổ trợ định dạng và hiển thị
+// 3. Hàm bổ trợ định dạng và hiển thị
 const formatCurrency = (value) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value).replace('₫', 'đ');
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
 };
 
 const formatDate = (dateString) => {
@@ -152,23 +171,23 @@ const formatDate = (dateString) => {
   });
 };
 
-// Hàm dịch Status từ Backend (Tiếng Anh) sang UI (Tiếng Việt)
+// Dịch Status từ Backend sang UI (Hỗ trợ cả chữ tiếng Anh và số từ DB)
 const translateStatus = (status) => {
-  switch(status) {
-    case 'Pending': return 'Chờ xác nhận';
-    case 'Confirmed': return 'Chờ lấy hàng';
-    case 'Shipping': return 'Đang giao hàng';
-    case 'Delivered': return 'Giao hàng thành công';
-    case 'Cancelled': return 'Đã hủy';
-    default: return status;
-  }
+  const s = String(status).toLowerCase();
+  if (s === '0' || s === 'pending') return 'Chờ xác nhận';
+  if (s === '1' || s === 'confirmed') return 'Chờ lấy hàng';
+  if (s === '2' || s === 'shipping') return 'Đang giao hàng';
+  if (s === '3' || s === 'delivered') return 'Giao hàng thành công';
+  if (s === '4' || s === 'cancelled') return 'Đã hủy';
+  return status;
 };
 
 const getStatusBadge = (status) => {
   switch(status) {
     case 'Giao hàng thành công': return 'bg-success-subtle text-success border-success-subtle';
     case 'Đang giao hàng': return 'bg-warning-subtle text-warning border-warning-subtle';
-    case 'Chờ xác nhận': return 'bg-primary-subtle text-primary border-primary-subtle';
+    case 'Chờ xác nhận': 
+    case 'Chờ lấy hàng': return 'bg-primary-subtle text-primary border-primary-subtle';
     case 'Đã hủy': return 'bg-danger-subtle text-danger border-danger-subtle';
     default: return 'bg-light text-dark border-light';
   }
@@ -178,18 +197,19 @@ const getStatusIcon = (status) => {
   switch(status) {
     case 'Giao hàng thành công': return 'bi-check-circle-fill';
     case 'Đang giao hàng': return 'bi-truck';
-    case 'Chờ xác nhận': return 'bi-hourglass-split';
+    case 'Chờ xác nhận': 
+    case 'Chờ lấy hàng': return 'bi-hourglass-split';
     case 'Đã hủy': return 'bi-x-circle-fill';
     default: return 'bi-box';
   }
 };
 
-// 3. Logic lọc đơn hàng theo Tab
+// 4. Logic lọc đơn hàng theo Tab
 const filteredOrders = computed(() => {
   if (activeTab.value === 'Tất cả') return orders.value;
-  if (activeTab.value === 'Đã giao') return orders.value.filter(o => translateStatus(o.statusName) === 'Giao hàng thành công');
-  if (activeTab.value === 'Đang giao') return orders.value.filter(o => translateStatus(o.statusName) === 'Đang giao hàng');
-  return orders.value.filter(o => translateStatus(o.statusName) === activeTab.value);
+  if (activeTab.value === 'Đã giao') return orders.value.filter(o => translateStatus(o.statusName || o.status) === 'Giao hàng thành công');
+  if (activeTab.value === 'Đang giao') return orders.value.filter(o => translateStatus(o.statusName || o.status) === 'Đang giao hàng');
+  return orders.value.filter(o => translateStatus(o.statusName || o.status) === activeTab.value);
 });
 </script>
 

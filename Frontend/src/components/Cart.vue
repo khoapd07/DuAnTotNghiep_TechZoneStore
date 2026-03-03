@@ -98,7 +98,7 @@
                 </div>
               </div>
 
-              <button class="btn btn-neon w-100 fw-black py-3 rounded-3 d-flex align-items-center justify-content-center gap-2 fs-7 text-dark shadow-sm">
+              <button @click="goToCheckout" class="btn btn-neon w-100 fw-black py-3 rounded-3 d-flex align-items-center justify-content-center gap-2 fs-7 text-dark shadow-sm">
                 TIẾN HÀNH THANH TOÁN <i class="bi bi-lightning-fill"></i>
               </button>
             </div>
@@ -126,36 +126,61 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios'; // Nhớ chạy lệnh: npm install axios
+import axios from 'axios'; 
 
-// Thay ID này bằng logic lấy ID User đang đăng nhập từ LocalStorage/Vuex/Pinia
-const CURRENT_USER_ID = 1; 
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
+
 const API_URL = 'http://localhost:8080/api/cart';
 
 const cartItems = ref([]);
 const selectAll = ref(false);
 
+let debounceTimer;
+
+const getCurrentUserId = () => {
+  const userInfoString = localStorage.getItem('user_info');
+  if (userInfoString) {
+    try {
+      return JSON.parse(userInfoString).userId;
+    } catch (e) { return null; }
+  }
+  return null;
+};
+
 // -----------------------------------------
-// 1. KẾT NỐI API: LẤY DỮ LIỆU GIỎ HÀNG
+// 1. KẾT NỐI API / LOCALSTORAGE: LẤY DỮ LIỆU
 // -----------------------------------------
 const fetchCart = async () => {
-  try {
-    const response = await axios.get(`${API_URL}/${CURRENT_USER_ID}`);
-    const backendItems = response.data.items;
+  const userId = getCurrentUserId();
+  
+  if (!userId) {
+    // KHÁCH VÃNG LAI: Lấy từ localStorage
+    const guestCart = localStorage.getItem('guest_cart');
+    if (guestCart) {
+      cartItems.value = JSON.parse(guestCart);
+    } else {
+      cartItems.value = [];
+    }
+    return;
+  }
 
-    // Map dữ liệu DTO Backend về đúng format UI đang dùng
+  // ĐÃ ĐĂNG NHẬP: Lấy từ API
+  try {
+    const response = await axios.get(`${API_URL}/${userId}`);
+    const backendItems = response.data.items || response.data;
+
     cartItems.value = backendItems.map(bItem => {
-      // Giữ lại trạng thái checkbox "selected" nếu SP này đã có trên UI
       const existingItem = cartItems.value.find(i => i.productId === bItem.productId);
-      
       return {
         productId: bItem.productId,
         name: bItem.productName,
-        desc: 'Sản phẩm chính hãng TechZone', // Backend ko trả desc, ta gán mặc định
-        price: bItem.salePrice || bItem.price, // Ưu tiên giá sale
+        desc: 'Sản phẩm chính hãng TechZone',
+        price: bItem.salePrice || bItem.price,
         oldPrice: bItem.salePrice ? bItem.price : null,
         quantity: bItem.quantity,
-        selected: existingItem ? existingItem.selected : true, // Mặc định là check
+        selected: existingItem ? existingItem.selected : true,
         img: bItem.imageUrl
       };
     });
@@ -165,7 +190,7 @@ const fetchCart = async () => {
 };
 
 onMounted(() => {
-  fetchCart(); // Gọi API ngay khi mở trang
+  fetchCart(); 
 });
 
 // -----------------------------------------
@@ -187,38 +212,48 @@ const tax = computed(() => subtotal.value * 0.1);
 const total = computed(() => subtotal.value + tax.value);
 
 // -----------------------------------------
-// 3. LOGIC API + DEBOUNCE: CẬP NHẬT SỐ LƯỢNG
+// 3. LOGIC CẬP NHẬT SỐ LƯỢNG
 // -----------------------------------------
-let debounceTimer;
-
 const syncQuantityWithBackend = (productId, newQuantity) => {
-  clearTimeout(debounceTimer); // Hủy request cũ nếu người dùng bấm quá nhanh
-  
-  // Chờ 1 giây (1000ms) sau khi người dùng ngừng bấm mới gửi API
+  const userId = getCurrentUserId();
+
+  if (!userId) {
+    // Xử lý Local Storage cho khách vãng lai (giữ nguyên code cũ)
+    const itemIndex = cartItems.value.findIndex(i => i.productId === productId);
+    if (itemIndex !== -1) {
+      cartItems.value[itemIndex].quantity = newQuantity;
+      localStorage.setItem('guest_cart', JSON.stringify(cartItems.value));
+      window.dispatchEvent(new Event('cart-updated'));
+    }
+    return;
+  }
+
+  // ĐÃ ĐĂNG NHẬP: GỌI API
+  clearTimeout(debounceTimer);
   debounceTimer = setTimeout(async () => {
     try {
-      await axios.post(`${API_URL}/${CURRENT_USER_ID}/add`, {
+      // ĐÃ SỬA: URL có thêm /${userId}/add
+      await axios.post(`${API_URL}/${userId}/add`, { 
         productId: productId,
         quantity: newQuantity
       });
-      // Backend thành công thì lôi lại data để khớp DB
       await fetchCart();
+      window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
-      // Bắt lỗi 400 (Vượt tồn kho) và Rollback giao diện
       alert(error.response?.data || 'Cập nhật thất bại');
-      fetchCart(); // Kéo lại giỏ hàng từ Server để phục hồi số lượng hợp lệ
+      fetchCart(); 
     }
   }, 1000); 
 };
 
 const increaseQty = (item) => {
-  item.quantity++; // Cập nhật UI ngay lập tức (Zero Lag)
+  item.quantity++; 
   syncQuantityWithBackend(item.productId, item.quantity);
 };
 
 const decreaseQty = (item) => {
   if (item.quantity > 1) {
-    item.quantity--; // Cập nhật UI ngay lập tức
+    item.quantity--; 
     syncQuantityWithBackend(item.productId, item.quantity);
   }
 };
@@ -229,13 +264,25 @@ const updateQty = (item) => {
 };
 
 // -----------------------------------------
-// 4. LOGIC API: XÓA SẢN PHẨM
+// 4. LOGIC XÓA SẢN PHẨM
 // -----------------------------------------
 const removeItem = async (productId) => {
   if (confirm('Bạn muốn xóa sản phẩm này khỏi giỏ hàng?')) {
+    const userId = getCurrentUserId();
+
+    if (!userId) {
+      // KHÁCH VÃNG LAI
+      cartItems.value = cartItems.value.filter(i => i.productId !== productId);
+      localStorage.setItem('guest_cart', JSON.stringify(cartItems.value));
+      window.dispatchEvent(new Event('cart-updated'));
+      return;
+    }
+
+    // ĐÃ ĐĂNG NHẬP
     try {
-      await axios.delete(`${API_URL}/${CURRENT_USER_ID}/remove/${productId}`);
-      await fetchCart(); // Cập nhật lại list sau khi xóa
+      await axios.delete(`${API_URL}/remove/${productId}`); 
+      await fetchCart();
+      window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
       console.error('Lỗi xóa sản phẩm:', error);
     }
@@ -244,9 +291,21 @@ const removeItem = async (productId) => {
 
 const clearCart = async () => {
   if (confirm('Làm trống toàn bộ giỏ hàng?')) {
-    try {
-      await axios.delete(`${API_URL}/${CURRENT_USER_ID}/clear`);
+    const userId = getCurrentUserId();
+
+    if (!userId) {
+      // KHÁCH VÃNG LAI
       cartItems.value = [];
+      localStorage.removeItem('guest_cart');
+      window.dispatchEvent(new Event('cart-updated'));
+      return;
+    }
+
+    // ĐÃ ĐĂNG NHẬP
+    try {
+      await axios.delete(`${API_URL}/${userId}/clear`);
+      cartItems.value = [];
+      window.dispatchEvent(new Event('cart-updated')); 
     } catch (error) {
       console.error('Lỗi dọn giỏ hàng:', error);
     }
@@ -255,6 +314,25 @@ const clearCart = async () => {
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
+};
+
+const goToCheckout = () => {
+  const userId = getCurrentUserId();
+  
+  if (!userId) {
+    alert('Vui lòng đăng nhập để tiến hành thanh toán!');
+    // router.push('/login'); // Chuyển sang trang đăng nhập nếu cần
+    return;
+  }
+
+  // Kiểm tra xem có sản phẩm nào được chọn không (dựa trên biến computed selectedCount của bạn)
+  if (selectedCount.value === 0) {
+    alert('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!');
+    return;
+  }
+
+  // Chuyển hướng sang trang Thanh toán
+  router.push('/checkout');
 };
 </script>
 

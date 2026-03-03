@@ -269,23 +269,61 @@ onMounted(() => {
   fetchBrands();
 });
 
+const getCurrentUserId = () => {
+  const userInfoString = localStorage.getItem('user_info');
+  if (userInfoString) {
+    try {
+      return JSON.parse(userInfoString).userId;
+    } catch (e) { return null; }
+  }
+  return null;
+};
+
+// CẬP NHẬT LẠI HÀM ADD TO CART
 const addToCart = async (productId) => {
-  const CURRENT_USER_ID = 1; // Tạm thời fix 1, sau này lấy từ Auth Store
+  const userId = getCurrentUserId();
+  const productToAdd = products.value.find(p => p.productId === productId);
+  if (!productToAdd) return;
 
-  try {
-    const payload = {
-      productId: productId,
-      quantity: 1 // Mặc định mỗi lần click là thêm 1 sản phẩm
-    };
+  if (userId) {
+    // 1. ĐÃ ĐĂNG NHẬP: GỌI API LƯU VÀO DATABASE
+    try {
+      const payload = {
+        productId: productId,
+        quantity: 1 
+        // Bỏ customerId ở payload đi nếu CartItemRequestDTO của bạn không bắt buộc, 
+        // vì userId đã được truyền trên URL rồi.
+      };
 
-    await axios.post('http://localhost:8080/api/cart/' + CURRENT_USER_ID + '/add', payload);
+      // ĐÃ SỬA: Chèn thêm userId vào giữa URL
+      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, payload);
 
-    // Hiển thị thông báo thành công (Bạn có thể dùng Toast cho xịn)
-    alert("Đã thêm sản phẩm vào giỏ hàng thành công!");
+      alert("Đã thêm sản phẩm vào giỏ hàng!");
+      window.dispatchEvent(new Event('cart-updated')); 
 
-  } catch (error) {
-    const errorMsg = error.response?.data || "Không thể thêm vào giỏ hàng";
-    alert(errorMsg);
+    } catch (error) {
+      alert(error.response?.data || "Không thể thêm vào giỏ hàng");
+    }
+  } else {
+    // 2. LÀ KHÁCH VÃNG LAI: LƯU VÀO LOCAL STORAGE (Giữ nguyên như cũ)
+    let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
+    const existingItemIndex = guestCart.findIndex(i => i.productId === productId);
+
+    if (existingItemIndex !== -1) {
+      guestCart[existingItemIndex].quantity += 1;
+    } else {
+      guestCart.push({
+        productId: productToAdd.productId,
+        name: productToAdd.name,
+        price: productToAdd.salePrice || productToAdd.price,
+        quantity: 1,
+        img: productToAdd.imageUrl || 'https://via.placeholder.com/150'
+      });
+    }
+
+    localStorage.setItem('guest_cart', JSON.stringify(guestCart));
+    alert("Đã thêm sản phẩm vào giỏ hàng!");
+    window.dispatchEvent(new Event('cart-updated'));
   }
 };
 

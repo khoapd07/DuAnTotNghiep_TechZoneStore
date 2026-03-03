@@ -1,244 +1,246 @@
 <template>
-  <div class="checkout-page bg-light-gray pb-5 pt-4">
+  <div class="order-tracking-page pb-5 pt-4 min-vh-100" style="background-color: #F8FBF9;">
     <div class="container narrow-container">
       
-      <div class="checkout-stepper d-flex justify-content-center align-items-center gap-4 mb-5 fs-7 fw-bold text-uppercase">
-        <div class="step-item text-muted">1. Giỏ hàng</div> 
-        <div class="step-divider"></div>
-        <div class="step-item text-neon">2. Thanh toán</div> 
-        <div class="step-divider"></div>
-        <div class="step-item text-muted">3. Hoàn tất</div> 
+      <div class="d-flex flex-wrap justify-content-between align-items-end mb-4">
+        <div>
+          <h3 class="fw-black text-dark mb-1">Theo Dõi Đơn Hàng</h3>
+          <span class="text-muted fs-7">Mã đơn hàng: <span class="fw-bold text-dark">{{ orderData.orderCode }}</span></span>
+        </div>
+        <div class="text-end mt-3 mt-md-0">
+          <div class="text-muted fs-8 mb-1">Ngày đặt: {{ orderData.orderDate }}</div>
+          <h3 class="text-success fw-black mb-0">{{ formatCurrency(orderData.totalAmount) }}</h3>
+        </div>
       </div>
 
-      <div class="row g-4">
-        <div class="col-lg-7">
-          <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
-            <h4 class="fw-black text-dark mb-4 text-uppercase">Thông tin nhận hàng</h4>
-            <form @submit.prevent="handlePlaceOrder">
-              <div class="row g-3">
-                <div class="col-12">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Họ và tên</label>
-                  <input v-model="shippingInfo.fullName" type="text" class="form-control custom-input" placeholder="Nhập họ tên người nhận" required>
-                </div>
+      <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        
+        <div v-if="orderData.status !== 4" class="stepper-wrapper d-flex justify-content-between position-relative my-4 px-3 px-md-5">
+          <div class="stepper-progress-bar">
+            <div class="stepper-progress" :style="{ width: progressWidth }"></div>
+          </div>
 
-                <div class="col-md-6">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Số điện thoại</label>
-                  <input v-model="shippingInfo.phone" type="text" class="form-control custom-input" placeholder="0xxx xxx XXX" required>
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Email (Tùy chọn)</label>
-                  <input v-model="shippingInfo.email" type="email" class="form-control custom-input" placeholder="example@gmail.com">
-                </div>
+          <div class="stepper-item text-center z-1" :class="{ 'active': orderData.status >= 0 }">
+            <div class="step-icon"><i class="bi bi-receipt"></i></div>
+            <div class="step-title mt-2">Chờ xác nhận</div>
+            <div class="step-time text-success fw-bold" v-if="orderData.status === 0">Hiện tại</div>
+            <div class="step-time" v-else>{{ orderData.orderDate }}</div>
+          </div>
 
-                <div class="col-12">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Địa chỉ chi tiết</label>
-                  <input v-model="shippingInfo.address" type="text" class="form-control custom-input" placeholder="Số nhà, tên đường, Phường/Xã..." required>
-                </div>
+          <div class="stepper-item text-center z-1" :class="{ 'active': orderData.status >= 1 }">
+            <div class="step-icon"><i class="bi bi-box-seam"></i></div>
+            <div class="step-title mt-2">Đã xác nhận</div>
+            <div class="step-time text-success fw-bold" v-if="orderData.status === 1">Hiện tại</div>
+          </div>
 
-                <div class="col-12">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Ghi chú đơn hàng</label>
-                  <textarea v-model="orderNote" class="form-control custom-input" rows="3" placeholder="Ghi chú về thời gian giao hàng, chỉ dẫn địa chỉ..."></textarea>
-                </div>
-              </div>
-            </form>
+          <div class="stepper-item text-center z-1" :class="{ 'active': orderData.status >= 2 }">
+            <div class="step-icon"><i class="bi bi-truck"></i></div>
+            <div class="step-title mt-2">Đang giao hàng</div>
+            <div class="step-time text-success fw-bold" v-if="orderData.status === 2">Hiện tại</div>
+          </div>
+
+          <div class="stepper-item text-center z-1" :class="{ 'active': orderData.status >= 3 }">
+            <div class="step-icon"><i class="bi bi-check2-circle"></i></div>
+            <div class="step-title mt-2">Thành công</div>
+            <div class="step-time text-success fw-bold" v-if="orderData.status === 3">Hiện tại</div>
           </div>
         </div>
 
-        <div class="col-lg-5">
-          <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-            <h5 class="fw-black text-uppercase mb-4">Đơn hàng của bạn ({{ cartData.items.length }})</h5>
-            
-            <div class="order-items-list d-flex flex-column gap-3 mb-4">
-              <div v-for="item in cartData.items" :key="item.productId" class="d-flex align-items-center gap-3">
-                <div class="bg-light rounded-3 p-1" style="width: 60px; height: 60px;">
-                  <img :src="item.imageUrl" class="img-fluid object-fit-contain" alt="Product">
-                </div>
-                <div class="flex-grow-1">
-                  <h6 class="fw-bold fs-7 mb-0 line-clamp-1">{{ item.productName }}</h6>
-                  <small class="text-muted fs-8">Số lượng: {{ item.quantity }}</small>
-                </div>
-                <div class="fw-bold fs-7">{{ formatCurrency(item.subTotal) }}</div>
-              </div>
-            </div>
+        <div v-else class="text-center my-4">
+          <i class="bi bi-x-circle text-danger" style="font-size: 3rem;"></i>
+          <h5 class="text-danger fw-bold mt-2">Đơn hàng đã bị hủy</h5>
+        </div>
 
-            <label class="form-label fs-8 fw-bold text-muted text-uppercase">Mã giảm giá</label>
-            <div class="input-group mb-4">
-              <input v-model="voucherCode" type="text" class="form-control custom-input fs-7" placeholder="Nhập mã của bạn">
-              <button @click="applyVoucher" class="btn btn-dark fw-bold px-3 fs-7 border-0" type="button">ÁP DỤNG</button>
-            </div>
-
-            <div class="d-flex flex-column gap-2 fs-7 mb-3">
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Tạm tính</span>
-                <span class="fw-bold">{{ formatCurrency(subtotal) }}</span>
-              </div>
-              <div class="d-flex justify-content-between">
-                <span class="text-muted">Phí vận chuyển</span>
-                <span class="text-success fw-bold">Miễn phí</span>
-              </div>
-              <hr class="my-2 opacity-10">
-              <div class="d-flex justify-content-between align-items-end">
-                <span class="fw-black text-uppercase">Tổng cộng</span>
-                <h4 class="text-neon fw-black mb-0">{{ formatCurrency(subtotal) }}</h4>
-              </div>
-            </div>
+        <div class="alert border-0 d-flex justify-content-between align-items-center rounded-3 fs-7 fw-bold mt-4 mb-0"
+             :class="orderData.status === 4 ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'">
+          <div>
+            <i class="bi me-2" :class="orderData.status === 4 ? 'bi-exclamation-circle' : 'bi-info-circle'"></i> 
+            {{ statusMessage }}
           </div>
-
-          <div class="card border-0 shadow-sm rounded-4 p-4">
-            <h5 class="fw-black text-uppercase mb-4">Phương thức thanh toán</h5>
-            <div class="payment-methods d-flex flex-column gap-3">
-              <div class="form-check custom-radio-payment border rounded-3 p-3 position-relative">
-                <input class="form-check-input ms-0 me-3 shadow-none" type="radio" name="payment" id="cod" checked>
-                <label class="form-check-label d-block cursor-pointer ps-4" for="cod">
-                  <span class="fw-bold fs-7 d-block">Thanh toán khi nhận hàng (COD)</span>
-                  <small class="text-muted fs-8">Nhận hàng rồi mới thanh toán tiền mặt</small>
-                </label>
-              </div>
-
-              <div class="form-check custom-radio-payment border rounded-3 p-3 position-relative">
-                <input class="form-check-input ms-0 me-3 shadow-none" type="radio" name="payment" id="bank">
-                <label class="form-check-label d-block cursor-pointer ps-4" for="bank">
-                  <span class="fw-bold fs-7 d-block">Chuyển khoản ngân hàng</span>
-                  <small class="text-muted fs-8">Miễn phí phí chuyển tiền liên ngân hàng</small>
-                </label>
-              </div>
-            </div>
-
-            <button @click="handlePlaceOrder" :disabled="loading || cartData.items.length === 0" class="btn btn-neon w-100 fw-black py-3 rounded-3 mt-4 text-dark shadow-sm">
-              <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
-              {{ loading ? 'ĐANG XỬ LÝ...' : 'XÁC NHẬN ĐẶT HÀNG' }}
-            </button>
-            
-            <router-link to="/cart" class="btn btn-link text-muted fw-bold fs-8 w-100 mt-2 text-decoration-none text-center d-block">
-              <i class="bi bi-arrow-left me-1"></i> Quay lại giỏ hàng
-            </router-link>
+          <div v-if="orderData.status < 3" class="text-dark">
+            Dự kiến nhận: <span class="text-success">{{ orderData.estimatedDelivery }}</span>
           </div>
         </div>
       </div>
+
+      <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h6 class="fw-bold mb-4 d-flex align-items-center gap-2">
+          <i class="bi bi-geo-alt-fill text-success fs-5"></i> Thông tin giao hàng
+        </h6>
+        
+        <div class="row g-3 fs-7">
+          <div class="col-md-12 border-bottom pb-3">
+            <div class="text-muted fs-8 text-uppercase mb-1">Người nhận</div>
+            <div class="fw-bold text-dark fs-6">{{ orderData.shippingInfo.name }}</div>
+            <div class="text-muted">{{ orderData.shippingInfo.phone }}</div>
+          </div>
+          <div class="col-md-12 pt-2">
+            <div class="text-muted fs-8 text-uppercase mb-1">Địa chỉ</div>
+            <div class="text-dark">{{ orderData.shippingInfo.address }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border-0 shadow-sm rounded-4 p-4 mb-5">
+        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
+          <i class="bi bi-box-fill text-success fs-5"></i> Đơn vị vận chuyển
+        </h6>
+        
+        <div class="d-flex align-items-center gap-3 border rounded-3 p-3">
+          <div class="bg-warning-subtle text-warning d-flex align-items-center justify-content-center rounded" style="width: 40px; height: 40px;">
+            <i class="bi bi-lightning-fill fs-5"></i>
+          </div>
+          <div>
+            <div class="fw-bold fs-7">{{ orderData.carrier.name }}</div>
+            <div class="text-muted fs-8">Mã vận đơn: {{ orderData.carrier.trackingCode }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <router-link to="/products" class="btn btn-success fw-bold px-5 py-2 rounded-pill shadow-sm mb-3">
+          Tiếp tục mua sắm <i class="bi bi-bag-check ms-1"></i>
+        </router-link>
+        <div class="d-block">
+          <a href="#" class="text-muted text-decoration-none fs-8 hover-dark">
+            <i class="bi bi-headset me-1"></i> Cần hỗ trợ về đơn hàng này?
+          </a>
+        </div>
+      </div>
+
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import axios from 'axios';
+import { ref, computed, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 
-const router = useRouter();
+const route = useRoute();
 
-// --- 1. STATE ---
-const CURRENT_USER_ID = 1; // Tạm thời để 1, sau này lấy từ Auth store
-const API_BASE = 'http://localhost:8080/api';
-
-const cartData = ref({ items: [], cartTotal: 0 });
-const loading = ref(false);
-const voucherCode = ref('');
-const orderNote = ref('');
-
-const shippingInfo = ref({
-  fullName: '',
-  phone: '',
-  email: '',
-  address: ''
-});
-
-// --- 2. FETCH DATA GIỎ HÀNG ---
-const fetchCart = async () => {
-  try {
-    const response = await axios.get(`${API_BASE}/cart/${CURRENT_USER_ID}`);
-    cartData.value = response.data;
-  } catch (error) {
-    console.error("Lỗi lấy giỏ hàng:", error);
+// MOCK DATA: Chờ ráp API thực tế
+// Status: 0 (Pending), 1 (Confirmed), 2 (Shipping), 3 (Delivered), 4 (Cancelled)
+const orderData = ref({
+  orderCode: route.params.id || '#TZ-7798124',
+  orderDate: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' }),
+  totalAmount: 25490000,
+  status: 0, // SỬA Ở ĐÂY: Đổi từ 2 thành 0 để mặc định là "Chờ xác nhận"
+  estimatedDelivery: 'Đang cập nhật', // Đơn mới đặt thường chưa có ngày dự kiến chính xác
+  shippingInfo: {
+    name: 'Nguyễn Minh Quân',
+    phone: '0908 XXX 123',
+    address: 'Số 45, Ngõ 123, Đường Xuân Thủy, Phường Dịch Vọng Hậu, Quận Cầu Giấy, Hà Nội'
+  },
+  carrier: {
+    name: 'Đang chờ điều phối', // Chưa có đơn vị vận chuyển
+    trackingCode: 'Chưa có'
   }
-};
+});
 
 onMounted(() => {
-  fetchCart();
+  // Tương lai bạn sẽ gọi API ở đây:
+  // axios.get(`http://localhost:8080/api/orders/${route.params.id}`).then(...)
 });
-
-// --- 3. TÍNH TOÁN ---
-const subtotal = computed(() => cartData.value.cartTotal || 0);
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value).replace('₫', 'đ');
 };
 
-// --- 4. ÁP DỤNG VOUCHER (MÔ PHỎNG) ---
-const applyVoucher = () => {
-  if (!voucherCode.value) return;
-  alert("Mã giảm giá đã được ghi nhận. Hệ thống sẽ kiểm tra và áp dụng khi bạn nhấn Đặt hàng.");
-};
+// Tính toán thanh tiến trình (Progress bar width)
+const progressWidth = computed(() => {
+  if (orderData.value.status === 0) return '0%';   // Pending
+  if (orderData.value.status === 1) return '33%';  // Confirmed
+  if (orderData.value.status === 2) return '66%';  // Shipping
+  if (orderData.value.status === 3) return '100%'; // Delivered
+  return '0%'; // Cancelled không dùng thanh này
+});
 
-// --- 5. XỬ LÝ ĐẶT HÀNG (API CALL) ---
-const handlePlaceOrder = async () => {
-  // Validate sơ bộ
-  if (!shippingInfo.value.fullName || !shippingInfo.value.phone || !shippingInfo.value.address) {
-    alert("Vui lòng điền đầy đủ thông tin nhận hàng!");
-    return;
+// Lời nhắn tự động thay đổi theo chuẩn Database
+const statusMessage = computed(() => {
+  switch (orderData.value.status) {
+    case 0: return 'Đơn hàng (Pending) đang chờ shop kiểm tra và xác nhận.';
+    case 1: return 'Đơn hàng (Confirmed) đã được xác nhận và đang đóng gói.';
+    case 2: return 'Kiện hàng (Shipping) đang trên đường giao. Vui lòng chú ý điện thoại!';
+    case 3: return 'Giao hàng thành công (Delivered). Cảm ơn bạn đã mua sắm!';
+    case 4: return 'Đơn hàng (Cancelled) đã bị hủy.';
+    default: return 'Đang cập nhật trạng thái...';
   }
-
-  loading.value = true;
-  try {
-    const payload = {
-      note: `Tên: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone}. Địa chỉ: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
-      voucherCode: voucherCode.value
-    };
-
-    // Gọi API placeOrder ở Backend
-    const response = await axios.post(`${API_BASE}/orders/${CURRENT_USER_ID}/place`, payload);
-    
-    // Nếu thành công
-    alert(`Đặt hàng thành công! Mã đơn của bạn là: ${response.data.orderCode}`);
-    
-    // Chuyển hướng về trang lịch sử đơn hàng
-    router.push('/Orders'); 
-    
-  } catch (error) {
-    // Bắt lỗi từ Backend (Ví dụ: hết hàng, sai voucher)
-    const errorMsg = error.response?.data || "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.";
-    alert(errorMsg);
-  } finally {
-    loading.value = false;
-  }
-};
+});
 </script>
 
 <style scoped>
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
-.cursor-pointer { cursor: pointer; }
-.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.text-success { color: #1ED760 !important; }
+.btn-success { background-color: #1ED760; border: none; color: #000; }
+.btn-success:hover { background-color: #17c153; color: #000; }
+.bg-success-subtle { background-color: #e8fbf0 !important; }
+.hover-dark:hover { color: #000 !important; }
 
-.bg-light-gray { background-color: #F8F9FA; }
-.text-neon { color: #00FF33 !important; }
-.btn-neon { background-color: #00FF33; color: #000; border: none; transition: all 0.2s; }
-.btn-neon:hover:not(:disabled) { background-color: #00cc29; transform: translateY(-2px); }
-.btn-neon:disabled { opacity: 0.7; cursor: not-allowed; }
+.narrow-container { max-width: 800px !important; margin: 0 auto; }
 
-.narrow-container { max-width: 1000px !important; margin: 0 auto; }
-.step-divider { width: 40px; height: 2px; background-color: #dee2e6; }
-
-.custom-input {
-  background-color: #F9FAFB;
-  border: 1px solid #EAEAEA;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  font-size: 0.85rem;
+/* --- STEPPER CSS --- */
+.stepper-wrapper {
+  position: relative;
 }
-.custom-input:focus {
-  background-color: #FFF;
-  border-color: #00FF33;
-  box-shadow: none;
+.stepper-progress-bar {
+  position: absolute;
+  top: 20px;
+  left: 5%;
+  right: 5%;
+  height: 3px;
+  background-color: #e9ecef;
+  z-index: 0;
+}
+.stepper-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background-color: #1ED760;
+  transition: width 0.4s ease;
 }
 
-.custom-radio-payment { transition: all 0.2s ease; cursor: pointer; }
-.custom-radio-payment:has(.form-check-input:checked) {
-  border-color: #00FF33 !important;
-  background-color: rgba(0, 255, 51, 0.05);
+.stepper-item {
+  width: 25%;
 }
-.custom-radio-payment .form-check-input:checked {
-  background-color: #00FF33;
-  border-color: #00FF33;
+.step-icon {
+  width: 44px;
+  height: 44px;
+  background-color: #e9ecef;
+  color: #adb5bd;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+  border: 4px solid #fff; /* Tạo viền cắt ngang đường progress */
+}
+
+.step-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #adb5bd;
+}
+.step-time {
+  font-size: 0.7rem;
+  color: #adb5bd;
+  margin-top: 2px;
+}
+
+/* Trạng thái Active */
+.stepper-item.active .step-icon {
+  background-color: #1ED760;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(30, 215, 96, 0.2);
+}
+.stepper-item.active .step-title {
+  color: #000;
+}
+.stepper-item.active .step-time {
+  color: #1ED760;
 }
 </style>

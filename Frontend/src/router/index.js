@@ -9,7 +9,8 @@ import MyAccount from '../components/MyAccount.vue'
 import Product from '../components/Product.vue'
 import ProductDetail from '../components/ProductDetail.vue'
 import Cart from '../components/Cart.vue'
-import OrderDetail from '../components/OrderDetail.vue'
+import OrderDetail from '../components/OrderDetail.vue';
+import Checkout from '../components/Checkout.vue'
 import Blog from '../components/Blog.vue'
 import Blogdetail from '../components/Blogdetail.vue'
 import ForgotPassword from '../components/ForgotPassword.vue'
@@ -36,6 +37,7 @@ const routes = [
 
   { path: '/cart', name: 'Cart', component: Cart },
   { path: '/orders', name: 'Order', component: Order },
+  { path: '/checkout', name: 'Checkout', component: Checkout },
   { path: '/order/:id', name: 'OrderDetail', component: OrderDetail },
   { path: '/blog', name: 'Blog', component: Blog },
   { path: '/Blogdetail', name: 'Blogdetail', component: Blogdetail },
