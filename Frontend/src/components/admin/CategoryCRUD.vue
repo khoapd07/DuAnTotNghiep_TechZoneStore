@@ -93,6 +93,30 @@
             </div>
           </div>
         </div>
+        
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
+            <div>
+              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng sản phẩm</p>
+              <h2 class="fw-black text-dark m-0">{{ totalProducts }}</h2>
+            </div>
+            <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+              <i class="bi bi-box-seam fs-4"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
+            <div>
+              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng tồn kho</p>
+              <h2 class="fw-black text-dark m-0">{{ totalStock }}</h2>
+            </div>
+            <div class="bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+              <i class="bi bi-box2-fill fs-4"></i>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 p-0">
@@ -101,13 +125,24 @@
             <thead class="border-bottom">
               <tr class="text-muted fs-8 text-uppercase">
                 <th class="py-3 px-4 fw-bold border-0">Tên Danh Mục</th>
-                <th class="py-3 fw-bold border-0 text-center" style="width: 150px;">Hành Động</th>
+                <th class="py-3 fw-bold border-0 text-center">Số Lượng SP</th>
+                <th class="py-3 fw-bold border-0 text-center">Tồn Kho</th> <th class="py-3 fw-bold border-0 text-center" style="width: 150px;">Hành Động</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="cat in categoryList" :key="cat.categoryId" class="border-bottom-dashed">
                 <td class="py-3 px-4">
                   <span class="fw-bold fs-7 text-dark">{{ cat.categoryName }}</span>
+                </td>
+                <td class="text-center py-3">
+                  <span class="badge bg-light text-dark border fs-8 px-2 py-1">
+                    {{ getProductCount(cat) }}
+                  </span>
+                </td>
+                <td class="text-center py-3">
+                  <span class="badge fs-8 px-2 py-1" :class="getStockCount(cat) > 10 ? 'bg-success-subtle text-success border border-success-subtle' : (getStockCount(cat) > 0 ? 'bg-warning-subtle text-warning border border-warning-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle')">
+                    {{ getStockCount(cat) }}
+                  </span>
                 </td>
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
@@ -121,7 +156,7 @@
                 </td>
               </tr>
               <tr v-if="categoryList.length === 0">
-                <td colspan="2" class="text-center py-4 text-muted fs-7">Chưa có danh mục nào.</td>
+                <td colspan="4" class="text-center py-4 text-muted fs-7">Chưa có danh mục nào.</td>
               </tr>
             </tbody>
           </table>
@@ -154,7 +189,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, reactive, computed } from 'vue';
 import axios from 'axios';
 
 const categoryList = ref([]);
@@ -162,6 +197,32 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const form = reactive({ categoryName: '' });
+
+// Lấy số lượng sản phẩm
+const getProductCount = (cat) => {
+  if (cat.productCount !== undefined) return cat.productCount;
+  if (cat.products && Array.isArray(cat.products)) return cat.products.length;
+  return 0;
+};
+
+// Lấy số lượng tồn kho
+const getStockCount = (cat) => {
+  if (cat.totalStock !== undefined) return cat.totalStock; // Lấy từ Backend sau khi gắn hàm getTotalStock()
+  if (cat.products && Array.isArray(cat.products)) {
+    return cat.products.reduce((sum, p) => sum + (p.stockQuantity || 0), 0);
+  }
+  return 0;
+};
+
+// Computed tính tổng tất cả sản phẩm
+const totalProducts = computed(() => {
+  return categoryList.value.reduce((total, cat) => total + getProductCount(cat), 0);
+});
+
+// Computed tính tổng tất cả tồn kho trên hệ thống
+const totalStock = computed(() => {
+  return categoryList.value.reduce((total, cat) => total + getStockCount(cat), 0);
+});
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('jwt_token');
@@ -212,13 +273,11 @@ const deleteCategory = async (id) => {
       fetchCategories();
       alert("Xóa thành công!");
     } catch (error) {
-      // Bóc tách thông báo lỗi từ Backend gửi về
       const errorMsg = error.response?.data?.message;
-      
       if (errorMsg) {
-        alert(errorMsg); // Sẽ hiển thị: "Không thể xóa danh mục này vì đang chứa sản phẩm..."
+        alert(errorMsg); 
       } else {
-        alert("Lỗi khi xóa! Vui lòng thử lại sau."); // Câu dự phòng nếu lỗi mạng hoặc server chết hẳn
+        alert("Lỗi khi xóa! Vui lòng thử lại sau."); 
       }
     }
   }
