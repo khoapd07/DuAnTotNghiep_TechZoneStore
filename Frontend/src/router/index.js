@@ -21,7 +21,10 @@ import AdminDashboard from '../components/admin/Dashboard.vue'
 import AdminOrderStatus from '../components/admin/OrderStatus.vue'
 import AdminProductCRUD from '../components/admin/ProductCRUD.vue'
 import AdminUserCRUD from '../components/admin/UserCRUD.vue'
+import AdminCategoryCRUD from '../components/admin/CategoryCRUD.vue'
+import AdminBrandCRUD from '../components/admin/BrandCRUD.vue'
 import Report from '../components/admin/Report.vue'
+
 
 const routes = [
   // --- ROUTES CHO KHÁCH HÀNG ---
@@ -48,6 +51,9 @@ const routes = [
   { path: '/admin/orders', name: 'AdminOrderStatus', component: AdminOrderStatus },
   { path: '/admin/products', name: 'AdminProductCRUD', component: AdminProductCRUD },
   { path: '/admin/users', name: 'AdminUserCRUD', component: AdminUserCRUD },
+  { path: '/admin/categories', name: 'AdminCategoryCRUD', component: AdminCategoryCRUD },
+  { path: '/admin/brands', name: 'AdminBrandCRUD', component: AdminBrandCRUD },
+  
   { path: '/admin/report', name: 'Report', component: Report }
 ]
 

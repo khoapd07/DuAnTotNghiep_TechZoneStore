@@ -126,13 +126,25 @@
           <div class="modal-body p-4">
             <div class="row g-3">
               <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm</label><input type="text" v-model="form.name" class="form-control fs-7"></div>
+              
+              <!-- DANH MỤC (bind bằng ID) -->
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Danh mục</label>
-                <select v-model="form.categoryName" class="form-select fs-7 shadow-none">
+                <select v-model="form.categoryId" class="form-select fs-7 shadow-none">
                   <option value="">Chọn danh mục</option>
-                  <option v-for="cat in categoryList" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
+                  <option v-for="cat in categoryList" :key="cat.categoryId" :value="cat.categoryId">{{ cat.categoryName }}</option>
                 </select>
               </div>
+
+              <!-- THƯƠNG HIỆU (bind bằng ID) -->
+              <div class="col-md-6">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Thương hiệu</label>
+                <select v-model="form.brandId" class="form-select fs-7 shadow-none">
+                  <option value="">Chọn thương hiệu</option>
+                  <option v-for="b in brandList" :key="b.brandId" :value="b.brandId">{{ b.brandName }}</option>
+                </select>
+              </div>
+
               <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng</label><input type="number" v-model="form.stockQuantity" class="form-control fs-7"></div>
               <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán</label><input type="number" v-model="form.price" class="form-control fs-7"></div>
               <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Link hình ảnh</label><input type="text" v-model="form.imageUrl" class="form-control fs-7"></div>
@@ -155,6 +167,7 @@ import axios from 'axios';
 
 const productList = ref([]);
 const categoryList = ref([]);
+const brandList = ref([]);
 const searchQuery = ref('');
 const currentPage = ref(1);
 const itemsPerPage = 10;
@@ -162,7 +175,15 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 
-const form = reactive({ name: '', categoryName: '', price: 0, stockQuantity: 0, imageUrl: '', description: '' });
+const form = reactive({ 
+  name: '', 
+  categoryId: null,      // ← SỬA: bind bằng ID
+  brandId: null,         // ← SỬA: bind bằng ID
+  price: 0, 
+  stockQuantity: 0, 
+  imageUrl: '', 
+  description: '' 
+});
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('jwt_token');
@@ -179,13 +200,16 @@ const fetchProducts = async () => {
 
 const fetchCategories = async () => {
   try {
-    // ĐÃ SỬA: Thêm 's' vào cuối categories cho đúng Mapping Spring Boot
     const response = await axios.get('http://localhost:8080/api/categories', { headers: getAuthHeader() });
     categoryList.value = response.data;
-  } catch (error) {
-    console.error("Lỗi tải danh mục:", error);
-    categoryList.value = []; 
-  }
+  } catch (error) { console.error("Lỗi tải danh mục:", error); categoryList.value = []; }
+};
+
+const fetchBrands = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/brands', { headers: getAuthHeader() });
+    brandList.value = response.data;
+  } catch (error) { console.error("Lỗi tải thương hiệu:", error); brandList.value = []; }
 };
 
 const stats = computed(() => ({
@@ -208,15 +232,16 @@ const paginatedProducts = computed(() => {
 const openAddModal = () => {
   isEditing.value = false;
   currentId.value = null;
-  Object.assign(form, { name: '', categoryName: '', price: 0, stockQuantity: 0, imageUrl: '', description: '' });
+  Object.assign(form, { name: '', categoryId: null, brandId: null, price: 0, stockQuantity: 0, imageUrl: '', description: '' });
   showModal.value = true;
 };
 
 const openEditModal = (p) => {
   isEditing.value = true;
-  // ĐÃ SỬA: Lấy ID dự phòng cả 2 trường hợp tên biến
   currentId.value = p.id || p.productId; 
-  Object.assign(form, p);
+  Object.assign(form, p);                    // copy hết dữ liệu cũ
+  form.categoryId = p.categoryId;            // ← ép bind ID đúng
+  form.brandId = p.brandId;                  // ← ép bind ID đúng
   showModal.value = true;
 };
 
@@ -237,11 +262,8 @@ const saveProduct = async () => {
 };
 
 const deleteProduct = async (id) => {
-  console.log("Đang thực hiện xóa ID:", id); // Log để debug
-  if (!id) {
-    alert("Không tìm thấy ID sản phẩm!");
-    return;
-  }
+  console.log("Đang thực hiện xóa ID:", id);
+  if (!id) { alert("Không tìm thấy ID sản phẩm!"); return; }
   if (confirm("Xóa sản phẩm này?")) {
     try {
       await axios.delete(`http://localhost:8080/api/product/${id}`, { headers: getAuthHeader() });
@@ -252,5 +274,10 @@ const deleteProduct = async (id) => {
 };
 
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN').format(v || 0) + '₫';
-onMounted(() => { fetchProducts(); fetchCategories(); });
+
+onMounted(() => { 
+  fetchProducts(); 
+  fetchCategories(); 
+  fetchBrands(); 
+});
 </script>
