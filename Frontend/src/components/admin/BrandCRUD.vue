@@ -1,49 +1,6 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
-    <!-- Sidebar giống hệt -->
-    <aside class="sidebar bg-white border-end d-flex flex-column sticky-top" style="width: 220px; height: 100vh;">
-      <div class="p-3 border-bottom">
-        <h4 class="fw-black text-dark m-0 d-flex align-items-center gap-1 fs-5">
-          TECHZONE <span class="text-neon fs-6">//</span>
-        </h4>
-        <small class="text-muted fw-bold" style="font-size: 0.65rem; letter-spacing: 1px;">QUẢN TRỊ</small>
-      </div>
-
-      <div class="p-2 flex-grow-1 overflow-auto">
-        <ul class="nav flex-column gap-1 custom-nav">
-          <li class="nav-item">
-            <router-link to="/admin" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark">
-              <i class="bi bi-grid-1x2"></i> <span class="fw-bold fs-7">Tổng quan</span>
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/admin/products" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark">
-              <i class="bi bi-box-seam-fill"></i> <span class="fw-bold fs-7">Sản phẩm</span>
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/admin/categories" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark">
-              <i class="bi bi-tags-fill"></i> <span class="fw-bold fs-7">Danh mục</span>
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link active rounded-3 d-flex align-items-center gap-3">
-              <i class="bi bi-bookmark-fill"></i> <span class="fw-bold fs-7">Thương hiệu</span>
-            </a>
-          </li>
-          <li class="nav-item">
-            <router-link to="/admin/orders" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark">
-              <i class="bi bi-receipt"></i> <span class="fw-bold fs-7">Đơn hàng</span>
-            </router-link>
-          </li>
-          <li class="nav-item">
-            <router-link to="/admin/users" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark">
-              <i class="bi bi-people"></i> <span class="fw-bold fs-7">Khách hàng</span>
-            </router-link>
-          </li>
-        </ul>
-      </div>
-    </aside>
+    
 
     <main class="flex-grow-1 p-4 overflow-auto">
       <div class="d-flex justify-content-between align-items-center mb-4">

@@ -18,10 +18,12 @@ import Historyproduct from '../components/Historyproduct.vue'
 import OrderVote from '../components/OrderVote.vue'
 import Order from '../components/Order.vue'
 // 2. Import các trang của Quản trị viên (Admin)
+import AdminLayout from '../components/admin/AdminLayout.vue'
 import AdminDashboard from '../components/admin/Dashboard.vue'
 import AdminOrderStatus from '../components/admin/OrderStatus.vue'
 import AdminProductCRUD from '../components/admin/ProductCRUD.vue'
-import AdminUserCRUD from '../components/admin/UserCRUD.vue'
+import Customer from '../components/admin/Customer.vue'
+import Employee from '../components/admin/Employee.vue'
 import AdminCategoryCRUD from '../components/admin/CategoryCRUD.vue'
 import AdminBrandCRUD from '../components/admin/BrandCRUD.vue'
 import Report from '../components/admin/Report.vue'
@@ -49,14 +51,53 @@ const routes = [
   { path: '/OrderVote', name: 'OrderVote', component: OrderVote},
 
   // --- ROUTES CHO ADMIN ---
-  { path: '/admin', name: 'AdminDashboard', component: AdminDashboard },
-  { path: '/admin/orders', name: 'AdminOrderStatus', component: AdminOrderStatus },
-  { path: '/admin/products', name: 'AdminProductCRUD', component: AdminProductCRUD },
-  { path: '/admin/users', name: 'AdminUserCRUD', component: AdminUserCRUD },
-  { path: '/admin/categories', name: 'AdminCategoryCRUD', component: AdminCategoryCRUD },
-  { path: '/admin/brands', name: 'AdminBrandCRUD', component: AdminBrandCRUD },
   
-  { path: '/admin/report', name: 'Report', component: Report }
+  { 
+    path: '/admin', 
+    component: AdminLayout, // Khai báo Layout cha
+    children: [
+      { 
+        path: '', // Khi vào /admin sẽ load Dashboard
+        name: 'AdminDashboard', 
+        component: AdminDashboard 
+      },
+      { 
+        path: 'orders', // URL sẽ là /admin/orders
+        name: 'AdminOrderStatus', 
+        component: AdminOrderStatus 
+      },
+      { 
+        path: 'products', 
+        name: 'AdminProductCRUD', 
+        component: AdminProductCRUD 
+      },
+      { 
+        path: 'customers', 
+        name: 'Customer', 
+        component: Customer 
+      },
+      {
+        path: 'employees',
+        name: 'Employee',
+        component: Employee
+      },
+      { 
+        path: 'categories', 
+        name: 'AdminCategoryCRUD', 
+        component: AdminCategoryCRUD 
+      },
+      { 
+        path: 'brands', 
+        name: 'AdminBrandCRUD', 
+        component: AdminBrandCRUD 
+      },
+      { 
+        path: 'report', 
+        name: 'Report', 
+        component: Report 
+      }
+    ]
+  }
 ]
 
 const router = createRouter({
