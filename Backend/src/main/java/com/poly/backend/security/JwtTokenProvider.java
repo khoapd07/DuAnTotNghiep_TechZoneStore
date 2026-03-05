@@ -1,6 +1,7 @@
 package com.poly.backend.security;
 
 import com.poly.backend.entity.User;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
@@ -37,5 +38,29 @@ public class JwtTokenProvider {
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    // 1. Lấy thông tin (Claims) từ Token
+    public Claims getClaimsFromToken(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+    }
+
+    // 2. Kiểm tra Token có hợp lệ hay không
+    public boolean validateToken(String authToken) {
+        try {
+            Jwts.parserBuilder()
+                    .setSigningKey(getSigningKey())
+                    .build()
+                    .parseClaimsJws(authToken);
+            return true;
+        } catch (Exception ex) {
+            // Có thể log lỗi ra đây (Hết hạn, sai chữ ký, token hỏng...)
+            System.out.println("Invalid JWT Token: " + ex.getMessage());
+        }
+        return false;
     }
 }

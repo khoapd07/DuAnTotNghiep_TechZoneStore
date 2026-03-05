@@ -27,6 +27,7 @@ import Employee from '../components/admin/Employee.vue'
 import AdminCategoryCRUD from '../components/admin/CategoryCRUD.vue'
 import AdminBrandCRUD from '../components/admin/BrandCRUD.vue'
 import Report from '../components/admin/Report.vue'
+import VoucherCRUD from '../components/admin/VoucherCRUD.vue'
 
 
 const routes = [
@@ -55,6 +56,7 @@ const routes = [
   { 
     path: '/admin', 
     component: AdminLayout, // Khai báo Layout cha
+    meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       { 
         path: '', // Khi vào /admin sẽ load Dashboard
@@ -95,6 +97,11 @@ const routes = [
         path: 'report', 
         name: 'Report', 
         component: Report 
+      },
+      {
+        path: 'vouchers',
+        name: 'VoucherCRUD',
+        component: VoucherCRUD
       }
     ]
   }
@@ -103,6 +110,40 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+router.beforeEach((to, from, next) => {
+  // Kiểm tra xem route chuẩn bị vào có yêu cầu đăng nhập hay không
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+
+  // Lấy thông tin xác thực từ localStorage (Do lúc Login bạn cần lưu xuống đây)
+  const token = localStorage.getItem('jwt_token')
+  const userStr = localStorage.getItem('user_info')
+  let user = null
+  if (userStr) {
+    try {
+      user = JSON.parse(userStr)
+    } catch (e) {}
+  }
+
+  // 1. Nếu chưa đăng nhập mà đòi vào trang cần Auth -> Đẩy ra Login
+  if (requiresAuth && !token) {
+    alert("Vui lòng đăng nhập để tiếp tục!");
+    return next('/login');
+  }
+
+  // 2. Nếu đã đăng nhập nhưng đòi vào trang Admin mà ko phải Admin -> Đẩy về Trang chủ
+  // Lưu ý: Đổi 'Admin' thành giá trị role thực tế bạn lưu trong DB (Ví dụ theo file SQL của bạn có thể là 2, 'ROLE_ADMIN', hoặc 'Admin')
+  if (requiresAdmin) {
+    if (!user || (user.role !== 'Admin' && user.role !== 'Staff')) {
+      alert("Bạn không có quyền...");
+      return next('/'); 
+      }
+  }
+
+  // Nếu hợp lệ thì cho qua
+  next();
 })
 
 export default router

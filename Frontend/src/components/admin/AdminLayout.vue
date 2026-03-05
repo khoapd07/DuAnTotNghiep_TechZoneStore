@@ -58,6 +58,12 @@
               <i class="bi bi-bar-chart-line"></i> <span class="fw-bold fs-7">Báo cáo</span>
             </router-link>
           </li>
+
+          <li class="nav-item">
+            <router-link to="/admin/vouchers" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
+              <i class="bi bi-ticket-detailed"></i> <span class="fw-bold fs-7">Mã giảm giá</span>
+            </router-link>
+          </li>
         </ul>
       </div>
 

@@ -1,9 +1,11 @@
 package com.poly.backend.security;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -17,6 +19,9 @@ import java.util.Arrays;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Autowired
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -32,10 +37,19 @@ public class SecurityConfig {
                 // 2. Kích hoạt CORS (Để Vue.js port 5173 gọi sang Java port 8080 được)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 3. Phân quyền: CHO PHÉP TẤT CẢ (Permit All)
+                // 3 PHÂN QUYỀN API
                 .authorizeHttpRequests(auth -> auth
-                        .anyRequest().permitAll() // Mở toang mọi endpoint
+                        // 1. Cho phép truy cập không cần token: Đăng nhập, đăng ký, xem sản phẩm...
+                        .requestMatchers("/api/auth/**", "/api/product/**", "/api/categories/**", "/api/brands/**").permitAll()
+
+                        // 2. KHÓA CHẶT API ADMIN: Bắt buộc user phải có Authority là "Admin" (tên role trong DB của bạn)
+                        .requestMatchers("/api/admin/**").hasAuthority("Admin")
+
+                        // 3. Các request còn lại (giỏ hàng, mua hàng của User) yêu cầu phải có Token hợp lệ
+                        .anyRequest().authenticated()
                 );
+        // Chèn JwtAuthenticationFilter vào trước lớp Filter xác thực mặc định của Spring
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
