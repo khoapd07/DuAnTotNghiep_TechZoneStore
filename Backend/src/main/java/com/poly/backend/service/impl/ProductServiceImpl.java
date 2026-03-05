@@ -131,4 +131,9 @@ public class ProductServiceImpl implements ProductService {
             product.setBrand(brand);
         }
     }
+
+    @Override
+    public Long countOutOfStock() {
+        return productDAO.countByStockQuantity(0); // Sửa tên hàm gọi ở đây
+    }
 }

@@ -16,4 +16,8 @@ public interface OrderService {
     List<OrderResponseDTO> getOrderHistory(Integer userId);
 
     OrderResponseDTO getOrderByCode(String orderCode);
+    // Thêm khai báo này vào Interface OrderService
+    List<OrderResponseDTO> getRecentOrders(int limit);
+
+
 }

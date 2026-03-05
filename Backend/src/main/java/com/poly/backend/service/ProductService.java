@@ -20,4 +20,7 @@ public interface ProductService {
     // Thêm mới và Cập nhật
     ProductDTO createProduct(ProductDTO productDTO);
     ProductDTO updateProduct(Integer id, ProductDTO productDTO);
+
+    // --- BỔ SUNG CHO DASHBOARD (Để hết lỗi ở Impl) ---
+    Long countOutOfStock();
 }

@@ -7,6 +7,8 @@ import com.poly.backend.service.EmailService;
 import com.poly.backend.service.OrderService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -276,5 +278,30 @@ public class OrderServiceImpl implements OrderService {
         Order order = orderDAO.findByOrderCode(orderCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng: " + orderCode));
         return mapToDTO(order); // Hàm mapToDTO đã có sẵn ở dưới file của bạn
+    }
+
+
+    @Override
+    public List<OrderResponseDTO> getRecentOrders(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        List<Order> orders = orderDAO.findRecentOrders(pageable);
+
+        return orders.stream().map(order -> {
+            OrderResponseDTO dto = new OrderResponseDTO();
+            dto.setOrderId(order.getOrderId());
+            dto.setOrderCode(order.getOrderCode());
+            dto.setOrderDate(order.getOrderDate());
+
+            // SỬA TẠI ĐÂY: Dùng setFinalAmount thay vì setTotalPrice
+            dto.setFinalAmount(order.getFinalAmount());
+            dto.setTotalMoney(order.getTotalMoney());
+
+            // SỬA TẠI ĐÂY: Kiểm tra null cho status và gọi đúng tên trường của Entity OrderStatus
+            if (order.getStatus() != null) {
+                dto.setStatusName(order.getStatus().getStatusName());
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

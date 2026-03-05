@@ -25,4 +25,9 @@ public interface ProductDAO extends JpaRepository<Product, Integer> {
             @Param("min") BigDecimal minPrice,
             @Param("max") BigDecimal maxPrice,
             Pageable pageable);
+
+    Long countByStockQuantity(Integer quantity);
+
+    // Nếu bạn muốn đếm sản phẩm sắp hết hàng (ví dụ < 10)
+    Long countByStockQuantityLessThan(Integer threshold);
 }
