@@ -1,5 +1,6 @@
 package com.poly.backend.controller;
 
+import com.poly.backend.dao.ProductDAO; // MỚI THÊM
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +11,8 @@ import com.poly.backend.dto.ProductDTO;
 import com.poly.backend.service.ProductService;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/product")
@@ -18,12 +21,24 @@ import java.math.BigDecimal;
 public class ProductController {
 
     private final ProductService productService;
+    private final ProductDAO productDAO; // MỚI THÊM: Inject DAO để lấy thống kê nhanh
+
+    // ==================== ENDPOINT MỚI: LẤY THỐNG KÊ ====================
+    @GetMapping("/stats")
+    public ResponseEntity<Map<String, Object>> getProductStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", productDAO.count()); // Tổng số sản phẩm trong DB
+        // Đếm số lượng sản phẩm có tồn kho DƯỚI 15 (nghĩa là < 15)
+        stats.put("lowStock", productDAO.countByStockQuantityLessThan(16));
+        return ResponseEntity.ok(stats);
+    }
+    // ====================================================================
 
     @GetMapping
     public ResponseEntity<Page<ProductDTO>> getAllProducts(
             @RequestParam(value = "keyword", required = false) String keyword,
-            @RequestParam(value = "categoryId", required = false) Integer categoryId, // Thêm mới
-            @RequestParam(value = "brandId", required = false) Integer brandId,       // Thêm mới
+            @RequestParam(value = "categoryId", required = false) Integer categoryId,
+            @RequestParam(value = "brandId", required = false) Integer brandId,
             @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
             @RequestParam(value = "page", defaultValue = "0") int page,
@@ -31,7 +46,6 @@ public class ProductController {
             @RequestParam(value = "sortBy", defaultValue = "createdAt") String sortBy,
             @RequestParam(value = "sortDir", defaultValue = "desc") String sortDir
     ) {
-        // Truyền thêm categoryId và brandId vào service
         Page<ProductDTO> products = productService.getProducts(keyword, categoryId, brandId, minPrice, maxPrice, page, size, sortBy, sortDir);
         return ResponseEntity.ok(products);
     }
@@ -45,10 +59,9 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody ProductDTO productDTO) {
         ProductDTO createdProduct = productService.createProduct(productDTO);
-        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED); // Trả về mã 201 Created
+        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
     }
 
-    // 4. CẬP NHẬT SẢN PHẨM
     @PutMapping("/{id}")
     public ResponseEntity<ProductDTO> updateProduct(
             @PathVariable Integer id,
@@ -57,7 +70,6 @@ public class ProductController {
         return ResponseEntity.ok(updatedProduct);
     }
 
-    // 5. XÓA SẢN PHẨM
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteProduct(@PathVariable Integer id) {
         productService.deleteById(id);
