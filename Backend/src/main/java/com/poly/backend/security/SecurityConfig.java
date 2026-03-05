@@ -40,7 +40,9 @@ public class SecurityConfig {
                 // 3 PHÂN QUYỀN API
                 .authorizeHttpRequests(auth -> auth
                         // 1. Cho phép truy cập không cần token: Đăng nhập, đăng ký, xem sản phẩm...
-                        .requestMatchers("/api/auth/**", "/api/product/**", "/api/categories/**", "/api/brands/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/product/**", "/api/categories/**", "/api/brands/**", "/api/cart/**").permitAll()
+
+//                        .requestMatchers("/api/cart").authenticated()
 
                         // 2. KHÓA CHẶT API ADMIN: Bắt buộc user phải có Authority là "Admin" (tên role trong DB của bạn)
                         .requestMatchers("/api/admin/**").hasAuthority("Admin")

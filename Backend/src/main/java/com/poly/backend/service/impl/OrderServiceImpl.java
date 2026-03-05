@@ -9,6 +9,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -317,5 +318,28 @@ public class OrderServiceImpl implements OrderService {
 
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrderResponseDTO> getAllOrdersForAdmin() {
+        // Lấy tất cả đơn hàng, sắp xếp mới nhất lên đầu
+        return orderDAO.findAll(Sort.by(Sort.Direction.DESC, "orderDate")).stream()
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId) {
+        Order order = orderDAO.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
+
+        OrderStatus status = orderStatusDAO.findById(newStatusId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trạng thái không hợp lệ"));
+
+        order.setStatus(status);
+        Order savedOrder = orderDAO.save(order);
+
+        return mapToDTO(savedOrder);
     }
 }

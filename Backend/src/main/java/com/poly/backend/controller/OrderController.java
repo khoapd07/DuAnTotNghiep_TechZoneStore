@@ -93,4 +93,34 @@ public class OrderController {
             return ResponseEntity.badRequest().body("Lỗi khi lấy đơn hàng: " + e.getMessage());
         }
     }
+
+    /**
+     * API 5: [ADMIN] Lấy tất cả danh sách đơn hàng
+     * URL: http://localhost:8080/api/orders/admin/all
+     */
+    @GetMapping("/admin/all")
+    public ResponseEntity<?> getAllOrdersAdmin() {
+        try {
+            return ResponseEntity.ok(orderService.getAllOrdersForAdmin());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi lấy danh sách đơn hàng: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API 6: [ADMIN] Cập nhật trạng thái đơn hàng
+     * URL: http://localhost:8080/api/orders/admin/{orderId}/status?statusId=...
+     */
+    @PutMapping("/admin/{orderId}/status")
+    public ResponseEntity<?> updateOrderStatus(
+            @PathVariable Integer orderId,
+            @RequestParam Integer statusId) {
+        try {
+            return ResponseEntity.ok(orderService.updateOrderStatus(orderId, statusId));
+        } catch (ResponseStatusException e) {
+            return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi cập nhật trạng thái: " + e.getMessage());
+        }
+    }
 }

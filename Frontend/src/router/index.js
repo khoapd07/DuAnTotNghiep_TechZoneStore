@@ -30,6 +30,9 @@ import Report from '../components/admin/Report.vue'
 import VoucherCRUD from '../components/admin/VoucherCRUD.vue'
 
 
+//import cho shipper
+import Shipping from '../components/shipping/Shipping.vue'
+
 const routes = [
   // --- ROUTES CHO KHÁCH HÀNG ---
   { path: '/', name: 'Home', component: Home },
@@ -50,6 +53,8 @@ const routes = [
   { path: '/ForgotPassword', name: 'ForgotPassword', component: ForgotPassword },
   { path: '/Historyproduct', name: 'Historyproduct', component: Historyproduct},
   { path: '/OrderVote', name: 'OrderVote', component: OrderVote},
+
+
 
   // --- ROUTES CHO ADMIN ---
   
@@ -104,6 +109,14 @@ const routes = [
         component: VoucherCRUD
       }
     ]
+  },
+
+  // --- ROUTES CHO SHIPPER ---
+  {
+    path: '/shipping',
+    name: 'Shipping',
+    component: Shipping,
+    meta: { requiresAuth: true, requiresShipper: true }
   }
 ]
 
