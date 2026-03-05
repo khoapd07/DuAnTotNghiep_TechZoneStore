@@ -132,8 +132,4 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
-    @Override
-    public Long countOutOfStock() {
-        return productDAO.countByStockQuantity(0); // Sửa tên hàm gọi ở đây
-    }
 }

@@ -15,13 +15,16 @@ import java.util.List;
 @Builder
 public class OrderResponseDTO {
     private Integer orderId;
-    private String orderCode;          // Mã đơn (VD: TZ-20260302-XXXX)
-    private LocalDateTime orderDate;   // Ngày đặt
-    private BigDecimal totalMoney;     // Tổng tiền hàng
-    private BigDecimal discountAmount; // Tiền giảm (nếu áp mã)
-    private BigDecimal finalAmount;    // Tiền thực trả
+    private String orderCode;
+    private LocalDateTime orderDate;
+    private BigDecimal totalMoney;
+    private BigDecimal discountAmount;
+    private BigDecimal finalAmount;
     private String note;
-    private String statusName;         // Trạng thái (Pending, Shipping,...)
+    private String statusName;
 
-    private List<OrderDetailResponseDTO> orderDetails; // Danh sách các món đã mua
+    // THÊM DÒNG NÀY ĐỂ TRẢ TÊN KHÁCH HÀNG VỀ CHO FRONTEND
+    private String customerName;
+
+    private List<OrderDetailResponseDTO> orderDetails;
 }

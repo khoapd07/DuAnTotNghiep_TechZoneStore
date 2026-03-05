@@ -158,6 +158,9 @@ public class OrderServiceImpl implements OrderService {
                         .build()
         ).collect(Collectors.toList());
 
+        // Xác định tên khách hàng
+        String cName = (order.getCustomer() != null) ? order.getCustomer().getFullName() : "Khách vãng lai";
+
         return OrderResponseDTO.builder()
                 .orderId(order.getOrderId())
                 .orderCode(order.getOrderCode())
@@ -167,6 +170,7 @@ public class OrderServiceImpl implements OrderService {
                 .finalAmount(order.getFinalAmount())
                 .note(order.getNote())
                 .statusName(order.getStatus() != null ? order.getStatus().getStatusName() : "Unknown")
+                .customerName(cName) // BỔ SUNG TRƯỜNG NÀY VÀO BUILDER
                 .orderDetails(detailDTOs)
                 .build();
     }
@@ -284,21 +288,31 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderResponseDTO> getRecentOrders(int limit) {
         Pageable pageable = PageRequest.of(0, limit);
-        List<Order> orders = orderDAO.findRecentOrders(pageable);
+
+        // Tính mốc 7 ngày
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime sevenDaysAgo = now.minusDays(7);
+
+        // Gọi hàm DAO mới tạo ở Bước 1
+        List<Order> orders = orderDAO.findRecentOrdersBetween(sevenDaysAgo, now, pageable);
 
         return orders.stream().map(order -> {
             OrderResponseDTO dto = new OrderResponseDTO();
             dto.setOrderId(order.getOrderId());
             dto.setOrderCode(order.getOrderCode());
             dto.setOrderDate(order.getOrderDate());
-
-            // SỬA TẠI ĐÂY: Dùng setFinalAmount thay vì setTotalPrice
             dto.setFinalAmount(order.getFinalAmount());
             dto.setTotalMoney(order.getTotalMoney());
 
-            // SỬA TẠI ĐÂY: Kiểm tra null cho status và gọi đúng tên trường của Entity OrderStatus
             if (order.getStatus() != null) {
                 dto.setStatusName(order.getStatus().getStatusName());
+            }
+
+            // Logic lấy tên khách hàng (đã sửa ở lần trước)
+            if (order.getCustomer() != null) {
+                dto.setCustomerName(order.getCustomer().getFullName());
+            } else {
+                dto.setCustomerName("Khách vãng lai");
             }
 
             return dto;

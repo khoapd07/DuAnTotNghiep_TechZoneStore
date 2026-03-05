@@ -1,5 +1,6 @@
 package com.poly.backend.controller;
 
+import com.poly.backend.dto.ChartDataDTO;
 import com.poly.backend.dto.DashboardStatsDTO;
 import com.poly.backend.dto.OrderResponseDTO;
 import com.poly.backend.service.DashboardService;
@@ -32,6 +33,11 @@ public class DashboardController {
     @GetMapping("/recent-orders")
     public ResponseEntity<List<OrderResponseDTO>> getRecentOrders() {
         // Lấy 5 đơn hàng mới nhất
-        return ResponseEntity.ok(orderService.getRecentOrders(5));
+        return ResponseEntity.ok(orderService.getRecentOrders(8));
+    }
+
+    @GetMapping("/chart-data")
+    public ResponseEntity<List<ChartDataDTO>> getChartData() {
+        return ResponseEntity.ok(dashboardService.getChartData7Days());
     }
 }
