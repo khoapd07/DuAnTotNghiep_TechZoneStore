@@ -1,8 +1,5 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
-    
-    
-
     <main class="flex-grow-1 p-4 overflow-auto">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -34,7 +31,7 @@
         </div>
         <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
-            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Sắp hết hàng</p><h2 class="fw-black text-dark m-0">{{ stats.lowStock }}</h2></div>
+            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Sắp hết hàng (< 15)</p><h2 class="fw-black text-dark m-0">{{ stats.lowStock }}</h2></div>
             <div class="bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-exclamation-triangle fs-4"></i></div>
           </div>
         </div>
@@ -70,7 +67,7 @@
                 <td class="py-3"><span class="fw-bold fs-7 text-dark">{{ product.name }}</span></td>
                 <td class="py-3"><span class="badge bg-light text-dark border rounded-pill px-3 py-1 fs-8 fw-bold">{{ product.categoryName || 'Chưa rõ' }}</span></td>
                 <td class="fw-bold text-dark fs-7 py-3">{{ formatCurrency(product.price) }}</td>
-                <td class="py-3"><span class="fs-7 fw-bold" :class="product.stockQuantity <= 15 ? 'text-danger' : 'text-dark'">{{ product.stockQuantity }}</span></td>
+                <td class="py-3"><span class="fs-7 fw-bold" :class="product.stockQuantity < 15 ? 'text-danger' : 'text-dark'">{{ product.stockQuantity }}</span></td>
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
                     <button @click="openEditModal(product)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
@@ -78,8 +75,28 @@
                   </div>
                 </td>
               </tr>
+              <tr v-if="paginatedProducts.length === 0">
+                <td colspan="6" class="text-center py-4 text-muted fs-7">Không tìm thấy sản phẩm nào.</td>
+              </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center p-3 border-top bg-white rounded-bottom-4">
+          <span class="text-muted fs-8 fw-medium">Hiển thị {{ paginatedProducts.length }} / {{ filteredProducts.length }} sản phẩm</span>
+          <nav v-if="totalPages > 1">
+            <ul class="pagination pagination-sm mb-0 gap-1">
+              <li class="page-item" :class="{ disabled: currentPage === 1 }">
+                <button class="page-link text-dark shadow-none rounded-2" @click="currentPage--">Trước</button>
+              </li>
+              <li class="page-item" v-for="page in totalPages" :key="page" :class="{ active: currentPage === page }">
+                <button class="page-link shadow-none rounded-2" :class="currentPage === page ? 'bg-neon text-dark border-neon fw-bold' : 'text-dark'" @click="currentPage = page">{{ page }}</button>
+              </li>
+              <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+                <button class="page-link text-dark shadow-none rounded-2" @click="currentPage++">Sau</button>
+              </li>
+            </ul>
+          </nav>
         </div>
       </div>
     </main>
@@ -98,8 +115,7 @@
               
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Danh mục</label>
-                <select v-model="form.categoryId" class="form-select fs-7 shadow-none">
-                  <option value="">Chọn danh mục</option>
+                <select v-model="form.categoryId" class="form-select fs-7 shadow-none">               
                   <option v-for="cat in categoryList" :key="cat.categoryId" :value="cat.categoryId">{{ cat.categoryName }}</option>
                 </select>
               </div>
@@ -107,7 +123,6 @@
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Thương hiệu</label>
                 <select v-model="form.brandId" class="form-select fs-7 shadow-none">
-                  <option value="">Chọn thương hiệu</option>
                   <option v-for="b in brandList" :key="b.brandId" :value="b.brandId">{{ b.brandName }}</option>
                 </select>
               </div>
@@ -129,18 +144,23 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, reactive } from 'vue';
+import { ref, computed, onMounted, reactive, watch } from 'vue';
 import axios from 'axios';
 
 const productList = ref([]);
 const categoryList = ref([]);
 const brandList = ref([]);
 const searchQuery = ref('');
+
+// Cập nhật phân trang: 15 sản phẩm / 1 trang
 const currentPage = ref(1);
-const itemsPerPage = 10;
+const itemsPerPage = 15; 
+
 const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
+
+const stats = reactive({ total: 0, lowStock: 0, categories: 0 });
 
 const form = reactive({ 
   name: '', 
@@ -159,16 +179,26 @@ const getAuthHeader = () => {
 
 const fetchProducts = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/product', { headers: getAuthHeader() });
+    // Ép backend trả về 1000 sản phẩm để Frontend tự phân trang
+    const response = await axios.get('http://localhost:8080/api/product?size=1000', { headers: getAuthHeader() });
     const data = response.data;
     productList.value = data.content || data.data || (Array.isArray(data) ? data : []);
   } catch (error) { console.error("Lỗi tải sản phẩm:", error); }
+};
+
+const fetchStats = async () => {
+  try {
+    const response = await axios.get('http://localhost:8080/api/product/stats', { headers: getAuthHeader() });
+    stats.total = response.data.total;
+    stats.lowStock = response.data.lowStock;
+  } catch (error) { console.error("Lỗi tải thống kê:", error); }
 };
 
 const fetchCategories = async () => {
   try {
     const response = await axios.get('http://localhost:8080/api/categories', { headers: getAuthHeader() });
     categoryList.value = response.data;
+    stats.categories = categoryList.value.length; 
   } catch (error) { console.error("Lỗi tải danh mục:", error); categoryList.value = []; }
 };
 
@@ -179,22 +209,25 @@ const fetchBrands = async () => {
   } catch (error) { console.error("Lỗi tải thương hiệu:", error); brandList.value = []; }
 };
 
-const stats = computed(() => ({
-  // Sửa chỗ này: Tính tổng số lượng của tất cả sản phẩm thay vì đếm số dòng
-  total: productList.value.reduce((sum, p) => sum + (Number(p.stockQuantity) || 0), 0),
-  lowStock: productList.value.filter(p => p.stockQuantity <= 15).length,
-  categories: [...new Set(productList.value.map(p => p.categoryName))].filter(Boolean).length
-}));
-
+// Lọc sản phẩm theo ô tìm kiếm
 const filteredProducts = computed(() => {
   let res = [...productList.value];
   if (searchQuery.value) res = res.filter(p => p.name.toLowerCase().includes(searchQuery.value.toLowerCase()));
   return res;
 });
 
+// Tính tổng số trang
+const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage));
+
+// Lấy sản phẩm cho trang hiện tại
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return filteredProducts.value.slice(start, start + itemsPerPage);
+});
+
+// Khi tìm kiếm, tự động quay về trang 1
+watch(searchQuery, () => {
+  currentPage.value = 1;
 });
 
 const openAddModal = () => {
@@ -223,6 +256,7 @@ const saveProduct = async () => {
     }
     showModal.value = false;
     fetchProducts();
+    fetchStats(); 
     alert("Thành công!");
   } catch (error) {
     alert("Lỗi: " + (error.response?.data?.message || "Không thể thực hiện"));
@@ -230,12 +264,12 @@ const saveProduct = async () => {
 };
 
 const deleteProduct = async (id) => {
-  console.log("Đang thực hiện xóa ID:", id);
   if (!id) { alert("Không tìm thấy ID sản phẩm!"); return; }
   if (confirm("Xóa sản phẩm này?")) {
     try {
       await axios.delete(`http://localhost:8080/api/product/${id}`, { headers: getAuthHeader() });
       fetchProducts();
+      fetchStats(); 
       alert("Xóa thành công!");
     } catch (error) { alert("Lỗi khi xóa!"); }
   }
@@ -247,6 +281,7 @@ onMounted(() => {
   fetchProducts(); 
   fetchCategories(); 
   fetchBrands(); 
+  fetchStats(); 
 });
 </script>
 
@@ -264,24 +299,9 @@ onMounted(() => {
 /* Custom Colors */
 .text-neon { color: #00FF33 !important; }
 .bg-neon { background-color: #00FF33 !important; }
+.border-neon { border-color: #00FF33 !important; }
 .btn-neon { background-color: #00FF33; border: none; }
 .btn-neon:hover { background-color: #00e62e; }
-
-/* Sidebar Nav */
-.custom-nav .nav-link {
-  padding: 0.6rem 1rem;
-  transition: all 0.2s ease;
-}
-.custom-nav .nav-link.active {
-  background-color: rgba(0, 255, 51, 0.1);
-  color: #00FF33 !important;
-  border-left: 4px solid #00FF33;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-}
-.custom-nav .nav-link:hover:not(.active) {
-  background-color: #f8f9fa;
-}
 
 /* Bảng dữ liệu */
 .table th { letter-spacing: 0.5px; }
@@ -293,4 +313,8 @@ onMounted(() => {
 .table-hover tbody tr:hover td {
   background-color: #f8f9fa;
 }
+
+/* Pagination */
+.page-link { border: 1px solid #dee2e6; color: #333; }
+.page-link:hover { background-color: #e9ecef; }
 </style>
