@@ -12,6 +12,7 @@ import com.poly.backend.service.ProductService;
 
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -60,6 +61,18 @@ public class ProductController {
     public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody ProductDTO productDTO) {
         ProductDTO createdProduct = productService.createProduct(productDTO);
         return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+    }
+
+    // Lấy danh sách sản phẩm CÓ GIẢM GIÁ (Dùng cho Flash Sale)
+    @GetMapping("/discounted")
+    public ResponseEntity<List<ProductDTO>> getDiscountedProducts() {
+        return ResponseEntity.ok(productService.getDiscountedProducts());
+    }
+
+    // Lấy 8 sản phẩm MỚI NHẤT (Dùng cho mục Hàng Mới Về)
+    @GetMapping("/latest")
+    public ResponseEntity<List<ProductDTO>> getLatestProducts() {
+        return ResponseEntity.ok(productService.getTop8NewestProducts());
     }
 
     @PutMapping("/{id}")

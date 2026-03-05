@@ -66,7 +66,21 @@
                 </td>
                 <td class="py-3"><span class="fw-bold fs-7 text-dark">{{ product.name }}</span></td>
                 <td class="py-3"><span class="badge bg-light text-dark border rounded-pill px-3 py-1 fs-8 fw-bold">{{ product.categoryName || 'Chưa rõ' }}</span></td>
-                <td class="fw-bold text-dark fs-7 py-3">{{ formatCurrency(product.price) }}</td>
+                
+                <td class="py-3">
+                  <div v-if="product.salePrice && product.salePrice > 0 && product.salePrice < product.price">
+                    <span class="fw-bold text-danger fs-7">{{ formatCurrency(product.salePrice) }}</span>
+                    <div class="d-flex align-items-center gap-2 mt-1">
+                      <span class="text-muted text-decoration-line-through fs-8">{{ formatCurrency(product.price) }}</span>
+                      <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-1 py-0" style="font-size: 0.65rem;">
+                        -{{ calculateDiscount(product.price, product.salePrice) }}%
+                      </span>
+                    </div>
+                  </div>
+                  <div v-else>
+                    <span class="fw-bold text-dark fs-7">{{ formatCurrency(product.price) }}</span>
+                  </div>
+                </td>
                 <td class="py-3"><span class="fs-7 fw-bold" :class="product.stockQuantity < 15 ? 'text-danger' : 'text-dark'">{{ product.stockQuantity }}</span></td>
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
@@ -127,9 +141,10 @@
                 </select>
               </div>
 
-              <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng</label><input type="number" v-model="form.stockQuantity" class="form-control fs-7"></div>
-              <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán</label><input type="number" v-model="form.price" class="form-control fs-7"></div>
-              <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Link hình ảnh</label><input type="text" v-model="form.imageUrl" class="form-control fs-7"></div>
+              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng</label><input type="number" v-model="form.stockQuantity" class="form-control fs-7"></div>
+              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán</label><input type="number" v-model="form.price" class="form-control fs-7"></div>
+              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM</label><input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống..."></div>
+              <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Link hình ảnh</label><input type="text" v-model="form.imageUrl" class="form-control fs-7"></div>
               <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mô tả ngắn</label><textarea v-model="form.description" class="form-control fs-7" rows="2"></textarea></div>
             </div>
           </div>
@@ -152,7 +167,6 @@ const categoryList = ref([]);
 const brandList = ref([]);
 const searchQuery = ref('');
 
-// Cập nhật phân trang: 15 sản phẩm / 1 trang
 const currentPage = ref(1);
 const itemsPerPage = 15; 
 
@@ -167,10 +181,26 @@ const form = reactive({
   categoryId: null,
   brandId: null,
   price: 0, 
+  salePrice: null, // Mới thêm
   stockQuantity: 0, 
   imageUrl: '', 
   description: '' 
 });
+
+// Hàm tính % giảm giá (Đã fix lỗi làm tròn 100%)
+const calculateDiscount = (price, salePrice) => {
+  if (!price || !salePrice || price <= 0 || salePrice >= price) return 0;
+  
+  const discount = ((price - salePrice) / price) * 100;
+  let roundedDiscount = Math.round(discount);
+  
+  // Nếu làm tròn lên 100% nhưng giá bán thực tế vẫn lớn hơn 0đ thì ép về 99%
+  if (roundedDiscount >= 100 && salePrice > 0) {
+    return 99;
+  }
+  
+  return roundedDiscount;
+};
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('jwt_token');
@@ -179,7 +209,6 @@ const getAuthHeader = () => {
 
 const fetchProducts = async () => {
   try {
-    // Ép backend trả về 1000 sản phẩm để Frontend tự phân trang
     const response = await axios.get('http://localhost:8080/api/product?size=1000', { headers: getAuthHeader() });
     const data = response.data;
     productList.value = data.content || data.data || (Array.isArray(data) ? data : []);
@@ -209,23 +238,19 @@ const fetchBrands = async () => {
   } catch (error) { console.error("Lỗi tải thương hiệu:", error); brandList.value = []; }
 };
 
-// Lọc sản phẩm theo ô tìm kiếm
 const filteredProducts = computed(() => {
   let res = [...productList.value];
   if (searchQuery.value) res = res.filter(p => p.name.toLowerCase().includes(searchQuery.value.toLowerCase()));
   return res;
 });
 
-// Tính tổng số trang
 const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage));
 
-// Lấy sản phẩm cho trang hiện tại
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return filteredProducts.value.slice(start, start + itemsPerPage);
 });
 
-// Khi tìm kiếm, tự động quay về trang 1
 watch(searchQuery, () => {
   currentPage.value = 1;
 });
@@ -233,7 +258,7 @@ watch(searchQuery, () => {
 const openAddModal = () => {
   isEditing.value = false;
   currentId.value = null;
-  Object.assign(form, { name: '', categoryId: null, brandId: null, price: 0, stockQuantity: 0, imageUrl: '', description: '' });
+  Object.assign(form, { name: '', categoryId: null, brandId: null, price: 0, salePrice: null, stockQuantity: 0, imageUrl: '', description: '' });
   showModal.value = true;
 };
 
@@ -243,23 +268,29 @@ const openEditModal = (p) => {
   Object.assign(form, p); 
   form.categoryId = p.categoryId; 
   form.brandId = p.brandId; 
+  form.salePrice = p.salePrice || null; // Map dữ liệu cũ
   showModal.value = true;
 };
 
 const saveProduct = async () => {
   try {
     const headers = getAuthHeader();
+    const payload = { ...form };
+    
+    // Ép kiểu salePrice để tránh lỗi đẩy chữ (String) xuống Backend
+    payload.salePrice = payload.salePrice ? Number(payload.salePrice) : null;
+
     if (isEditing.value) {
-      await axios.put(`http://localhost:8080/api/product/${currentId.value}`, form, { headers });
+      await axios.put(`http://localhost:8080/api/product/${currentId.value}`, payload, { headers });
     } else {
-      await axios.post('http://localhost:8080/api/product', form, { headers });
+      await axios.post('http://localhost:8080/api/product', payload, { headers });
     }
     showModal.value = false;
     fetchProducts();
     fetchStats(); 
     alert("Thành công!");
   } catch (error) {
-    alert("Lỗi: " + (error.response?.data?.message || "Không thể thực hiện"));
+    alert("Lỗi: " + (error.response?.data?.message || "Không thể thực hiện. Kiểm tra lại giá KM"));
   }
 };
 
@@ -295,6 +326,7 @@ onMounted(() => {
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
+.fs-9 { font-size: 0.65rem; }
 
 /* Custom Colors */
 .text-neon { color: #00FF33 !important; }
