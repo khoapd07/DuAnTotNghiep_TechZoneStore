@@ -1,8 +1,6 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
     
-    
-
     <main class="flex-grow-1 p-3 overflow-auto position-relative">
       
       <header class="d-flex justify-content-between align-items-center mb-4">
@@ -14,9 +12,7 @@
         </div>
         <div class="d-flex gap-3 align-items-center">
           <div class="d-flex align-items-center gap-2">
-            <div class="avatar bg-light text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center border" style="width: 35px; height: 35px;">
-              A
-            </div>
+            <div class="avatar bg-light text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center border" style="width: 35px; height: 35px;">A</div>
             <span class="fw-bold fs-7">Admin TechZone</span>
           </div>
         </div>
@@ -26,55 +22,30 @@
         <div class="col-md-3">
           <div class="card border-0 shadow-sm rounded-4 p-3 h-100 border-start border-4 border-primary">
             <p class="text-muted fs-8 fw-bold text-uppercase m-0">Tổng đơn hàng</p>
-            <h3 class="fw-black text-dark m-0 mt-1">1,250</h3>
-            <span class="text-success fs-8 fw-bold mt-2 d-inline-block"><i class="bi bi-arrow-up-right"></i> 12.5% tháng này</span>
+            <h3 class="fw-black text-dark m-0 mt-1">{{ stats.total }}</h3>
           </div>
         </div>
         <div class="col-md-3">
           <div class="card border-0 shadow-sm rounded-4 p-3 h-100 border-start border-4 border-warning">
             <p class="text-muted fs-8 fw-bold text-uppercase m-0">Chờ xử lý</p>
-            <h3 class="fw-black text-dark m-0 mt-1">45</h3>
-            <span class="text-warning fs-8 fw-bold mt-2 d-inline-block">Cần xử lý ngay</span>
+            <h3 class="fw-black text-dark m-0 mt-1">{{ stats.pending }}</h3>
           </div>
         </div>
         <div class="col-md-3">
           <div class="card border-0 shadow-sm rounded-4 p-3 h-100 border-start border-4 border-info">
             <p class="text-muted fs-8 fw-bold text-uppercase m-0">Đang giao</p>
-            <h3 class="fw-black text-dark m-0 mt-1">120</h3>
-            <span class="text-info fs-8 fw-bold mt-2 d-inline-block">Đang vận chuyển</span>
+            <h3 class="fw-black text-dark m-0 mt-1">{{ stats.shipping }}</h3>
           </div>
         </div>
         <div class="col-md-3">
           <div class="card border-0 shadow-sm rounded-4 p-3 h-100 border-start border-4 border-success">
             <p class="text-muted fs-8 fw-bold text-uppercase m-0">Hoàn thành</p>
-            <h3 class="fw-black text-dark m-0 mt-1">1,085</h3>
-            <span class="text-success fs-8 fw-bold mt-2 d-inline-block">Tỷ lệ thành công cao</span>
+            <h3 class="fw-black text-dark m-0 mt-1">{{ stats.delivered }}</h3>
           </div>
         </div>
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 p-3 mb-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-          <div>
-            <h6 class="fw-black text-dark m-0 fs-5">Danh sách đơn hàng</h6>
-            <small class="text-muted fs-7">248 đơn hàng mới</small>
-          </div>
-          <div class="d-flex gap-2">
-            <select class="form-select form-select-sm border bg-light fw-bold text-muted shadow-none fs-8" style="width: 150px;">
-              <option>Tất cả trạng thái</option>
-              <option>Chờ xử lý</option>
-              <option>Đang giao</option>
-              <option>Hoàn thành</option>
-            </select>
-            <button class="btn btn-light border fw-bold fs-8 text-dark d-flex align-items-center gap-2">
-              <i class="bi bi-file-earmark-arrow-down"></i> Xuất File
-            </button>
-            <button class="btn btn-dark fw-bold fs-8 text-white d-flex align-items-center gap-2 rounded-3">
-              <i class="bi bi-plus-lg"></i> Thêm đơn hàng
-            </button>
-          </div>
-        </div>
-        
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead class="border-bottom bg-light">
@@ -83,30 +54,26 @@
                 <th scope="col" class="py-3 fw-bold">Khách Hàng</th>
                 <th scope="col" class="py-3 fw-bold">Ngày Đặt</th>
                 <th scope="col" class="py-3 fw-bold">Tổng Tiền</th>
-                <th scope="col" class="py-3 fw-bold">Thanh Toán</th>
                 <th scope="col" class="py-3 fw-bold">Trạng Thái</th>
                 <th scope="col" class="py-3 fw-bold text-center">Hành Động</th>
               </tr>
             </thead>
-            <tbody>
-              <tr v-for="order in orderList" :key="order.id" class="border-bottom-dashed cursor-pointer">
-                <td class="fw-bold fs-7 text-dark px-3">{{ order.id }}</td>
+            <tbody v-if="!loading">
+              <tr v-for="order in orderList" :key="order.orderId" class="border-bottom-dashed cursor-pointer">
+                <td class="fw-bold fs-7 text-dark px-3">{{ order.orderCode }}</td>
                 <td>
                   <div class="d-flex align-items-center gap-2">
                     <div class="avatar-text bg-secondary text-white fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.75rem;">
-                      {{ order.initials }}
+                      {{ getInitials(extractCustomerInfo(order.note).name) }}
                     </div>
-                    <span class="fw-bold fs-7 text-dark">{{ order.customer }}</span>
+                    <span class="fw-bold fs-7 text-dark">{{ extractCustomerInfo(order.note).name }}</span>
                   </div>
                 </td>
-                <td class="text-muted fs-7">{{ order.date }}</td>
-                <td class="fw-bold fs-7 text-dark">{{ formatCurrency(order.total) }}</td>
+                <td class="text-muted fs-7">{{ formatDate(order.orderDate) }}</td>
+                <td class="fw-bold fs-7 text-dark">{{ formatCurrency(order.finalAmount) }}</td>
                 <td>
-                  <span class="badge bg-light text-dark border fs-8 px-2 py-1">{{ order.payment }}</span>
-                </td>
-                <td>
-                  <span class="badge fw-bold px-2 py-1 rounded-2 fs-8" :class="getStatusClass(order.status)">
-                    {{ order.status }}
+                  <span class="badge fw-bold px-2 py-1 rounded-2 fs-8" :class="getStatusClass(order.statusName)">
+                    {{ translateStatus(order.statusName) }}
                   </span>
                 </td>
                 <td class="text-center">
@@ -120,40 +87,36 @@
                 </td>
               </tr>
             </tbody>
+            <tbody v-else>
+              <tr><td colspan="6" class="text-center py-4"><span class="spinner-border text-success"></span> Đang tải...</td></tr>
+            </tbody>
           </table>
-        </div>
-
-        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 px-2 border-top">
-          <span class="text-muted fs-8">Hiển thị 10 trong 1,250 đơn hàng</span>
-          <div class="d-flex gap-1">
-            <button class="btn btn-sm btn-light border px-2"><i class="bi bi-chevron-left"></i></button>
-            <button class="btn btn-sm btn-dark px-3 fw-bold">1</button>
-            <button class="btn btn-sm btn-light border px-3 fw-bold">2</button>
-            <button class="btn btn-sm btn-light border px-3 fw-bold">3</button>
-            <button class="btn btn-sm btn-light border px-2"><i class="bi bi-chevron-right"></i></button>
-          </div>
         </div>
       </div>
 
     </main>
 
-    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="orderDetailOffcanvas" style="width: 400px; border-left: none;">
+    <div class="offcanvas offcanvas-end shadow" tabindex="-1" id="orderDetailOffcanvas" style="width: 450px; border-left: none;">
       <div class="offcanvas-header border-bottom bg-light">
-        <h5 class="offcanvas-title fw-black fs-5">Đơn hàng {{ selectedOrder?.id }}</h5>
+        <h5 class="offcanvas-title fw-black fs-5">{{ selectedOrder?.orderCode }}</h5>
         <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
       </div>
       <div class="offcanvas-body p-0" v-if="selectedOrder">
         
         <div class="p-3 border-bottom bg-light-gray">
-          <p class="fs-8 text-muted fw-bold mb-1">NGÀY ĐẶT: {{ selectedOrder.date }}</p>
+          <p class="fs-8 text-muted fw-bold mb-1">NGÀY ĐẶT: {{ formatDate(selectedOrder.orderDate) }}</p>
           <label class="fs-8 fw-bold text-dark mb-2">TRẠNG THÁI XỬ LÝ</label>
           <div class="d-flex gap-2">
-            <select class="form-select form-select-sm fw-bold border-dark shadow-none" v-model="selectedOrder.status">
-              <option value="CHỜ XỬ LÝ">Chờ xử lý</option>
-              <option value="ĐANG GIAO">Đang giao</option>
-              <option value="HOÀN THÀNH">Hoàn thành</option>
+            <select class="form-select form-select-sm fw-bold border-dark shadow-none" v-model="selectedOrderEditStatus">
+              <option value="0">Chờ xác nhận</option>
+              <option value="1">Đã xác nhận</option>
+              <option value="2">Đang giao hàng</option>
+              <option value="3">Giao hàng thành công</option>
+              <option value="4">Hủy đơn</option>
             </select>
-            <button class="btn btn-sm btn-dark fw-bold px-3" data-bs-dismiss="offcanvas">Lưu</button>
+            <button class="btn btn-sm btn-dark fw-bold px-3" @click="updateStatus" :disabled="isSaving">
+              {{ isSaving ? '...' : 'Lưu' }}
+            </button>
           </div>
         </div>
 
@@ -161,58 +124,45 @@
           <h6 class="fw-bold fs-6 mb-3">Thông tin khách hàng</h6>
           <div class="mb-2">
             <small class="text-muted d-block fs-8 fw-bold">HỌ TÊN</small>
-            <span class="fs-7 fw-bold text-dark">{{ selectedOrder.customer }}</span>
+            <span class="fs-7 fw-bold text-dark">{{ extractCustomerInfo(selectedOrder.note).name }}</span>
           </div>
           <div class="mb-2">
             <small class="text-muted d-block fs-8 fw-bold">ĐIỆN THOẠI</small>
-            <span class="fs-7 fw-bold text-dark">0987 123 456</span>
+            <span class="fs-7 fw-bold text-dark">{{ extractCustomerInfo(selectedOrder.note).phone }}</span>
           </div>
           <div>
             <small class="text-muted d-block fs-8 fw-bold">ĐỊA CHỈ NHẬN HÀNG</small>
-            <span class="fs-7 text-dark">123 Đường ABC, Phường 10, Quận 1, TP. Hồ Chí Minh</span>
+            <span class="fs-7 text-dark">{{ extractCustomerInfo(selectedOrder.note).address }}</span>
           </div>
         </div>
 
-        <div class="p-3 border-bottom">
-          <h6 class="fw-bold fs-6 mb-3">Sản phẩm (2)</h6>
-          <div class="d-flex align-items-center gap-3 mb-3">
-            <div class="bg-light rounded p-2 border" style="width: 50px; height: 50px;">
-              <i class="bi bi-laptop fs-4 text-muted d-flex justify-content-center"></i>
+        <div class="p-3 border-bottom overflow-auto" style="max-height: 250px;">
+          <h6 class="fw-bold fs-6 mb-3">Sản phẩm ({{ selectedOrder.orderDetails.length }})</h6>
+          <div v-for="item in selectedOrder.orderDetails" :key="item.productId" class="d-flex align-items-center gap-3 mb-3">
+            <div class="bg-light rounded p-1 border" style="width: 50px; height: 50px;">
+              <img :src="item.imageUrl" alt="img" class="img-fluid object-fit-contain h-100 w-100">
             </div>
             <div class="flex-grow-1">
-              <h6 class="m-0 fs-7 fw-bold">MacBook Pro 14 M2</h6>
-              <span class="fs-8 text-muted">x1</span>
+              <h6 class="m-0 fs-8 fw-bold line-clamp-1">{{ item.productName }}</h6>
+              <span class="fs-8 text-muted">SL: {{ item.quantity }}</span>
             </div>
-            <span class="fw-bold fs-7">42,000,000₫</span>
-          </div>
-          <div class="d-flex align-items-center gap-3">
-            <div class="bg-light rounded p-2 border" style="width: 50px; height: 50px;">
-              <i class="bi bi-mouse3 fs-4 text-muted d-flex justify-content-center"></i>
-            </div>
-            <div class="flex-grow-1">
-              <h6 class="m-0 fs-7 fw-bold">Magic Mouse 2 - Black</h6>
-              <span class="fs-8 text-muted">x1</span>
-            </div>
-            <span class="fw-bold fs-7">3,000,000₫</span>
+            <span class="fw-bold fs-7">{{ formatCurrency(item.subTotal) }}</span>
           </div>
         </div>
 
         <div class="p-3 bg-light mt-auto">
           <div class="d-flex justify-content-between mb-2 fs-7">
             <span class="text-muted">Tạm tính</span>
-            <span class="fw-bold">45,000,000₫</span>
+            <span class="fw-bold">{{ formatCurrency(selectedOrder.totalMoney) }}</span>
           </div>
-          <div class="d-flex justify-content-between mb-3 fs-7">
-            <span class="text-muted">Phí vận chuyển</span>
-            <span class="fw-bold">0₫</span>
+          <div class="d-flex justify-content-between mb-2 fs-7">
+            <span class="text-muted">Giảm giá Voucher</span>
+            <span class="fw-bold text-danger">-{{ formatCurrency(selectedOrder.discountAmount) }}</span>
           </div>
           <div class="d-flex justify-content-between pt-2 border-top mb-3">
-            <span class="fw-bold text-dark">Tổng cộng</span>
-            <span class="fw-black text-danger fs-5">{{ formatCurrency(selectedOrder.total) }}</span>
+            <span class="fw-bold text-dark">Tổng cộng (Thực trả)</span>
+            <span class="fw-black text-success fs-5">{{ formatCurrency(selectedOrder.finalAmount) }}</span>
           </div>
-          <button class="btn btn-outline-dark w-100 fw-bold d-flex justify-content-center align-items-center gap-2">
-            <i class="bi bi-printer"></i> In hóa đơn
-          </button>
         </div>
 
       </div>
@@ -222,71 +172,134 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed, onMounted } from 'vue';
+import axios from 'axios';
 
-// State lưu đơn hàng đang được xem chi tiết
+const orderList = ref([]);
+const loading = ref(true);
 const selectedOrder = ref(null);
+const selectedOrderEditStatus = ref('0');
+const isSaving = ref(false);
 
-// Hàm hiển thị chi tiết đơn hàng lên Offcanvas
-const viewOrderDetail = (order) => {
-  selectedOrder.value = { ...order };
-};
+const API_URL = 'http://localhost:8080/api/orders';
 
-// Hàm format tiền tệ
-const formatCurrency = (value) => {
-  return value.toLocaleString('vi-VN') + '₫';
-};
-
-// Hàm cấp màu Badge chuẩn theo thiết kế
-const getStatusClass = (status) => {
-  switch(status) {
-    case 'HOÀN THÀNH': return 'bg-success text-white';
-    case 'CHỜ XỬ LÝ': return 'bg-warning text-dark';
-    case 'ĐANG GIAO': return 'bg-info text-dark';
-    case 'HỦY ĐƠN': return 'bg-danger text-white';
-    default: return 'bg-secondary text-white';
+// Lấy danh sách đơn hàng
+const fetchOrders = async () => {
+  loading.value = true;
+  try {
+    const response = await axios.get(`${API_URL}/admin/all`);
+    orderList.value = response.data;
+  } catch (error) {
+    console.error("Lỗi khi tải đơn hàng:", error);
+  } finally {
+    loading.value = false;
   }
 };
 
-// Dữ liệu Mock mô phỏng chính xác theo hình ảnh Figma
-const orderList = ref([
-  { id: '#TZ-1001', initials: 'NA', customer: 'Nguyễn Văn An', date: '12/10/2023 14:30', total: 15500000, payment: 'COD', status: 'HOÀN THÀNH' },
-  { id: '#TZ-1002', initials: 'TB', customer: 'Trần Thị Bích', date: '12/10/2023 10:15', total: 2300000, payment: 'CHUYỂN KHOẢN', status: 'CHỜ XỬ LÝ' },
-  { id: '#TZ-1003', initials: 'LC', customer: 'Lê Văn Cường', date: '11/10/2023 18:20', total: 45000000, payment: 'CHUYỂN KHOẢN', status: 'ĐANG GIAO' },
-  { id: '#TZ-1004', initials: 'MD', customer: 'Phạm Minh Duy', date: '11/10/2023 09:45', total: 8900000, payment: 'COD', status: 'HOÀN THÀNH' }
-]);
+onMounted(() => fetchOrders());
+
+// Mở Offcanvas Xem chi tiết
+const viewOrderDetail = (order) => {
+  selectedOrder.value = order;
+  // Map chữ Tiếng Anh/Số về Option Value
+  const s = String(order.statusName).toLowerCase();
+  if (s === '0' || s === 'pending') selectedOrderEditStatus.value = '0';
+  else if (s === '1' || s === 'confirmed') selectedOrderEditStatus.value = '1';
+  else if (s === '2' || s === 'shipping') selectedOrderEditStatus.value = '2';
+  else if (s === '3' || s === 'delivered') selectedOrderEditStatus.value = '3';
+  else if (s === '4' || s === 'cancelled') selectedOrderEditStatus.value = '4';
+};
+
+// Cập nhật trạng thái
+const updateStatus = async () => {
+  if (!selectedOrder.value) return;
+  isSaving.value = true;
+  try {
+    await axios.put(`${API_URL}/admin/${selectedOrder.value.orderId}/status?statusId=${selectedOrderEditStatus.value}`);
+    alert("Cập nhật trạng thái thành công!");
+    fetchOrders(); // Load lại danh sách
+    document.querySelector('.btn-close').click(); // Đóng offcanvas
+  } catch (error) {
+    alert("Lỗi cập nhật: " + (error.response?.data || error.message));
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+// Hàm thống kê
+const stats = computed(() => {
+  return {
+    total: orderList.value.length,
+    pending: orderList.value.filter(o => { const s=String(o.statusName).toLowerCase(); return s==='0' || s==='pending'; }).length,
+    shipping: orderList.value.filter(o => { const s=String(o.statusName).toLowerCase(); return s==='2' || s==='shipping'; }).length,
+    delivered: orderList.value.filter(o => { const s=String(o.statusName).toLowerCase(); return s==='3' || s==='delivered'; }).length,
+  };
+});
+
+// Hàm trích xuất thông tin khách hàng từ chuỗi "note" đã làm ở trang Checkout
+const extractCustomerInfo = (noteString) => {
+  let extName = 'Khách hàng';
+  let extPhone = 'Đang cập nhật';
+  let extAddress = noteString || 'Đang cập nhật';
+  
+  if (noteString && noteString.includes(' - SĐT:')) {
+    try {
+      const parts = noteString.split(' - ');
+      extName = parts[0].replace('Người nhận: ', '').replace('Khách vãng lai: ', '').trim();
+      extPhone = parts[1].replace('SĐT: ', '').trim();
+      extAddress = parts[2].replace('Đ/C: ', '').split('. Ghi chú')[0].trim();
+    } catch (e) {}
+  }
+  return { name: extName, phone: extPhone, address: extAddress };
+};
+
+// Lấy 2 chữ cái đầu để làm Avatar
+const getInitials = (name) => {
+  if (!name) return 'KH';
+  const words = name.trim().split(' ');
+  if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
+  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+};
+
+const formatCurrency = (value) => value ? value.toLocaleString('vi-VN') + '₫' : "0₫";
+
+const formatDate = (dateString) => {
+  if(!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+// Định dạng trạng thái tiếng Việt
+const translateStatus = (status) => {
+  const s = String(status).toLowerCase();
+  if (s === '0' || s === 'pending') return 'CHỜ XÁC NHẬN';
+  if (s === '1' || s === 'confirmed') return 'ĐÃ XÁC NHẬN';
+  if (s === '2' || s === 'shipping') return 'ĐANG GIAO';
+  if (s === '3' || s === 'delivered') return 'HOÀN THÀNH';
+  if (s === '4' || s === 'cancelled') return 'ĐÃ HỦY';
+  return 'KHÔNG RÕ';
+};
+
+const getStatusClass = (status) => {
+  const s = String(status).toLowerCase();
+  if (s === '0' || s === 'pending') return 'bg-warning text-dark';
+  if (s === '1' || s === 'confirmed') return 'bg-primary text-white';
+  if (s === '2' || s === 'shipping') return 'bg-info text-dark';
+  if (s === '3' || s === 'delivered') return 'bg-success text-white';
+  if (s === '4' || s === 'cancelled') return 'bg-danger text-white';
+  return 'bg-secondary text-white';
+};
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
 
-.admin-layout { 
-  font-family: 'Inter', system-ui, sans-serif; 
-}
+.admin-layout { font-family: 'Inter', system-ui, sans-serif; }
 .bg-light-gray { background-color: #F4F6F8; }
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
-
-/* Custom Colors */
-.text-neon { color: #00FF33 !important; }
-.bg-neon { background-color: #00FF33 !important; }
-
-/* Sidebar Nav */
-.custom-nav .nav-link {
-  padding: 0.6rem 1rem;
-  transition: all 0.2s ease;
-}
-.custom-nav .nav-link.active {
-  background-color: rgba(0, 255, 51, 0.1);
-  color: #00FF33 !important;
-  border-left: 4px solid #00FF33;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-}
-.custom-nav .nav-link:hover:not(.active) {
-  background-color: #f8f9fa;
-}
+.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* Bảng dữ liệu */
 .table th { letter-spacing: 0.5px; }
@@ -294,8 +307,5 @@ const orderList = ref([
 .border-bottom-dashed:last-child { border-bottom: none; }
 .cursor-pointer { cursor: pointer; }
 
-/* Tránh giật UI khi hover dòng bảng */
-.table-hover tbody tr:hover td {
-  background-color: #f8f9fa;
-}
+.table-hover tbody tr:hover td { background-color: #f8f9fa; }
 </style>

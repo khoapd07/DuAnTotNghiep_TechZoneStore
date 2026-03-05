@@ -20,4 +20,12 @@ public interface OrderService {
     List<OrderResponseDTO> getRecentOrders(int limit);
 
 
+    //liên quan đến admin
+    // Lấy tất cả đơn hàng cho Admin
+    List<OrderResponseDTO> getAllOrdersForAdmin();
+
+    // Cập nhật trạng thái đơn hàng
+    OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId);
+
+
 }

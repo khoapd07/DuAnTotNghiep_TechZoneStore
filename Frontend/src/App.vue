@@ -13,5 +13,5 @@ import Footer from './components/Footer.vue'
 const route = useRoute()
 
 // Kiểm tra xem đường dẫn hiện tại có bắt đầu bằng '/admin' không
-const isAdminRoute = computed(() => route.path.startsWith('/admin'))
+const isAdminRoute = computed(() => route.path.startsWith('/admin' ) || route.path.startsWith('/shipping'))
 </script>
