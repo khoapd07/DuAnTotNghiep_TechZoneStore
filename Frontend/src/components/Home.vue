@@ -100,7 +100,7 @@
     <section class="container narrow-container mb-5">
       <div class="d-flex justify-content-between align-items-end mb-4 border-bottom border-dark border-2 pb-2">
         <h3 class="fw-bold mb-0 text-uppercase">SẢN PHẨM NỔI BẬT</h3>
-        <a href="#" class="text-neon text-decoration-none fw-bold small">XEM TẤT CẢ</a>
+        <router-link to="/products" @click="scrollToTop" class="text-neon text-decoration-none fw-bold small">XEM TẤT CẢ</router-link>
       </div>
 
       <div class="row g-4">
@@ -132,24 +132,27 @@
         </div>
       </div>
     </section>
-
     <section class="container narrow-container mb-5">
       <div class="d-flex justify-content-between align-items-end mb-4 border-bottom border-dark border-2 pb-2">
         <h3 class="fw-bold mb-0 text-uppercase">SẢN PHẨM MỚI</h3>
-        <a href="#" class="text-neon text-decoration-none fw-bold small">XEM TẤT CẢ</a>
+        <router-link to="/products" @click="scrollToTop" class="text-neon text-decoration-none fw-bold small">XEM TẤT CẢ</router-link> 
       </div>
 
       <div class="row g-4">
-        <div class="col-md-3" v-for="i in 4" :key="'new-'+i">
+        <div class="col-md-3" v-for="product in latestProducts" :key="'new-' + product.productId">
           <div class="card border-0 shadow-sm h-100 bg-white rounded-3 position-relative p-2 d-flex flex-column">
             <span class="badge bg-neon text-dark position-absolute top-0 start-0 m-3 z-1">NEW</span>
             <div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
-               <img src="https://images.unsplash.com/photo-1527443154391-507e9dc6c5cc?w=300" class="img-fluid" style="height: 120px; object-fit: contain;">
+               <img :src="product.imageUrl || 'https://via.placeholder.com/300'" class="img-fluid" style="height: 120px; object-fit: contain;">
             </div>
             <div class="card-body p-2 d-flex flex-column">
-              <h6 class="fw-bold mb-1">Monitor UltraWide 49" QLED</h6>
-              <small class="text-muted mb-3 line-clamp-1">Samsung Odyssey Series</small>
-              <h5 class="fw-bold mb-3 text-neon">$1,199</h5>
+              <h6 class="fw-bold mb-1 line-clamp-1" :title="product.name">{{ product.name }}</h6>
+              <small class="text-muted mb-3 line-clamp-1">{{ product.categoryName || 'Sản phẩm mới' }}</small>
+              
+              <h5 class="fw-bold mb-3 text-neon">
+                {{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
+              </h5>
+
               <div class="d-flex gap-2 mt-auto">
                 <button class="btn btn-dark flex-grow-1 fw-bold fs-7">MUA</button>
                 <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng">
@@ -182,31 +185,52 @@
     <section class="container narrow-container mb-5">
       <div class="d-flex justify-content-between align-items-end mb-4 border-bottom border-dark border-2 pb-2">
         <h3 class="fw-bold mb-0 text-uppercase">SẢN PHẨM GIẢM GIÁ</h3>
-        <a href="#" class="text-neon text-decoration-none fw-bold small">XEM TẤT CẢ</a>
-      </div>
+        </div>
 
-      <div class="row g-4">
-        <div class="col-md-3" v-for="i in 4" :key="'sale-'+i">
-          <div class="card border-0 shadow-sm h-100 bg-white rounded-3 position-relative p-2 d-flex flex-column">
-            <span class="badge bg-danger position-absolute top-0 end-0 m-3 z-1">-30%</span>
-            <div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
-               <img src="https://images.unsplash.com/photo-1591488320449-011701bb6704?w=300" class="img-fluid" style="height: 120px; object-fit: contain;">
-            </div>
-            <div class="card-body p-2 d-flex flex-column text-center">
-              <h6 class="fw-bold mb-2">RTX 3060 Ti Eagle 8G</h6>
-              <div class="d-flex justify-content-center gap-2 mb-3">
-                <h5 class="fw-bold text-neon mb-0">$589</h5>
-                <span class="text-muted text-decoration-line-through small align-self-end">$899</span>
+      <div class="position-relative">
+        
+        <button @click="scrollSale('-')" 
+                class="btn btn-light border shadow rounded-circle position-absolute top-50 start-0 translate-middle-y z-3 d-flex align-items-center justify-content-center hover-neon" 
+                style="width: 45px; height: 45px; margin-left: -20px;" title="Trượt qua trái">
+          <i class="bi bi-chevron-left fs-5 text-dark"></i>
+        </button>
+
+        <div class="d-flex flex-nowrap overflow-x-auto gap-4 pb-3 pt-2 custom-scrollbar px-2" ref="saleContainer" style="scroll-behavior: smooth;">
+          <div class="flex-shrink-0" style="width: 250px;" v-for="product in discountedProducts" :key="'sale-' + product.productId">
+            <div class="card border-0 shadow-sm h-100 bg-white rounded-3 position-relative p-2 d-flex flex-column">
+              <span class="badge bg-danger position-absolute top-0 end-0 m-3 z-1">
+                -{{ calculateDiscount(product.price, product.salePrice) }}%
+              </span>
+              <div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
+                 <img :src="product.imageUrl || 'https://via.placeholder.com/300'" class="img-fluid" style="height: 120px; object-fit: contain;">
               </div>
-              <div class="d-flex gap-2 mt-auto">
-                <button class="btn btn-dark flex-grow-1 fw-bold fs-7">MUA</button>
-                <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng">
-                  <i class="bi bi-cart-plus fs-5"></i>
-                </button>
+              <div class="card-body p-2 d-flex flex-column text-center">
+                <h6 class="fw-bold mb-2 line-clamp-1" :title="product.name">{{ product.name }}</h6>
+                <div class="d-flex flex-column justify-content-center gap-1 mb-3">
+                  <h5 class="fw-bold text-neon mb-0">{{ formatCurrency(product.salePrice) }}</h5>
+                  <span class="text-muted text-decoration-line-through small">{{ formatCurrency(product.price) }}</span>
+                </div>
+                <div class="d-flex gap-2 mt-auto">
+                  <button class="btn btn-dark flex-grow-1 fw-bold fs-7">MUA</button>
+                  <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng">
+                    <i class="bi bi-cart-plus fs-5"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
+          
+          <div v-if="discountedProducts.length === 0" class="text-center w-100 py-4 text-muted">
+            Hiện tại chưa có chương trình giảm giá nào.
+          </div>
         </div>
+
+        <button @click="scrollSale('+')" 
+                class="btn btn-light border shadow rounded-circle position-absolute top-50 end-0 translate-middle-y z-3 d-flex align-items-center justify-content-center hover-neon" 
+                style="width: 45px; height: 45px; margin-right: -20px;" title="Trượt qua phải">
+          <i class="bi bi-chevron-right fs-5 text-dark"></i>
+        </button>
+
       </div>
     </section>
 
@@ -217,7 +241,61 @@
 import { ref, onMounted } from 'vue';
 import axios from 'axios';
 
-// Logic gọi API backend Spring Boot 
+const latestProducts = ref([]);
+const discountedProducts = ref([]);
+const saleContainer = ref(null);
+
+// Hàm ép cuộn lên đầu trang khi bấm "Xem tất cả"
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'instant' });
+};
+
+// Hàm điều khiển trượt ngang (300px mỗi lần bấm)
+const scrollSale = (direction) => {
+  if (saleContainer.value) {
+    const scrollAmount = 300; 
+    if (direction === '-') {
+      saleContainer.value.scrollLeft -= scrollAmount;
+    } else {
+      saleContainer.value.scrollLeft += scrollAmount;
+    }
+  }
+};
+
+const formatCurrency = (v) => {
+  if (!v && v !== 0) return '';
+  return new Intl.NumberFormat('vi-VN').format(v) + '₫';
+};
+
+const calculateDiscount = (price, salePrice) => {
+  if (!price || !salePrice || price <= 0 || salePrice >= price) return 0;
+  
+  const discount = ((price - salePrice) / price) * 100;
+  let roundedDiscount = Math.round(discount);
+  
+  if (roundedDiscount >= 100 && salePrice > 0) {
+    return 99;
+  }
+  return roundedDiscount;
+};
+
+const fetchData = async () => {
+  try {
+    const [latestRes, discountedRes] = await Promise.all([
+      axios.get('http://localhost:8080/api/product/latest'),
+      axios.get('http://localhost:8080/api/product/discounted')
+    ]);
+    
+    latestProducts.value = latestRes.data;
+    discountedProducts.value = discountedRes.data;
+  } catch (error) {
+    console.error("Lỗi khi tải dữ liệu trang chủ:", error);
+  }
+};
+
+onMounted(() => {
+  fetchData();
+});
 </script>
 
 <style scoped>
@@ -271,7 +349,7 @@ import axios from 'axios';
   border: 1px solid #00FF33 !important;
 }
 
-/* Nút giỏ hàng tùy chỉnh */
+/* Nút tùy chỉnh */
 .btn-outline-dark {
   border-color: #333;
   color: #333;
@@ -281,6 +359,15 @@ import axios from 'axios';
   background-color: #00FF33;
   border-color: #00FF33;
   color: #000;
+}
+
+/* Nút cuộn ngang lơ lửng */
+.hover-neon {
+  transition: all 0.2s ease;
+}
+.hover-neon:hover {
+  background-color: #00FF33 !important;
+  border-color: #00FF33 !important;
 }
 
 /* Custom Container (Bóp nhỏ 2 bên) */
@@ -325,5 +412,20 @@ import axios from 'axios';
 .card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
+}
+
+/* Scrollbar ngang (ẩn mượt) */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 6px; 
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent; 
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #ddd; 
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #00FF33; 
 }
 </style>
