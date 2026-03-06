@@ -86,7 +86,13 @@
               
               <template v-if="translateStatus(order.statusName) === 'Giao hàng thành công'">
                 <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2">Mua lại</button>
-                <router-link to="/OrderVote" class="btn btn-neon fw-bold text-dark fs-8 rounded-3 px-3 py-2 shadow-sm">Đánh giá</router-link>
+                
+                <button v-if="hasUnreviewedItems(order)" @click="openReviewModal(order)" data-bs-toggle="modal" data-bs-target="#reviewModal" class="btn btn-neon fw-bold text-dark fs-8 rounded-3 px-3 py-2 shadow-sm">
+                  Đánh giá
+                </button>
+                <button v-else class="btn btn-light border-success text-success fw-bold fs-8 rounded-3 px-3 py-2 shadow-sm disabled">
+                  <i class="bi bi-check2-all"></i> Đã đánh giá
+                </button>
               </template>
               
               <template v-if="translateStatus(order.statusName) === 'Đang giao hàng'">
@@ -108,12 +114,71 @@
       </div>
 
     </div>
+
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+          <div class="modal-header border-bottom-0 pb-0">
+            <h5 class="modal-title fw-black fs-4" id="reviewModalLabel">Đánh giá sản phẩm</h5>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body pt-2" v-if="selectedOrderForReview">
+            <p class="text-muted fs-7 mb-4">Mã đơn hàng: <span class="fw-bold text-dark">#{{ selectedOrderForReview.orderCode }}</span></p>
+            
+            <div v-for="item in selectedOrderForReview.orderDetails" :key="item.productId" class="mb-4 pb-4 border-bottom">
+              <div class="d-flex gap-3 mb-3">
+                <img :src="item.imageUrl || 'https://via.placeholder.com/80'" class="rounded border object-fit-contain p-1" style="width: 60px; height: 60px;" alt="">
+                <div>
+                  <h6 class="fw-bold fs-7 mb-1">{{ item.productName }}</h6>
+                  <span class="text-muted fs-8">Phân loại: Mặc định</span>
+                </div>
+              </div>
+
+              <div v-if="userReviewedProductIds.includes(item.productId)" class="bg-light p-3 rounded-3 text-center border">
+                <i class="bi bi-check-circle-fill text-success fs-5 mb-1 d-block"></i>
+                <span class="text-success fw-bold fs-7">Sản phẩm này đã được bạn đánh giá!</span>
+              </div>
+
+              <div v-else>
+                <div class="d-flex align-items-center gap-3 mb-3">
+                  <span class="fw-bold fs-7">Chất lượng:</span>
+                  <div class="d-flex gap-1">
+                    <i v-for="n in 5" :key="n" 
+                       class="bi cursor-pointer fs-4 transition-all"
+                       :class="n <= reviewForms[item.productId].rating ? 'bi-star-fill text-warning' : 'bi-star text-muted'"
+                       @click="reviewForms[item.productId].rating = n">
+                    </i>
+                  </div>
+                  <span class="fs-8 fw-bold text-warning" v-if="reviewForms[item.productId].rating === 5">Tuyệt vời!</span>
+                </div>
+
+                <textarea 
+                  v-model="reviewForms[item.productId].comment"
+                  class="form-control bg-light border-0 shadow-none fs-7 p-3 rounded-3" 
+                  rows="3" 
+                  placeholder="Hãy chia sẻ nhận xét của bạn về sản phẩm này nhé (tối thiểu 10 ký tự)...">
+                </textarea>
+              </div>
+
+            </div>
+
+          </div>
+          <div class="modal-footer border-top-0 pt-0">
+            <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Trở lại</button>
+            <button v-if="hasUnreviewedItems(selectedOrderForReview)" type="button" class="btn btn-neon fw-bold px-5 text-dark" @click="submitReviews" :disabled="isSubmittingReview">
+              <span v-if="isSubmittingReview" class="spinner-border spinner-border-sm me-2"></span>
+              GỬI ĐÁNH GIÁ
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useRouter } from 'vue-router'; // Thêm router để chuyển hướng nếu chưa đăng nhập
+import { useRouter } from 'vue-router'; 
 import axios from 'axios';
 
 const router = useRouter();
@@ -122,7 +187,9 @@ const tabs = ['Tất cả', 'Chờ xác nhận', 'Đang giao', 'Đã giao', 'Đ�
 const orders = ref([]);
 const loading = ref(true);
 
-// 1. Hàm lấy User ID đang đăng nhập
+// Lưu danh sách ID các sản phẩm user đã từng đánh giá
+const userReviewedProductIds = ref([]);
+
 const getCurrentUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
   if (userInfoString) {
@@ -144,10 +211,17 @@ const fetchOrders = async () => {
 
   loading.value = true;
   try {
-    const response = await axios.get(`http://localhost:8080/api/orders/${userId}/history`);
-    orders.value = response.data;
+    // Gọi API lấy Đơn hàng
+    const orderRes = await axios.get(`http://localhost:8080/api/orders/${userId}/history`);
+    orders.value = orderRes.data;
+
+    // CÙNG LÚC ĐÓ: Gọi API lấy các Đánh giá mà user đã từng viết
+    const reviewRes = await axios.get(`http://localhost:8080/api/reviews/user/${userId}`);
+    // Trích xuất ra mảng chỉ chứa các productId đã review (VD: [1, 5, 8])
+    userReviewedProductIds.value = reviewRes.data.map(r => r.productId);
+
   } catch (error) {
-    console.error("Lỗi khi lấy lịch sử đơn hàng:", error);
+    console.error("Lỗi tải dữ liệu:", error);
   } finally {
     loading.value = false;
   }
@@ -157,7 +231,6 @@ onMounted(() => {
   fetchOrders();
 });
 
-// 3. Hàm bổ trợ định dạng và hiển thị
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
 };
@@ -171,7 +244,6 @@ const formatDate = (dateString) => {
   });
 };
 
-// Dịch Status từ Backend sang UI (Hỗ trợ cả chữ tiếng Anh và số từ DB)
 const translateStatus = (status) => {
   const s = String(status).toLowerCase();
   if (s === '0' || s === 'pending') return 'Chờ xác nhận';
@@ -204,17 +276,86 @@ const getStatusIcon = (status) => {
   }
 };
 
-// 4. Logic lọc đơn hàng theo Tab
 const filteredOrders = computed(() => {
   if (activeTab.value === 'Tất cả') return orders.value;
   if (activeTab.value === 'Đã giao') return orders.value.filter(o => translateStatus(o.statusName || o.status) === 'Giao hàng thành công');
   if (activeTab.value === 'Đang giao') return orders.value.filter(o => translateStatus(o.statusName || o.status) === 'Đang giao hàng');
   return orders.value.filter(o => translateStatus(o.statusName || o.status) === activeTab.value);
 });
+
+// --- LOGIC ĐÁNH GIÁ SẢN PHẨM ---
+const selectedOrderForReview = ref(null);
+const reviewForms = ref({}); 
+const isSubmittingReview = ref(false);
+
+// Hàm kiểm tra đơn hàng này còn sản phẩm nào chưa được đánh giá không?
+const hasUnreviewedItems = (order) => {
+  if (!order || !order.orderDetails) return false;
+  return order.orderDetails.some(item => !userReviewedProductIds.value.includes(item.productId));
+};
+
+const openReviewModal = (order) => {
+  selectedOrderForReview.value = order;
+  reviewForms.value = {};
+  
+  order.orderDetails.forEach(item => {
+    // Chỉ khởi tạo form cho những SP chưa đánh giá
+    if (!userReviewedProductIds.value.includes(item.productId)) {
+      reviewForms.value[item.productId] = {
+        rating: 5,
+        comment: ''
+      };
+    }
+  });
+};
+
+const submitReviews = async () => {
+  const userId = getCurrentUserId();
+  if (!userId) return;
+
+  isSubmittingReview.value = true;
+  let successCount = 0;
+
+  try {
+    for (const item of selectedOrderForReview.value.orderDetails) {
+      const formData = reviewForms.value[item.productId];
+      
+      // Bỏ qua nếu form không tồn tại (sản phẩm đã đc review từ trước)
+      // Hoặc nếu người dùng để trống comment (tùy bạn cấu hình)
+      if (!formData || !formData.comment.trim()) continue;
+
+      const payload = {
+        userId: userId,
+        productId: item.productId,
+        rating: formData.rating,
+        comment: formData.comment
+      };
+
+      await axios.post('http://localhost:8080/api/reviews/send', payload);
+      
+      // THÀNH CÔNG: Thêm ID sản phẩm này vào danh sách Đã đánh giá ngay lập tức
+      userReviewedProductIds.value.push(item.productId);
+      successCount++;
+    }
+
+    if (successCount > 0) {
+      alert("Cảm ơn bạn đã đánh giá sản phẩm!");
+      document.querySelector('#reviewModal .btn-close').click();
+    } else {
+      alert("Vui lòng nhập bình luận cho ít nhất 1 sản phẩm trước khi gửi!");
+    }
+
+  } catch (error) {
+    console.error("Lỗi khi gửi đánh giá:", error);
+    alert("Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại!");
+  } finally {
+    isSubmittingReview.value = false;
+  }
+};
 </script>
 
 <style scoped>
-/* CSS Giữ nguyên toàn bộ như cũ của bạn */
+/* CSS Giữ nguyên toàn bộ như cũ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@700&display=swap');
 
 .orders-page { font-family: 'Inter', system-ui, sans-serif; }

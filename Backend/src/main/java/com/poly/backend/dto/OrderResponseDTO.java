@@ -15,6 +15,7 @@ import java.util.List;
 @Builder
 public class OrderResponseDTO {
     private Integer orderId;
+    private Integer statusId;
     private String orderCode;
     private LocalDateTime orderDate;
     private BigDecimal totalMoney;
@@ -23,8 +24,10 @@ public class OrderResponseDTO {
     private String note;
     private String statusName;
 
-    // THÊM DÒNG NÀY ĐỂ TRẢ TÊN KHÁCH HÀNG VỀ CHO FRONTEND
+
     private String customerName;
+    private String employeeName;
+    private String shipperName;
 
     private List<OrderDetailResponseDTO> orderDetails;
 }

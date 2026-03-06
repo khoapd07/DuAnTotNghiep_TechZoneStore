@@ -1,5 +1,6 @@
 package com.poly.backend.controller;
 
+import com.poly.backend.dao.OrderStatusDAO;
 import com.poly.backend.dto.GuestOrderRequestDTO;
 import com.poly.backend.dto.OrderRequestDTO;
 import com.poly.backend.dto.OrderResponseDTO;
@@ -18,6 +19,9 @@ public class OrderController {
 
     @Autowired
     private OrderService orderService;
+
+    @Autowired
+    private OrderStatusDAO orderStatusDAO;
 
     /**
      * API 1: Khách hàng tiến hành đặt hàng (Checkout)
@@ -114,13 +118,40 @@ public class OrderController {
     @PutMapping("/admin/{orderId}/status")
     public ResponseEntity<?> updateOrderStatus(
             @PathVariable Integer orderId,
-            @RequestParam Integer statusId) {
+            @RequestParam Integer statusId,
+            @RequestParam(required = false) Integer employeeId,
+            @RequestParam(required = false) Integer shipperId) {
         try {
-            return ResponseEntity.ok(orderService.updateOrderStatus(orderId, statusId));
+            return ResponseEntity.ok(orderService.updateOrderStatus(orderId, statusId,employeeId, shipperId));
         } catch (ResponseStatusException e) {
             return ResponseEntity.status(e.getStatusCode()).body(e.getReason());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Lỗi cập nhật trạng thái: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API 7: [SHIPPER] Lấy danh sách đơn hàng cần giao
+     * URL: http://localhost:8080/api/orders/shipper/tasks
+     */
+    @GetMapping("/shipper/tasks")
+    public ResponseEntity<?> getOrdersForShipper(@RequestParam Integer shipperId) { // Yêu cầu gửi kèm Shipper ID
+        try {
+            return ResponseEntity.ok(orderService.getOrdersForShipper(shipperId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi lấy nhiệm vụ giao hàng: " + e.getMessage());
+        }
+    }
+
+    /**
+     * API 8: Lấy danh sách tất cả các trạng thái đơn hàng từ DB
+     */
+    @GetMapping("/statuses")
+    public ResponseEntity<?> getAllOrderStatuses() {
+        try {
+            return ResponseEntity.ok(orderStatusDAO.findAll());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi lấy trạng thái: " + e.getMessage());
         }
     }
 }

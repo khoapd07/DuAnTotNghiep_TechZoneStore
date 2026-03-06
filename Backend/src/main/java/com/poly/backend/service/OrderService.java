@@ -25,7 +25,11 @@ public interface OrderService {
     List<OrderResponseDTO> getAllOrdersForAdmin();
 
     // Cập nhật trạng thái đơn hàng
-    OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId);
+    OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId, Integer employeeId, Integer shipperId);
+
+    List<OrderResponseDTO> getOrdersForShipper(Integer shipperId);
+
+
 
 
 }
