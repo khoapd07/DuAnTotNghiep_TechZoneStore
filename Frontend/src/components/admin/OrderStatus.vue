@@ -1,6 +1,5 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
-    
     <main class="flex-grow-1 p-3 overflow-auto position-relative">
       
       <header class="d-flex justify-content-between align-items-center mb-4">
@@ -12,8 +11,10 @@
         </div>
         <div class="d-flex gap-3 align-items-center">
           <div class="d-flex align-items-center gap-2">
-            <div class="avatar bg-light text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center border" style="width: 35px; height: 35px;">A</div>
-            <span class="fw-bold fs-7">Admin TechZone</span>
+            <div class="avatar bg-light text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center border" style="width: 35px; height: 35px;">
+              {{ getInitials(currentUser.name) }}
+            </div>
+            <span class="fw-bold fs-7">{{ currentUser.name }}</span>
           </div>
         </div>
       </header>
@@ -72,17 +73,15 @@
                 <td class="text-muted fs-7">{{ formatDate(order.orderDate) }}</td>
                 <td class="fw-bold fs-7 text-dark">{{ formatCurrency(order.finalAmount) }}</td>
                 <td>
-                  <span class="badge fw-bold px-2 py-1 rounded-2 fs-8" :class="getStatusClass(order.statusName)">
-                    {{ translateStatus(order.statusName) }}
+                  <span class="badge fw-bold px-2 py-1 rounded-2 fs-8" :class="getStatusClass(order.statusId)">
+                    {{ getStatusVietnamese(order.statusId) }}
                   </span>
                 </td>
                 <td class="text-center">
-                  <button 
-                    class="btn btn-sm btn-outline-dark fs-8 fw-bold px-3 py-1 rounded-pill"
-                    data-bs-toggle="offcanvas" 
-                    data-bs-target="#orderDetailOffcanvas" 
-                    @click="viewOrderDetail(order)">
-                    Xem chi tiết
+                  <button class="btn btn-sm btn-outline-dark fs-8 fw-bold px-3 py-1 rounded-pill"
+                          data-bs-toggle="offcanvas" data-bs-target="#orderDetailOffcanvas" 
+                          @click="viewOrderDetail(order)">
+                    Xem
                   </button>
                 </td>
               </tr>
@@ -107,32 +106,54 @@
           <p class="fs-8 text-muted fw-bold mb-1">NGÀY ĐẶT: {{ formatDate(selectedOrder.orderDate) }}</p>
           <label class="fs-8 fw-bold text-dark mb-2">TRẠNG THÁI XỬ LÝ</label>
           <div class="d-flex gap-2">
-            <select class="form-select form-select-sm fw-bold border-dark shadow-none" v-model="selectedOrderEditStatus">
-              <option value="0">Chờ xác nhận</option>
-              <option value="1">Đã xác nhận</option>
-              <option value="2">Đang giao hàng</option>
-              <option value="3">Giao hàng thành công</option>
-              <option value="4">Hủy đơn</option>
+            <select class="form-select form-select-sm fw-bold border-dark shadow-none" 
+                    v-model="selectedOrderEditStatus" 
+                    :disabled="availableStatuses.length <= 1">
+              <option v-for="st in availableStatuses" :key="st.statusId" :value="st.statusId">
+                {{ st.description }}
+              </option>
             </select>
-            <button class="btn btn-sm btn-dark fw-bold px-3" @click="updateStatus" :disabled="isSaving">
+
+            <button class="btn btn-sm btn-dark fw-bold px-3" 
+                    @click="updateStatus" 
+                    :disabled="isSaving || availableStatuses.length <= 1">
               {{ isSaving ? '...' : 'Lưu' }}
             </button>
           </div>
+          
+          <small v-if="availableStatuses.length <= 1" class="text-danger fs-9 mt-1 d-block fw-bold">
+            Đơn hàng đã kết thúc quy trình, không thể thay đổi trạng thái.
+          </small>
         </div>
 
         <div class="p-3 border-bottom">
-          <h6 class="fw-bold fs-6 mb-3">Thông tin khách hàng</h6>
+          <h6 class="fw-bold fs-6 mb-3">Thông tin liên hệ</h6>
           <div class="mb-2">
-            <small class="text-muted d-block fs-8 fw-bold">HỌ TÊN</small>
+            <small class="text-muted d-block fs-8 fw-bold">HỌ TÊN KHÁCH</small>
             <span class="fs-7 fw-bold text-dark">{{ extractCustomerInfo(selectedOrder.note).name }}</span>
           </div>
           <div class="mb-2">
             <small class="text-muted d-block fs-8 fw-bold">ĐIỆN THOẠI</small>
             <span class="fs-7 fw-bold text-dark">{{ extractCustomerInfo(selectedOrder.note).phone }}</span>
           </div>
-          <div>
-            <small class="text-muted d-block fs-8 fw-bold">ĐỊA CHỈ NHẬN HÀNG</small>
+          <div class="mb-4">
+            <small class="text-muted d-block fs-8 fw-bold">ĐỊA CHỈ</small>
             <span class="fs-7 text-dark">{{ extractCustomerInfo(selectedOrder.note).address }}</span>
+          </div>
+          
+          <div class="bg-light p-3 rounded-3 border">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <small class="text-muted fs-8 fw-bold"><i class="bi bi-person-check-fill me-1"></i> NV XÁC NHẬN:</small>
+              <span class="fs-8 fw-bold" :class="selectedOrder.employeeName ? 'text-primary' : 'text-muted fst-italic'">
+                {{ selectedOrder.employeeName || 'Chưa duyệt' }}
+              </span>
+            </div>
+            <div class="d-flex align-items-center justify-content-between border-top pt-2">
+              <small class="text-muted fs-8 fw-bold"><i class="bi bi-truck me-1"></i> SHIPPER:</small>
+              <span class="fs-8 fw-bold" :class="selectedOrder.shipperName ? 'text-success' : 'text-muted fst-italic'">
+                {{ selectedOrder.shipperName || 'Chưa điều phối' }}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -155,19 +176,14 @@
             <span class="text-muted">Tạm tính</span>
             <span class="fw-bold">{{ formatCurrency(selectedOrder.totalMoney) }}</span>
           </div>
-          <div class="d-flex justify-content-between mb-2 fs-7">
-            <span class="text-muted">Giảm giá Voucher</span>
-            <span class="fw-bold text-danger">-{{ formatCurrency(selectedOrder.discountAmount) }}</span>
-          </div>
           <div class="d-flex justify-content-between pt-2 border-top mb-3">
-            <span class="fw-bold text-dark">Tổng cộng (Thực trả)</span>
-            <span class="fw-black text-success fs-5">{{ formatCurrency(selectedOrder.finalAmount) }}</span>
+            <span class="fw-bold text-dark">Tổng cộng</span>
+            <span class="fw-black text-danger fs-5">{{ formatCurrency(selectedOrder.finalAmount) }}</span>
           </div>
         </div>
 
       </div>
     </div>
-    
   </div>
 </template>
 
@@ -176,14 +192,42 @@ import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
 const orderList = ref([]);
+const dbStatuses = ref([]);
 const loading = ref(true);
 const selectedOrder = ref(null);
-const selectedOrderEditStatus = ref('0');
+const selectedOrderEditStatus = ref(0);
 const isSaving = ref(false);
+
+// Biến lưu thông tin người đang đăng nhập
+const currentUser = ref({
+  id: null,
+  name: 'Admin TechZone'
+});
 
 const API_URL = 'http://localhost:8080/api/orders';
 
-// Lấy danh sách đơn hàng
+onMounted(async () => {
+  // Lấy thông tin user từ LocalStorage
+  const userStr = localStorage.getItem('user_info');
+  if (userStr) {
+    const userObj = JSON.parse(userStr);
+    currentUser.value.id = userObj.userId;
+    currentUser.value.name = userObj.fullName || userObj.username;
+  }
+
+  await fetchOrderStatuses();
+  fetchOrders();
+});
+
+const fetchOrderStatuses = async () => {
+  try {
+    const res = await axios.get(`${API_URL}/statuses`);
+    dbStatuses.value = res.data;
+  } catch (error) {
+    console.error("Lỗi tải trạng thái:", error);
+  }
+};
+
 const fetchOrders = async () => {
   loading.value = true;
   try {
@@ -196,29 +240,29 @@ const fetchOrders = async () => {
   }
 };
 
-onMounted(() => fetchOrders());
-
-// Mở Offcanvas Xem chi tiết
 const viewOrderDetail = (order) => {
   selectedOrder.value = order;
-  // Map chữ Tiếng Anh/Số về Option Value
-  const s = String(order.statusName).toLowerCase();
-  if (s === '0' || s === 'pending') selectedOrderEditStatus.value = '0';
-  else if (s === '1' || s === 'confirmed') selectedOrderEditStatus.value = '1';
-  else if (s === '2' || s === 'shipping') selectedOrderEditStatus.value = '2';
-  else if (s === '3' || s === 'delivered') selectedOrderEditStatus.value = '3';
-  else if (s === '4' || s === 'cancelled') selectedOrderEditStatus.value = '4';
+  selectedOrderEditStatus.value = order.statusId; 
 };
 
-// Cập nhật trạng thái
+// Cập nhật trạng thái (Gửi kèm ID người thao tác)
 const updateStatus = async () => {
   if (!selectedOrder.value) return;
   isSaving.value = true;
+  
+  // Tạo URL gửi request
+  let url = `${API_URL}/admin/${selectedOrder.value.orderId}/status?statusId=${selectedOrderEditStatus.value}`;
+  
+  // Nếu có user đang đăng nhập, đính kèm employeeId vào URL
+  if (currentUser.value.id) {
+    url += `&employeeId=${currentUser.value.id}`;
+  }
+
   try {
-    await axios.put(`${API_URL}/admin/${selectedOrder.value.orderId}/status?statusId=${selectedOrderEditStatus.value}`);
+    await axios.put(url);
     alert("Cập nhật trạng thái thành công!");
-    fetchOrders(); // Load lại danh sách
-    document.querySelector('.btn-close').click(); // Đóng offcanvas
+    fetchOrders(); 
+    document.querySelector('.btn-close').click();
   } catch (error) {
     alert("Lỗi cập nhật: " + (error.response?.data || error.message));
   } finally {
@@ -226,86 +270,104 @@ const updateStatus = async () => {
   }
 };
 
-// Hàm thống kê
+// --- CÁC HÀM HỖ TRỢ BÊN DƯỚI GIỮ NGUYÊN ---
 const stats = computed(() => {
   return {
     total: orderList.value.length,
-    pending: orderList.value.filter(o => { const s=String(o.statusName).toLowerCase(); return s==='0' || s==='pending'; }).length,
-    shipping: orderList.value.filter(o => { const s=String(o.statusName).toLowerCase(); return s==='2' || s==='shipping'; }).length,
-    delivered: orderList.value.filter(o => { const s=String(o.statusName).toLowerCase(); return s==='3' || s==='delivered'; }).length,
+    pending: orderList.value.filter(o => o.statusId === 0).length,
+    shipping: orderList.value.filter(o => o.statusId === 2).length,
+    delivered: orderList.value.filter(o => o.statusId === 3).length,
   };
 });
 
-// Hàm trích xuất thông tin khách hàng từ chuỗi "note" đã làm ở trang Checkout
 const extractCustomerInfo = (noteString) => {
-  let extName = 'Khách hàng';
-  let extPhone = 'Đang cập nhật';
-  let extAddress = noteString || 'Đang cập nhật';
-  
+  let extName = 'Khách hàng', extPhone = '...', extAddress = noteString || '...';
   if (noteString && noteString.includes(' - SĐT:')) {
     try {
-      const parts = noteString.split(' - ');
-      extName = parts[0].replace('Người nhận: ', '').replace('Khách vãng lai: ', '').trim();
-      extPhone = parts[1].replace('SĐT: ', '').trim();
-      extAddress = parts[2].replace('Đ/C: ', '').split('. Ghi chú')[0].trim();
+      const p = noteString.split(' - ');
+      extName = p[0].replace('Người nhận: ', '').replace('Khách vãng lai: ', '').trim();
+      extPhone = p[1].replace('SĐT: ', '').trim();
+      extAddress = p[2].replace('Đ/C: ', '').split('. Ghi chú')[0].trim();
     } catch (e) {}
   }
   return { name: extName, phone: extPhone, address: extAddress };
 };
 
-// Lấy 2 chữ cái đầu để làm Avatar
 const getInitials = (name) => {
   if (!name) return 'KH';
   const words = name.trim().split(' ');
   if (words.length === 1) return words[0].substring(0, 2).toUpperCase();
-  return (words[0].charAt(0) + words[words.length - 1].charAt(0)).toUpperCase();
+  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
 };
 
 const formatCurrency = (value) => value ? value.toLocaleString('vi-VN') + '₫' : "0₫";
-
 const formatDate = (dateString) => {
   if(!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  return new Date(dateString).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
-// Định dạng trạng thái tiếng Việt
-const translateStatus = (status) => {
-  const s = String(status).toLowerCase();
-  if (s === '0' || s === 'pending') return 'CHỜ XÁC NHẬN';
-  if (s === '1' || s === 'confirmed') return 'ĐÃ XÁC NHẬN';
-  if (s === '2' || s === 'shipping') return 'ĐANG GIAO';
-  if (s === '3' || s === 'delivered') return 'HOÀN THÀNH';
-  if (s === '4' || s === 'cancelled') return 'ĐÃ HỦY';
-  return 'KHÔNG RÕ';
+const getStatusVietnamese = (id) => {
+  const st = dbStatuses.value.find(s => s.statusId === id);
+  return st ? st.description : 'Đang xử lý';
 };
 
-const getStatusClass = (status) => {
-  const s = String(status).toLowerCase();
-  if (s === '0' || s === 'pending') return 'bg-warning text-dark';
-  if (s === '1' || s === 'confirmed') return 'bg-primary text-white';
-  if (s === '2' || s === 'shipping') return 'bg-info text-dark';
-  if (s === '3' || s === 'delivered') return 'bg-success text-white';
-  if (s === '4' || s === 'cancelled') return 'bg-danger text-white';
+const getStatusClass = (id) => {
+  if (id === 0) return 'bg-warning text-dark';
+  if (id === 1) return 'bg-primary text-white';
+  if (id === 2) return 'bg-info text-dark';
+  if (id === 3) return 'bg-success text-white';
+  if (id === 4) return 'bg-danger text-white';
   return 'bg-secondary text-white';
 };
+
+// Tùy thuộc vào trạng thái HIỆN TẠI, Admin chỉ được chọn các trạng thái TIẾP THEO hợp lý
+const availableStatuses = computed(() => {
+  if (!selectedOrder.value) return [];
+  
+  const currentStatus = selectedOrder.value.statusId;
+
+  // Lọc danh sách status từ DB dựa trên quy tắc
+  return dbStatuses.value.filter(st => {
+    const targetStatus = st.statusId;
+    
+    // Luôn cho phép hiển thị lại trạng thái hiện tại
+    if (targetStatus === currentStatus) return true;
+
+    // Quy tắc chuyển trạng thái
+    switch (currentStatus) {
+      case 0: // Từ [Chờ xác nhận] -> Chỉ được [Đã xác nhận] hoặc [Hủy]
+        return targetStatus === 1 || targetStatus === 4;
+      
+      case 1: // Từ [Đã xác nhận] -> Chỉ được [Đang giao] hoặc [Hủy]
+        return targetStatus === 2 || targetStatus === 4;
+      
+      case 2: // Từ [Đang giao] -> Chỉ được [Hoàn thành] hoặc [Hủy/Giao thất bại]
+        return targetStatus === 3 || targetStatus === 4;
+      
+      case 3: // [Hoàn thành] -> Không cho đổi nữa (Kết thúc quy trình)
+        return false; 
+      
+      case 4: // [Đã hủy] -> Không cho đổi nữa
+        return false;
+        
+      default:
+        return false;
+    }
+  });
+});
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-
 .admin-layout { font-family: 'Inter', system-ui, sans-serif; }
 .bg-light-gray { background-color: #F4F6F8; }
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
 .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
-
-/* Bảng dữ liệu */
 .table th { letter-spacing: 0.5px; }
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
 .cursor-pointer { cursor: pointer; }
-
 .table-hover tbody tr:hover td { background-color: #f8f9fa; }
 </style>

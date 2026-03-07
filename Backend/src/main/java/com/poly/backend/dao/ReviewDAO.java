@@ -11,4 +11,7 @@ public interface ReviewDAO extends JpaRepository<Review, Integer> {
     // ✅ Fix lỗi "No property 'id' found for type 'Product'"
     @Query("SELECT r FROM Review r WHERE r.product.productId = :productId ORDER BY r.reviewDate DESC")
     List<Review> findByProductId(@Param("productId") Integer productId);
+
+    @Query("SELECT r FROM Review r WHERE r.user.userId = :userId ORDER BY r.reviewDate DESC")
+    List<Review> findByUserId(@Param("userId") Integer userId);
 }

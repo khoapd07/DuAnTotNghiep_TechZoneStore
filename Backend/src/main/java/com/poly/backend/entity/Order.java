@@ -58,6 +58,10 @@ public class Order {
     @JoinColumn(name = "employee_id")
     private User employee; // Người duyệt đơn
 
+    @ManyToOne
+    @JoinColumn(name = "shipper_id")
+    private User shipper;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "voucher_id")
     private Voucher voucher;

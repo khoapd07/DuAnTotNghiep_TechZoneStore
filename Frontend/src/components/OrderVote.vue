@@ -131,11 +131,25 @@ const reviews = ref([]);
 const loading = ref(true);
 const filterRating = ref('Tất cả');
 
+// Hàm lấy User ID đang đăng nhập
+const getCurrentUserId = () => {
+  const userInfoString = localStorage.getItem('user_info');
+  if (userInfoString) {
+    try {
+      return JSON.parse(userInfoString).userId;
+    } catch (e) { return null; }
+  }
+  return null;
+};
+
 // --- 2. FETCH DATA FROM BACKEND ---
 const fetchUserReviews = async () => {
+  const userId = getCurrentUserId();
+  if (!userId) return;
+
   loading.value = true;
   try {
-    const response = await axios.get(`${API_URL}/user/${CURRENT_USER_ID}`);
+    const response = await axios.get(`${API_URL}/user/${userId}`);
     reviews.value = response.data;
   } catch (error) {
     console.error("Lỗi khi tải lịch sử đánh giá:", error);

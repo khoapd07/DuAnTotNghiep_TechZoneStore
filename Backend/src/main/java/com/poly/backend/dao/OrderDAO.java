@@ -1,5 +1,6 @@
 package com.poly.backend.dao;
 
+import com.poly.backend.dto.OrderResponseDTO;
 import com.poly.backend.entity.Order;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -52,4 +53,7 @@ public interface OrderDAO extends JpaRepository<Order, Integer> {
     // Đếm số lượng đơn hàng theo khoảng thời gian VÀ theo trạng thái
     @Query("SELECT COUNT(o) FROM Order o WHERE o.orderDate >= :startDate AND o.orderDate <= :endDate AND o.status.statusName = :statusName")
     Long countOrdersBetweenAndStatus(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate, @Param("statusName") String statusName);
+
+    List<Order> findByStatus_StatusIdInOrderByOrderDateAsc(List<Integer> statusIds);
+
 }

@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -161,6 +162,8 @@ public class OrderServiceImpl implements OrderService {
 
         // Xác định tên khách hàng
         String cName = (order.getCustomer() != null) ? order.getCustomer().getFullName() : "Khách vãng lai";
+        String sName = (order.getShipper() != null) ? order.getShipper().getFullName() : null;
+        String eName = (order.getEmployee() != null) ? order.getEmployee().getFullName() : null;
 
         return OrderResponseDTO.builder()
                 .orderId(order.getOrderId())
@@ -170,8 +173,11 @@ public class OrderServiceImpl implements OrderService {
                 .discountAmount(order.getDiscountAmount())
                 .finalAmount(order.getFinalAmount())
                 .note(order.getNote())
+                .statusId(order.getStatus() != null ? order.getStatus().getStatusId() : 0)
                 .statusName(order.getStatus() != null ? order.getStatus().getStatusName() : "Unknown")
-                .customerName(cName) // BỔ SUNG TRƯỜNG NÀY VÀO BUILDER
+                .customerName(cName)
+                .shipperName(sName)
+                .employeeName(eName)
                 .orderDetails(detailDTOs)
                 .build();
     }
@@ -330,16 +336,58 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId) {
+    public OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId, Integer employeeId, Integer shipperId) {
         Order order = orderDAO.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
 
         OrderStatus status = orderStatusDAO.findById(newStatusId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trạng thái không hợp lệ"));
 
+        if (newStatusId == 1 && employeeId != null) {
+            User employee = userDAO.findById(employeeId).orElse(null);
+            order.setEmployee(employee);
+        }
+
+        if (newStatusId == 2 && shipperId != null) {
+            User shipper = userDAO.findById(shipperId).orElse(null);
+            order.setShipper(shipper);
+        }
+
+        // Chỉ cộng lại nếu trạng thái cũ KHÔNG PHẢI là hủy, và trạng thái mới LÀ hủy (id = 4)
+        if (order.getStatus().getStatusId() != 4 && newStatusId == 4) {
+            for (OrderDetail detail : order.getOrderDetails()) {
+                Product p = detail.getProduct();
+                p.setStockQuantity(p.getStockQuantity() + detail.getQuantity());
+                productDAO.save(p);
+            }
+        }
+
         order.setStatus(status);
         Order savedOrder = orderDAO.save(order);
 
         return mapToDTO(savedOrder);
+    }
+
+    @Override
+    public List<OrderResponseDTO> getOrdersForShipper(Integer shipperId) {
+        // Lấy tất cả đơn có status 1, 2, 3
+        List<Order> allRelevantOrders = orderDAO.findByStatus_StatusIdInOrderByOrderDateAsc(Arrays.asList(1, 2, 3));
+
+        List<OrderResponseDTO> result = new ArrayList<>();
+
+        for (Order order : allRelevantOrders) {
+            int status = order.getStatus().getStatusId();
+
+            // Nếu là đơn CHỜ NHẬN (1) -> Ai cũng được xem
+            if (status == 1) {
+                result.add(mapToDTO(order));
+            }
+            // Nếu là đơn ĐANG GIAO (2) hoặc HOÀN THÀNH (3) -> Chỉ Shipper ĐÃ NHẬN đơn đó mới được xem
+            else if ((status == 2 || status == 3) && order.getShipper() != null && order.getShipper().getUserId().equals(shipperId)) {
+                result.add(mapToDTO(order));
+            }
+        }
+
+        return result;
     }
 }
