@@ -55,6 +55,7 @@
                 <th scope="col" class="py-3 fw-bold">Khách Hàng</th>
                 <th scope="col" class="py-3 fw-bold">Ngày Đặt</th>
                 <th scope="col" class="py-3 fw-bold">Tổng Tiền</th>
+                <th scope="col" class="py-3 fw-bold">Thanh toán</th>
                 <th scope="col" class="py-3 fw-bold">Trạng Thái</th>
                 <th scope="col" class="py-3 fw-bold text-center">Hành Động</th>
               </tr>
@@ -72,6 +73,17 @@
                 </td>
                 <td class="text-muted fs-7">{{ formatDate(order.orderDate) }}</td>
                 <td class="fw-bold fs-7 text-dark">{{ formatCurrency(order.finalAmount) }}</td>
+                
+                <td>
+                  <span class="fw-bold d-block fs-8 mb-1">
+                    {{ order.paymentMethod === 'BANK' ? 'Chuyển khoản QR' : 'Tiền mặt (COD)' }}
+                  </span>
+                  <span class="badge fw-bold px-2 py-1 fs-9" 
+                        :class="order.paymentStatus ? 'bg-success text-white' : 'bg-warning text-dark'">
+                    {{ order.paymentStatus ? 'Đã thu tiền' : 'Chưa thu tiền' }}
+                  </span>
+                </td>
+
                 <td>
                   <span class="badge fw-bold px-2 py-1 rounded-2 fs-8" :class="getStatusClass(order.statusId)">
                     {{ getStatusVietnamese(order.statusId) }}
@@ -103,7 +115,30 @@
       <div class="offcanvas-body p-0" v-if="selectedOrder">
         
         <div class="p-3 border-bottom bg-light-gray">
-          <p class="fs-8 text-muted fw-bold mb-1">NGÀY ĐẶT: {{ formatDate(selectedOrder.orderDate) }}</p>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <p class="fs-8 text-muted fw-bold mb-1">NGÀY ĐẶT: {{ formatDate(selectedOrder.orderDate) }}</p>
+              <p class="fs-8 fw-bold m-0" :class="selectedOrder.paymentMethod === 'BANK' ? 'text-primary' : 'text-dark'">
+                Phương thức: {{ selectedOrder.paymentMethod === 'BANK' ? 'Chuyển khoản (VietQR)' : 'Thanh toán COD' }}
+              </p>
+            </div>
+            <div class="form-check form-switch cursor-pointer">
+              <input class="form-check-input" type="checkbox" role="switch" id="paymentStatusSwitch" 
+                     :checked="selectedOrder.paymentStatus"
+                      
+                     :disabled="selectedOrder.paymentMethod !== 'BANK'"
+
+                     @change="togglePaymentStatus(selectedOrder)">
+              <label class="form-check-label fw-bold fs-8" for="paymentStatusSwitch"
+                     :class="selectedOrder.paymentStatus ? 'text-success' : 'text-danger'">
+                {{ selectedOrder.paymentStatus ? 'Đã thu tiền' : 'Chưa thu tiền' }}
+              </label>
+
+              <small v-if="selectedOrder.paymentMethod !== 'BANK'" class="d-block text-muted fs-9 fst-italic mt-1">
+                (Đơn COD sẽ tự động cập nhật khi Shipper giao thành công)
+              </small>
+            </div>
+          </div>
           <label class="fs-8 fw-bold text-dark mb-2">TRẠNG THÁI XỬ LÝ</label>
           <div class="d-flex gap-2">
             <select class="form-select form-select-sm fw-bold border-dark shadow-none" 
@@ -248,6 +283,20 @@ const viewOrderDetail = (order) => {
 // Cập nhật trạng thái (Gửi kèm ID người thao tác)
 const updateStatus = async () => {
   if (!selectedOrder.value) return;
+
+  // =========================================================
+  // RÀNG BUỘC: Đơn BANK thì BẮT BUỘC phải "Đã thu tiền" 
+  // mới được phép chuyển lên "Đã xác nhận" (statusId = 1)
+  // =========================================================
+  if (
+    selectedOrder.value.paymentMethod === 'BANK' && 
+    !selectedOrder.value.paymentStatus && 
+    selectedOrderEditStatus.value == 1 // 1 là trạng thái Đã xác nhận
+  ) {
+    alert("CẢNH BÁO: Đơn hàng này là Chuyển khoản (VietQR). \nVui lòng kiểm tra tài khoản và gạt công tắc 'Đã thu tiền' trước khi Xác nhận đơn!");
+    return; // Dừng lại, không gọi API lưu
+  }
+  
   isSaving.value = true;
   
   // Tạo URL gửi request
@@ -355,6 +404,19 @@ const availableStatuses = computed(() => {
     }
   });
 });
+
+// Cập nhật trạng thái Thu Tiền (Gạt công tắc)
+const togglePaymentStatus = async (order) => {
+  const newStatus = !order.paymentStatus;
+  try {
+    await axios.put(`${API_URL}/admin/${order.orderId}/payment?status=${newStatus}`);
+    order.paymentStatus = newStatus;
+  } catch (error) {
+    alert("Lỗi cập nhật thanh toán: " + (error.response?.data || error.message));
+    // Revert lại trạng thái trên UI nếu API lỗi
+    order.paymentStatus = !newStatus; 
+  }
+};
 </script>
 
 <style scoped>

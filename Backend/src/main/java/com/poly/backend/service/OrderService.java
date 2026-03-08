@@ -29,6 +29,8 @@ public interface OrderService {
 
     List<OrderResponseDTO> getOrdersForShipper(Integer shipperId);
 
+    OrderResponseDTO updatePaymentStatus(Integer orderId, Boolean status);
+
 
 
 

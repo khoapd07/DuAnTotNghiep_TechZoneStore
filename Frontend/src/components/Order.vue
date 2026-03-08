@@ -83,6 +83,13 @@
               <router-link :to="`/order/${order.orderCode}`" class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2 text-decoration-none">
                 Xem chi tiết
               </router-link>
+
+              <button v-if="order.paymentMethod === 'BANK' && !order.paymentStatus && translateStatus(order.statusName) !== 'Đã hủy'" 
+                      @click="openPaymentModal(order)"
+                      data-bs-toggle="modal" data-bs-target="#orderPaymentModal"
+                      class="btn btn-primary fw-bold text-white fs-8 rounded-3 px-3 py-2 shadow-sm">
+                <i class="bi bi-qr-code-scan"></i> Thanh toán QR
+              </button>
               
               <template v-if="translateStatus(order.statusName) === 'Giao hàng thành công'">
                 <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2">Mua lại</button>
@@ -169,6 +176,36 @@
               <span v-if="isSubmittingReview" class="spinner-border spinner-border-sm me-2"></span>
               GỬI ĐÁNH GIÁ
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- . modal thanh toán -->
+    <div class="modal fade" id="orderPaymentModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+          <div class="modal-header border-bottom-0 pb-0">
+            <h5 class="modal-title fw-black fs-4 text-center w-100">Thanh toán đơn hàng</h5>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body text-center pt-2 pb-4" v-if="selectedOrderForPayment">
+            <p class="text-muted fs-7 mb-3">Sử dụng App Ngân hàng quét mã QR bên dưới.</p>
+            <div class="bg-light p-3 rounded-4 d-inline-block mb-3 border">
+              <img v-if="generatedQrUrl" :src="generatedQrUrl" style="width: 250px; height: 250px; object-fit: contain;">
+              <div v-else class="spinner-border text-neon m-5" role="status"></div>
+            </div>
+            <div class="bg-light-gray p-3 rounded-3 text-start mx-auto border" style="max-width: 320px;">
+              <div class="d-flex justify-content-between mb-2 fs-7">
+                <span class="text-muted">Mã đơn hàng:</span><span class="fw-bold text-dark">#{{ selectedOrderForPayment.orderCode }}</span>
+              </div>
+              <div class="d-flex justify-content-between fs-7">
+                <span class="text-muted">Số tiền:</span><span class="fw-black text-danger">{{ formatCurrency(selectedOrderForPayment.finalAmount) }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-top-0 justify-content-center">
+            <button type="button" class="btn btn-neon fw-bold px-4 text-dark" @click="confirmPaymentDone" data-bs-dismiss="modal">TÔI ĐÃ CHUYỂN KHOẢN</button>
           </div>
         </div>
       </div>
@@ -351,6 +388,26 @@ const submitReviews = async () => {
   } finally {
     isSubmittingReview.value = false;
   }
+};
+
+// --- LOGIC THANH TOÁN QR ---
+const selectedOrderForPayment = ref(null);
+const generatedQrUrl = ref('');
+
+const BANK_ID = 'TPB'; 
+const BANK_ACCOUNT_NO = '31413122007'; 
+const BANK_ACCOUNT_NAME = 'PHAM DANG KHOA'; 
+
+const openPaymentModal = (order) => {
+  selectedOrderForPayment.value = order;
+  const amount = order.finalAmount;
+  const addInfo = encodeURIComponent(order.orderCode); 
+  generatedQrUrl.value = `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${encodeURIComponent(BANK_ACCOUNT_NAME)}`;
+};
+
+const confirmPaymentDone = () => {
+  alert("Yêu cầu của bạn đã được ghi nhận. Vui lòng chờ Admin xác nhận khoản thanh toán!");
+  document.querySelector('#orderPaymentModal .btn-close').click();
 };
 </script>
 

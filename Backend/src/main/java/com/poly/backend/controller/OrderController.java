@@ -154,4 +154,16 @@ public class OrderController {
             return ResponseEntity.badRequest().body("Lỗi lấy trạng thái: " + e.getMessage());
         }
     }
+
+    /**
+     * API 9: [ADMIN] Cập nhật trạng thái đã thu tiền
+     */
+    @PutMapping("/admin/{orderId}/payment")
+    public ResponseEntity<?> updatePaymentStatus(@PathVariable Integer orderId, @RequestParam Boolean status) {
+        try {
+            return ResponseEntity.ok(orderService.updatePaymentStatus(orderId, status));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Lỗi cập nhật thanh toán: " + e.getMessage());
+        }
+    }
 }

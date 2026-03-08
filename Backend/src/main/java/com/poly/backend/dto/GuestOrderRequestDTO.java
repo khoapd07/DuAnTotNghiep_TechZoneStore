@@ -12,6 +12,7 @@ public class GuestOrderRequestDTO {
     private String guestPhone;
     private String guestEmail;
     private String guestAddress;
+    private String paymentMethod;
 
     // Bắt buộc phải có list này vì khách vãng lai ko có giỏ hàng trong Database
     private List<GuestCartItemDTO> items;

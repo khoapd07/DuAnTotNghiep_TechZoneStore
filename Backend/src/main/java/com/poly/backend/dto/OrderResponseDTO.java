@@ -29,5 +29,8 @@ public class OrderResponseDTO {
     private String employeeName;
     private String shipperName;
 
+    private String paymentMethod;
+    private Boolean paymentStatus;
+
     private List<OrderDetailResponseDTO> orderDetails;
 }

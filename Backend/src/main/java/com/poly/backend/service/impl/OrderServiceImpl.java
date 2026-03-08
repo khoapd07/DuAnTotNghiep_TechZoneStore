@@ -126,6 +126,9 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal finalAmount = totalMoney.subtract(discountAmount);
         order.setFinalAmount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
 
+        order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
+        order.setPaymentStatus(false);
+
         // 5. Lưu hóa đơn vào Database
         Order savedOrder = orderDAO.save(order);
 
@@ -179,6 +182,8 @@ public class OrderServiceImpl implements OrderService {
                 .shipperName(sName)
                 .employeeName(eName)
                 .orderDetails(detailDTOs)
+                .paymentMethod(order.getPaymentMethod())
+                .paymentStatus(order.getPaymentStatus())
                 .build();
     }
 
@@ -261,6 +266,9 @@ public class OrderServiceImpl implements OrderService {
             discountAmount = voucher.getDiscountAmount();
             order.setVoucher(voucher);
 
+            order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
+            order.setPaymentStatus(false);// Mặc định tạo đơn xong là chưa thanh toán
+
             // Trừ lượt dùng voucher
             voucher.setQuantity(voucher.getQuantity() - 1);
             voucherDAO.save(voucher);
@@ -271,6 +279,9 @@ public class OrderServiceImpl implements OrderService {
         // Tính tiền thực trả (Không để âm tiền)
         BigDecimal finalAmount = totalMoney.subtract(discountAmount);
         order.setFinalAmount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
+
+        order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
+        order.setPaymentStatus(false);
 
         // 5. Lưu hóa đơn vào Database
         Order savedOrder = orderDAO.save(order);
@@ -389,5 +400,14 @@ public class OrderServiceImpl implements OrderService {
         }
 
         return result;
+    }
+
+    @Override
+    @Transactional
+    public OrderResponseDTO updatePaymentStatus(Integer orderId, Boolean status) {
+        Order order = orderDAO.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
+        order.setPaymentStatus(status);
+        return mapToDTO(orderDAO.save(order));
     }
 }

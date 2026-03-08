@@ -70,6 +70,12 @@ public class Order {
     @JoinColumn(name = "status_id")
     private OrderStatus status;
 
+    @Column(name = "payment_method")
+    private String paymentMethod;
+
+    @Column(name = "payment_status")
+    private Boolean paymentStatus;
+
     // Liên kết 1-N với OrderDetail (Lưu 1 Order tự động lưu các Detail)
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference

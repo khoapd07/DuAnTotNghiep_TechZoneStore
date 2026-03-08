@@ -113,7 +113,12 @@
                 </div>
                 <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                   <span class="fs-8 fw-bold text-dark text-uppercase">Cần thu (COD):</span>
-                  <span class="fs-5 fw-black" :class="order.finalAmount > 0 ? 'text-danger' : 'text-success'">
+                  
+                  <span v-if="order.paymentStatus" class="fs-5 fw-black text-success">
+                    0đ <small class="fs-9 fw-bold border border-success rounded px-1 ms-1 pb-1">ĐÃ CK</small>
+                  </span>
+                  
+                  <span v-else class="fs-5 fw-black text-danger">
                     {{ formatCurrency(order.finalAmount) }} 
                   </span>
                 </div>
@@ -263,9 +268,9 @@ const stats = computed(() => {
   const shipping = orders.value.filter(o => getStatusValue(o.statusName) === 2).length;
   const delivered = orders.value.filter(o => getStatusValue(o.statusName) === 3).length;
   
-  // Tính tổng COD của các đơn ĐANG GIAO (chưa hoàn thành)
+  // Tính tổng COD: Chỉ tính những đơn ĐANG GIAO (2) VÀ CHƯA THANH TOÁN (paymentStatus == false)
   const totalCOD = orders.value
-    .filter(o => getStatusValue(o.statusName) === 2)
+    .filter(o => getStatusValue(o.statusName) === 2 && !o.paymentStatus)
     .reduce((sum, o) => sum + o.finalAmount, 0);
 
   return { waiting, shipping, delivered, totalCOD };
