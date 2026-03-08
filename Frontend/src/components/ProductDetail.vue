@@ -98,7 +98,7 @@
         <h5 class="fw-bold mb-4 border-bottom pb-2 text-uppercase text-dark">ĐÁNH GIÁ SẢN PHẨM</h5>
         
         <div class="row">
-          <div class="col-md-3">
+          <div class="col-md-3 border-end">
              <div class="rating-summary text-center">
               <h1 class="fw-light mb-0" style="font-size: 3.5rem;">{{ averageRating }}<span class="fs-4 text-muted">/5</span></h1>
               <div class="text-dark fw-bold my-1 fs-5">
@@ -107,6 +107,36 @@
                 </span>
               </div>
               <p class="fs-9 text-muted mb-0">Dựa trên {{ reviews.length }} đánh giá</p>
+            </div>
+          </div>
+
+          <div class="col-md-9 ps-4">
+            <div v-if="reviews && reviews.length > 0" class="d-flex flex-column gap-3">
+              <div v-for="review in reviews" :key="review.reviewId" class="review-item border-bottom pb-3">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                  
+                  <img v-if="review.userAvatar" :src="review.userAvatar" class="rounded-circle object-fit-cover" style="width: 45px; height: 45px;" alt="Avatar">
+                  <div v-else class="bg-light text-secondary border rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                    <i class="bi bi-person fs-4"></i>
+                  </div>
+                  
+                  <div>
+                    <div class="fw-bold fs-8 text-dark">{{ review.userFullName || (review.user && review.user.fullName) || 'Khách hàng' }}</div>
+                    <div class="d-flex align-items-center gap-2">
+                      <div class="text-dark fs-9 fw-bold">
+                        <span v-for="n in 5" :key="n">{{ n <= review.rating ? '★' : '☆' }}</span>
+                      </div>
+                      <span v-if="review.reviewDate" class="text-muted fs-9">• {{ formatDate(review.reviewDate) }}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <p class="mb-0 fs-8 text-dark">{{ review.comment || 'Đánh giá này không có bình luận.' }}</p>
+              </div>
+            </div>
+            
+            <div v-else class="text-muted fs-8 fst-italic py-4 text-center">
+              Chưa có bình luận nào cho sản phẩm này.
             </div>
           </div>
         </div>
@@ -174,6 +204,19 @@ const formatCurrency = (value) => value ? value.toLocaleString('vi-VN') + ' VNĐ
 
 // Đã cập nhật đúng dữ liệu thật, mặc định là 0.0 nếu chưa có ai rate
 const averageRating = computed(() => reviews.value.length ? (reviews.value.reduce((a, r) => a + r.rating, 0) / reviews.value.length).toFixed(1) : "0.0");
+
+// Thêm hàm này vào phần script của bạn
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('vi-VN', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
 
 const fetchProductDetail = async (id) => {
   try {
