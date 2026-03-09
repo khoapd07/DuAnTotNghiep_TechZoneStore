@@ -6,4 +6,10 @@ import com.poly.backend.entity.Category;
 
 @Repository
 public interface CategoryDAO extends JpaRepository<Category, Integer> {
+
+    // Kiểm tra tên trùng lúc tạo mới
+    boolean existsByCategoryName(String categoryName);
+
+    // Kiểm tra tên trùng lúc cập nhật (Loại trừ ID của chính nó)
+    boolean existsByCategoryNameAndCategoryIdNot(String categoryName, Integer categoryId);
 }

@@ -13,6 +13,45 @@
           <h3 class="fw-black text-dark mb-1 fs-4">Quản Lý Người Dùng</h3>
           <p class="text-muted m-0 fs-7">Theo dõi, quản lý và phân quyền thành viên trong hệ thống.</p>
         </div>
+        <button @click="openAddModal" class="btn btn-success fw-bold fs-7 text-white rounded-3 d-flex align-items-center gap-2 px-3 py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#customerModal">
+          <i class="bi bi-person-plus-fill"></i> Thêm Khách Hàng Mới
+        </button>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
+            <div>
+              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng người dùng</p>
+              <h2 class="fw-black text-dark m-0">{{ totalCustomers }}</h2>
+            </div>
+            <div class="bg-primary-subtle text-primary rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+              <i class="bi bi-people-fill fs-4"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
+            <div>
+              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Khách mới (Tháng này)</p>
+              <h2 class="fw-black text-success m-0">+{{ newCustomersThisMonth }}</h2>
+            </div>
+            <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+              <i class="bi bi-person-check-fill fs-4"></i>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
+            <div>
+              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tài khoản bị khóa</p>
+              <h2 class="fw-black text-danger m-0">{{ lockedCustomers }}</h2>
+            </div>
+            <div class="bg-danger-subtle text-danger rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+              <i class="bi bi-person-x-fill fs-4"></i>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 p-0">
@@ -35,7 +74,7 @@
                 <th scope="col" class="py-3 px-4 fw-bold border-0">Khách hàng</th>
                 <th scope="col" class="py-3 fw-bold border-0">Email / Số điện thoại</th>
                 <th scope="col" class="py-3 fw-bold border-0">Địa chỉ giao hàng</th>
-                <th scope="col" class="py-3 fw-bold border-0">Điểm tích lũy</th>
+                <th scope="col" class="py-3 fw-bold border-0">Điểm</th>
                 <th scope="col" class="py-3 fw-bold border-0">Trạng thái</th>
                 <th scope="col" class="py-3 fw-bold border-0 text-center">Hành động</th>
               </tr>
@@ -43,9 +82,7 @@
             <tbody>
               <tr v-if="isLoading">
                 <td colspan="6" class="text-center py-4">
-                  <div class="spinner-border text-success" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                  </div>
+                  <div class="spinner-border text-success" role="status"></div>
                 </td>
               </tr>
               <tr v-else v-for="user in filteredCustomers" :key="user.userId" class="border-bottom-dashed">
@@ -73,41 +110,57 @@
                     <button @click="openEditModal(user)" class="btn btn-link p-0 text-primary shadow-none" title="Chỉnh sửa" data-bs-toggle="modal" data-bs-target="#customerModal">
                       <i class="bi bi-pencil-fill"></i>
                     </button>
-                    <button v-if="user.status" @click="toggleStatus(user.userId)" class="btn btn-link p-0 text-danger shadow-none" title="Khóa tài khoản nhanh">
+                    <button v-if="user.status" @click="toggleStatus(user.userId)" class="btn btn-link p-0 text-warning shadow-none" title="Khóa tài khoản">
                       <i class="bi bi-slash-circle"></i>
                     </button>
-                    <button v-else @click="toggleStatus(user.userId)" class="btn btn-link p-0 text-success shadow-none" title="Mở khóa tài khoản nhanh">
+                    <button v-else @click="toggleStatus(user.userId)" class="btn btn-link p-0 text-success shadow-none" title="Mở khóa tài khoản">
                       <i class="bi bi-check-circle-fill"></i>
+                    </button>
+                    <button @click="deleteCustomer(user.userId)" class="btn btn-link p-0 text-danger shadow-none" title="Xóa khách hàng">
+                      <i class="bi bi-trash-fill"></i>
                     </button>
                   </div>
                 </td>
-              </tr>
-              <tr v-if="!isLoading && filteredCustomers.length === 0">
-                <td colspan="6" class="text-center py-4 text-muted">Không tìm thấy khách hàng nào. (Kiểm tra lại DB đã có dữ liệu ở bảng Customers chưa nhé!)</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-
     </main>
 
-    <div class="modal fade" id="customerModal" tabindex="-1" aria-labelledby="customerModalLabel" aria-hidden="true">
+    <div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
           <div class="modal-header border-bottom-0 pb-0">
-            <h5 class="modal-title fw-bold" id="customerModalLabel">Cập nhật Khách Hàng</h5>
-            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+            <h5 class="modal-title fw-bold">{{ isEditing ? 'Cập nhật Khách Hàng' : 'Thêm Khách Hàng Mới' }}</h5>
+            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
           </div>
           <div class="modal-body">
             <form @submit.prevent="saveCustomer">
+              <div v-if="!isEditing" class="row">
+                <div class="col-6 mb-3">
+                  <label class="form-label fs-8 fw-bold text-muted">Tên đăng nhập *</label>
+                  <input v-model="form.username" type="text" class="form-control shadow-none fs-7" required>
+                </div>
+                <div class="col-6 mb-3">
+                  <label class="form-label fs-8 fw-bold text-muted">Mật khẩu *</label>
+                  <input v-model="form.password" type="password" class="form-control shadow-none fs-7" required>
+                </div>
+              </div>
+
               <div class="mb-3">
                 <label class="form-label fs-8 fw-bold text-muted">Họ và tên</label>
                 <input v-model="form.fullName" type="text" class="form-control shadow-none fs-7" required>
               </div>
-              <div class="mb-3">
-                <label class="form-label fs-8 fw-bold text-muted">Số điện thoại</label>
-                <input v-model="form.phoneNumber" type="text" class="form-control shadow-none fs-7">
+              <div class="row">
+                <div class="col-6 mb-3">
+                  <label class="form-label fs-8 fw-bold text-muted">Email</label>
+                  <input v-model="form.email" type="email" class="form-control shadow-none fs-7">
+                </div>
+                <div class="col-6 mb-3">
+                  <label class="form-label fs-8 fw-bold text-muted">Số điện thoại</label>
+                  <input v-model="form.phoneNumber" type="text" class="form-control shadow-none fs-7">
+                </div>
               </div>
               <div class="mb-3">
                 <label class="form-label fs-8 fw-bold text-muted">Địa chỉ giao hàng</label>
@@ -119,7 +172,7 @@
                   <input v-model="form.loyaltyPoints" type="number" min="0" class="form-control shadow-none fs-7">
                 </div>
                 <div class="col-6 mb-3">
-                  <label class="form-label fs-8 fw-bold text-muted">Trạng thái tài khoản</label>
+                  <label class="form-label fs-8 fw-bold text-muted">Trạng thái</label>
                   <select v-model="form.status" class="form-select shadow-none fs-7">
                     <option :value="true">Đang hoạt động</option>
                     <option :value="false">Bị khóa</option>
@@ -128,7 +181,7 @@
               </div>
               <div class="d-flex justify-content-end gap-2 mt-4">
                 <button type="button" class="btn btn-light fw-bold fs-7" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" class="btn btn-success fw-bold fs-7">Lưu thay đổi</button>
+                <button type="submit" class="btn btn-success fw-bold fs-7">{{ isEditing ? 'Lưu thay đổi' : 'Tạo khách hàng' }}</button>
               </div>
             </form>
           </div>
@@ -146,11 +199,14 @@ const customers = ref([]);
 const isLoading = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('ALL');
+const isEditing = ref(false);
 
-// Bổ sung thêm 'status' vào State form
 const form = ref({
   userId: null,
+  username: '',
+  password: '',
   fullName: '',
+  email: '',
   phoneNumber: '',
   shippingAddress: '',
   loyaltyPoints: 0,
@@ -171,69 +227,120 @@ const fetchCustomers = async () => {
     customers.value = response.data;
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu:', error);
-    if (error.response && error.response.status === 403) {
-      alert('Bạn không có quyền hoặc Token đã hết hạn. Vui lòng đăng nhập lại!');
-    } else {
-      alert('Không thể tải dữ liệu từ server. Hãy kiểm tra Backend.');
-    }
   } finally {
     isLoading.value = false;
   }
 };
 
+// --- LOGIC TÍNH TOÁN THỐNG KÊ ---
+const totalCustomers = computed(() => customers.value.length);
+
+const lockedCustomers = computed(() => customers.value.filter(c => !c.status).length);
+
+const newCustomersThisMonth = computed(() => {
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  return customers.value.filter(c => {
+    if(!c.createdAt) return false;
+    const date = new Date(c.createdAt);
+    return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+  }).length;
+});
+
+// --- CÁC HÀM CRUD ---
 const toggleStatus = async (id) => {
   if(!confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản này?')) return;
   try {
     await axios.put(`${API_URL}/${id}/toggle-status`, {}, getAuthConfig());
     fetchCustomers();
-  } catch (error) {
-    console.error('Lỗi:', error);
-    alert('Có lỗi xảy ra!');
-  }
+  } catch (error) { alert('Có lỗi xảy ra!'); }
 };
 
-// Map dữ liệu khi mở Modal, lấy cả status
+const deleteCustomer = async (id) => {
+  if(!confirm('Cảnh báo: Hành động này sẽ xóa vĩnh viễn khách hàng. Bạn có chắc chắn?')) return;
+  try {
+    await axios.delete(`${API_URL}/${id}`, getAuthConfig());
+    alert('Đã xóa thành công!');
+    fetchCustomers();
+  } catch (error) { alert('Không thể xóa! Có thể tài khoản này đang dính khóa ngoại tới đơn hàng.'); }
+};
+
+const openAddModal = () => {
+  isEditing.value = false;
+  form.value = { userId: null, username: '', password: '', fullName: '', email: '', phoneNumber: '', shippingAddress: '', loyaltyPoints: 0, status: true };
+};
+
 const openEditModal = (user) => {
+  isEditing.value = true;
   form.value = {
     userId: user.userId,
     fullName: user.fullName || '',
+    email: user.email || '',
     phoneNumber: user.phoneNumber || '',
     shippingAddress: user.shippingAddress || '',
     loyaltyPoints: user.loyaltyPoints || 0,
-    status: user.status // Map đúng status hiện tại lên UI
+    status: user.status
   };
 };
 
 const saveCustomer = async () => {
+  // --- 1. VALIDATE FRONTEND ---
+  // Ràng buộc mật khẩu (Nếu đang thêm mới)
+  if (!isEditing.value && form.value.password.length < 6) {
+    alert("Mật khẩu phải có ít nhất 6 ký tự!");
+    return;
+  }
+
+  // Validate Email (Phải có @ và . )
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (form.value.email && !emailRegex.test(form.value.email)) {
+    alert("Email không đúng định dạng! (Ví dụ: nguyenvan@gmail.com)");
+    return;
+  }
+
+  // Validate SĐT Việt Nam (Bắt đầu bằng 03, 05, 07, 08, 09 và gồm 10 số)
+  const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
+  if (form.value.phoneNumber && !phoneRegex.test(form.value.phoneNumber)) {
+    alert("Số điện thoại không hợp lệ! Vui lòng nhập SĐT Việt Nam gồm 10 số.");
+    return;
+  }
+
+  // --- 2. GỌI API & ĐỌC LỖI TỪ BACKEND ---
   try {
-    await axios.put(`${API_URL}/${form.value.userId}`, form.value, getAuthConfig());
-    alert('Cập nhật thành công!');
+    if (isEditing.value) {
+      await axios.put(`${API_URL}/${form.value.userId}`, form.value, getAuthConfig());
+      alert('Cập nhật thành công!');
+    } else {
+      await axios.post(API_URL, form.value, getAuthConfig());
+      alert('Tạo khách hàng thành công!');
+    }
+    
     fetchCustomers(); 
     
     const modalElement = document.getElementById('customerModal');
-    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-    if(modalInstance) modalInstance.hide();
+    if (modalElement && window.bootstrap) {
+      let modalInstance = window.bootstrap.Modal.getInstance(modalElement);
+      if (modalInstance) modalInstance.hide();
+    }
     
   } catch (error) {
-    console.error('Lỗi:', error);
-    alert('Cập nhật thất bại!');
+    console.error('Lỗi khi lưu:', error);
+    // Nhận câu thông báo "Email đã tồn tại", "Username đã tồn tại"... từ Controller trả về
+    const errorMsg = error.response?.data?.message || error.response?.data || 'Thao tác thất bại. Vui lòng kiểm tra lại!';
+    if (typeof errorMsg === 'string') {
+      alert(errorMsg);
+    }
   }
 };
 
 const filteredCustomers = computed(() => {
   return customers.value.filter(user => {
-    // 1. Lấy từ khóa tìm kiếm
     const query = searchQuery.value.toLowerCase();
-    
-    // 2. Lỗi nằm ở đây đã được sửa: 
-    // Nếu ô tìm kiếm trống (!query) -> Cho qua luôn.
-    // Nếu có tìm kiếm thì mới check fullName, email, hoặc phoneNumber.
     const matchSearch = !query || 
                         (user.fullName && user.fullName.toLowerCase().includes(query)) ||
                         (user.email && user.email.toLowerCase().includes(query)) ||
                         (user.phoneNumber && user.phoneNumber.includes(query));
     
-    // 3. Lọc theo trạng thái
     let matchStatus = true;
     if (statusFilter.value === 'ACTIVE') matchStatus = user.status === true;
     if (statusFilter.value === 'LOCKED') matchStatus = user.status === false;

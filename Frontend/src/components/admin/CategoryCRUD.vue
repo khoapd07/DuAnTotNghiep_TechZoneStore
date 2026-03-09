@@ -1,8 +1,5 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
-    
-    
-
     <main class="flex-grow-1 p-4 overflow-auto">
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
@@ -64,7 +61,8 @@
               <tr class="text-muted fs-8 text-uppercase">
                 <th class="py-3 px-4 fw-bold border-0">Tên Danh Mục</th>
                 <th class="py-3 fw-bold border-0 text-center">Số Lượng SP</th>
-                <th class="py-3 fw-bold border-0 text-center">Tồn Kho</th> <th class="py-3 fw-bold border-0 text-center" style="width: 150px;">Hành Động</th>
+                <th class="py-3 fw-bold border-0 text-center">Tồn Kho</th> 
+                <th class="py-3 fw-bold border-0 text-center" style="width: 150px;">Hành Động</th>
               </tr>
             </thead>
             <tbody>
@@ -112,7 +110,7 @@
           </div>
           <div class="modal-body p-4">
             <div class="mb-3">
-              <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên danh mục</label>
+              <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên danh mục <span class="text-danger">*</span></label>
               <input type="text" v-model="form.categoryName" class="form-control fs-7" placeholder="Nhập tên danh mục">
             </div>
           </div>
@@ -136,28 +134,24 @@ const isEditing = ref(false);
 const currentId = ref(null);
 const form = reactive({ categoryName: '' });
 
-// Lấy số lượng sản phẩm
 const getProductCount = (cat) => {
   if (cat.productCount !== undefined) return cat.productCount;
   if (cat.products && Array.isArray(cat.products)) return cat.products.length;
   return 0;
 };
 
-// Lấy số lượng tồn kho
 const getStockCount = (cat) => {
-  if (cat.totalStock !== undefined) return cat.totalStock; // Lấy từ Backend sau khi gắn hàm getTotalStock()
+  if (cat.totalStock !== undefined) return cat.totalStock; 
   if (cat.products && Array.isArray(cat.products)) {
     return cat.products.reduce((sum, p) => sum + (p.stockQuantity || 0), 0);
   }
   return 0;
 };
 
-// Computed tính tổng tất cả sản phẩm
 const totalProducts = computed(() => {
   return categoryList.value.reduce((total, cat) => total + getProductCount(cat), 0);
 });
 
-// Computed tính tổng tất cả tồn kho trên hệ thống
 const totalStock = computed(() => {
   return categoryList.value.reduce((total, cat) => total + getStockCount(cat), 0);
 });
@@ -189,18 +183,31 @@ const openEditModal = (cat) => {
 };
 
 const saveCategory = async () => {
+  // 1. VALIDATE Ở FRONTEND
+  if (!form.categoryName || form.categoryName.trim() === '') {
+    alert("Vui lòng nhập tên danh mục!");
+    return;
+  }
+
   try {
     const headers = getAuthHeader();
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/categories/${currentId.value}`, form, { headers });
+      alert("Cập nhật thành công!");
     } else {
       await axios.post('http://localhost:8080/api/categories', form, { headers });
+      alert("Thêm mới thành công!");
     }
-    showModal.value = false;
-    fetchCategories();
-    alert("Thành công!");
+    
+    showModal.value = false; // Đóng modal
+    fetchCategories(); // Load lại bảng
+    
   } catch (error) {
-    alert("Lỗi: " + (error.response?.data?.message || "Không thể thực hiện"));
+    // 2. BẮT LỖI TỪ BACKEND (Trùng tên, v.v...)
+    const errorMsg = error.response?.data?.message || error.response?.data || "Không thể thực hiện! Vui lòng thử lại.";
+    if (typeof errorMsg === 'string') {
+      alert(errorMsg);
+    }
   }
 };
 

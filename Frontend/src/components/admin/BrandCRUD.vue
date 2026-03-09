@@ -110,7 +110,7 @@
           </div>
           <div class="modal-body p-4">
             <div class="mb-3">
-              <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên thương hiệu</label>
+              <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên thương hiệu <span class="text-danger">*</span></label>
               <input type="text" v-model="form.brandName" class="form-control fs-7" placeholder="Nhập tên thương hiệu">
             </div>
           </div>
@@ -187,18 +187,31 @@ const openEditModal = (brand) => {
 };
 
 const saveBrand = async () => {
+  // 1. VALIDATE Ở FRONTEND
+  if (!form.brandName || form.brandName.trim() === '') {
+    alert("Vui lòng nhập tên thương hiệu!");
+    return;
+  }
+
   try {
     const headers = getAuthHeader();
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/brands/${currentId.value}`, form, { headers });
+      alert("Cập nhật thành công!");
     } else {
       await axios.post('http://localhost:8080/api/brands', form, { headers });
+      alert("Thêm mới thành công!");
     }
+    
     showModal.value = false;
     fetchBrands();
-    alert("Thành công!");
+    
   } catch (error) {
-    alert("Lỗi: " + (error.response?.data?.message || "Không thể thực hiện"));
+    // 2. BẮT LỖI TỪ BACKEND
+    const errorMsg = error.response?.data?.message || error.response?.data || "Không thể thực hiện! Vui lòng thử lại.";
+    if (typeof errorMsg === 'string') {
+      alert(errorMsg);
+    }
   }
 };
 
@@ -209,13 +222,10 @@ const deleteBrand = async (id) => {
       fetchBrands();
       alert("Xóa thành công!");
     } catch (error) {
-      // Lấy thông báo từ backend (ưu tiên e.response.data.message, nếu không có thì lấy chuỗi thuần e.response.data)
       const errorMsg = error.response?.data?.message || error.response?.data;
-      
       if (typeof errorMsg === 'string') {
         alert(errorMsg); 
       } else {
-        // Câu dự phòng cuối cùng nếu lỗi sập server không lấy được data
         alert("Không thể xóa thương hiệu này vì đang chứa sản phẩm! Vui lòng xóa sản phẩm trước."); 
       }
     }

@@ -37,8 +37,8 @@
         </div>
         <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
-            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Danh mục</p><h2 class="fw-black text-dark m-0">{{ stats.categories }}</h2></div>
-            <div class="bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-tags fs-4"></i></div>
+            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng tồn kho</p><h2 class="fw-black text-dark m-0">{{ stats.totalStockQuantity }}</h2></div>
+            <div class="bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-boxes fs-4"></i></div>
           </div>
         </div>
       </div>
@@ -125,24 +125,24 @@
           </div>
           <div class="modal-body p-4">
             <div class="row g-3">
-              <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm</label><input type="text" v-model="form.name" class="form-control fs-7"></div>
+              <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm <span class="text-danger">*</span></label><input type="text" v-model="form.name" class="form-control fs-7"></div>
               
               <div class="col-md-6">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Danh mục</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Danh mục <span class="text-danger">*</span></label>
                 <select v-model="form.categoryId" class="form-select fs-7 shadow-none">               
                   <option v-for="cat in categoryList" :key="cat.categoryId" :value="cat.categoryId">{{ cat.categoryName }}</option>
                 </select>
               </div>
 
               <div class="col-md-6">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Thương hiệu</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Thương hiệu <span class="text-danger">*</span></label>
                 <select v-model="form.brandId" class="form-select fs-7 shadow-none">
                   <option v-for="b in brandList" :key="b.brandId" :value="b.brandId">{{ b.brandName }}</option>
                 </select>
               </div>
 
-              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng</label><input type="number" v-model="form.stockQuantity" class="form-control fs-7"></div>
-              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán</label><input type="number" v-model="form.price" class="form-control fs-7"></div>
+              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng <span class="text-danger">*</span></label><input type="number" v-model="form.stockQuantity" class="form-control fs-7"></div>
+              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán <span class="text-danger">*</span></label><input type="number" v-model="form.price" class="form-control fs-7"></div>
               <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM</label><input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống..."></div>
               <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Link hình ảnh</label><input type="text" v-model="form.imageUrl" class="form-control fs-7"></div>
               <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mô tả ngắn</label><textarea v-model="form.description" class="form-control fs-7" rows="2"></textarea></div>
@@ -174,27 +174,25 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 
-const stats = reactive({ total: 0, lowStock: 0, categories: 0 });
+const stats = reactive({ total: 0, lowStock: 0, totalStockQuantity: 0 }); // Đã đổi categories thành totalStockQuantity
 
 const form = reactive({ 
   name: '', 
   categoryId: null,
   brandId: null,
   price: 0, 
-  salePrice: null, // Mới thêm
+  salePrice: null, 
   stockQuantity: 0, 
   imageUrl: '', 
   description: '' 
 });
 
-// Hàm tính % giảm giá (Đã fix lỗi làm tròn 100%)
 const calculateDiscount = (price, salePrice) => {
   if (!price || !salePrice || price <= 0 || salePrice >= price) return 0;
   
   const discount = ((price - salePrice) / price) * 100;
   let roundedDiscount = Math.round(discount);
   
-  // Nếu làm tròn lên 100% nhưng giá bán thực tế vẫn lớn hơn 0đ thì ép về 99%
   if (roundedDiscount >= 100 && salePrice > 0) {
     return 99;
   }
@@ -220,6 +218,7 @@ const fetchStats = async () => {
     const response = await axios.get('http://localhost:8080/api/product/stats', { headers: getAuthHeader() });
     stats.total = response.data.total;
     stats.lowStock = response.data.lowStock;
+    stats.totalStockQuantity = response.data.totalStockQuantity; // Nhận giá trị mới từ API
   } catch (error) { console.error("Lỗi tải thống kê:", error); }
 };
 
@@ -227,7 +226,6 @@ const fetchCategories = async () => {
   try {
     const response = await axios.get('http://localhost:8080/api/categories', { headers: getAuthHeader() });
     categoryList.value = response.data;
-    stats.categories = categoryList.value.length; 
   } catch (error) { console.error("Lỗi tải danh mục:", error); categoryList.value = []; }
 };
 
@@ -268,29 +266,51 @@ const openEditModal = (p) => {
   Object.assign(form, p); 
   form.categoryId = p.categoryId; 
   form.brandId = p.brandId; 
-  form.salePrice = p.salePrice || null; // Map dữ liệu cũ
+  form.salePrice = p.salePrice || null; 
   showModal.value = true;
 };
 
 const saveProduct = async () => {
+  // 1. VALIDATE Ở FRONTEND
+  if (!form.name || form.name.trim() === '') {
+    alert("Vui lòng nhập tên sản phẩm!"); return;
+  }
+  if (!form.categoryId) {
+    alert("Vui lòng chọn danh mục!"); return;
+  }
+  if (!form.brandId) {
+    alert("Vui lòng chọn thương hiệu!"); return;
+  }
+  if (form.price === null || form.price === undefined || form.price < 0) {
+    alert("Vui lòng nhập giá bán lớn hơn hoặc bằng 0!"); return;
+  }
+  if (form.stockQuantity === null || form.stockQuantity === undefined || form.stockQuantity < 0) {
+    alert("Vui lòng nhập số lượng lớn hơn hoặc bằng 0!"); return;
+  }
+
   try {
     const headers = getAuthHeader();
     const payload = { ...form };
     
-    // Ép kiểu salePrice để tránh lỗi đẩy chữ (String) xuống Backend
     payload.salePrice = payload.salePrice ? Number(payload.salePrice) : null;
 
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/product/${currentId.value}`, payload, { headers });
+      alert("Cập nhật thành công!");
     } else {
       await axios.post('http://localhost:8080/api/product', payload, { headers });
+      alert("Thêm mới thành công!");
     }
     showModal.value = false;
     fetchProducts();
     fetchStats(); 
-    alert("Thành công!");
+    
   } catch (error) {
-    alert("Lỗi: " + (error.response?.data?.message || "Không thể thực hiện. Kiểm tra lại giá KM"));
+    // 2. BẮT LỖI TỪ BACKEND
+    const errorMsg = error.response?.data?.message || error.response?.data || "Không thể thực hiện. Vui lòng thử lại.";
+    if (typeof errorMsg === 'string') {
+      alert(errorMsg);
+    }
   }
 };
 

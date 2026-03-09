@@ -1,6 +1,6 @@
 package com.poly.backend.controller;
 
-import com.poly.backend.dao.ProductDAO; // MỚI THÊM
+import com.poly.backend.dao.ProductDAO;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,18 +22,20 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductService productService;
-    private final ProductDAO productDAO; // MỚI THÊM: Inject DAO để lấy thống kê nhanh
+    private final ProductDAO productDAO;
 
-    // ==================== ENDPOINT MỚI: LẤY THỐNG KÊ ====================
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getProductStats() {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("total", productDAO.count()); // Tổng số sản phẩm trong DB
-        // Đếm số lượng sản phẩm có tồn kho DƯỚI 15 (nghĩa là < 15)
+        stats.put("total", productDAO.count());
         stats.put("lowStock", productDAO.countByStockQuantityLessThan(16));
+
+        // MỚI THÊM: Lấy tổng số lượng tồn kho
+        Long totalStock = productDAO.sumTotalStockQuantity();
+        stats.put("totalStockQuantity", totalStock != null ? totalStock : 0);
+
         return ResponseEntity.ok(stats);
     }
-    // ====================================================================
 
     @GetMapping
     public ResponseEntity<Page<ProductDTO>> getAllProducts(
@@ -57,30 +59,40 @@ public class ProductController {
         return ResponseEntity.ok(productDTO);
     }
 
+    // ĐÃ THÊM TRY-CATCH ĐỂ BẮT LỖI VALIDATE
     @PostMapping
-    public ResponseEntity<ProductDTO> createProduct(@Valid @RequestBody ProductDTO productDTO) {
-        ProductDTO createdProduct = productService.createProduct(productDTO);
-        return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+    public ResponseEntity<?> createProduct(@Valid @RequestBody ProductDTO productDTO) {
+        try {
+            ProductDTO createdProduct = productService.createProduct(productDTO);
+            return new ResponseEntity<>(createdProduct, HttpStatus.CREATED);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
-    // Lấy danh sách sản phẩm CÓ GIẢM GIÁ (Dùng cho Flash Sale)
     @GetMapping("/discounted")
     public ResponseEntity<List<ProductDTO>> getDiscountedProducts() {
         return ResponseEntity.ok(productService.getDiscountedProducts());
     }
 
-    // Lấy 8 sản phẩm MỚI NHẤT (Dùng cho mục Hàng Mới Về)
     @GetMapping("/latest")
     public ResponseEntity<List<ProductDTO>> getLatestProducts() {
         return ResponseEntity.ok(productService.getTop8NewestProducts());
     }
 
+    // ĐÃ THÊM TRY-CATCH ĐỂ BẮT LỖI VALIDATE
     @PutMapping("/{id}")
-    public ResponseEntity<ProductDTO> updateProduct(
-            @PathVariable Integer id,
-            @Valid @RequestBody ProductDTO productDTO) {
-        ProductDTO updatedProduct = productService.updateProduct(id, productDTO);
-        return ResponseEntity.ok(updatedProduct);
+    public ResponseEntity<?> updateProduct(@PathVariable Integer id, @Valid @RequestBody ProductDTO productDTO) {
+        try {
+            ProductDTO updatedProduct = productService.updateProduct(id, productDTO);
+            return ResponseEntity.ok(updatedProduct);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
     }
 
     @DeleteMapping("/{id}")

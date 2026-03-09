@@ -9,7 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/brands")
@@ -19,13 +21,11 @@ public class BrandController {
 
     private final BrandService brandService;
 
-    // 1. GET ALL (Kèm thống kê số lượng SP và Tồn kho)
     @GetMapping
     public ResponseEntity<List<BrandDTO>> getAll() {
         return ResponseEntity.ok(brandService.findAllWithStats());
     }
 
-    // 2. GET BY ID (Lấy thông tin 1 thương hiệu để edit)
     @GetMapping("/{id}")
     public ResponseEntity<Brand> getById(@PathVariable Integer id) {
         Brand brand = brandService.findById(id);
@@ -35,48 +35,50 @@ public class BrandController {
         return ResponseEntity.ok(brand);
     }
 
-    // 3. POST (Thêm mới thương hiệu)
     @PostMapping
     public ResponseEntity<?> createBrand(@Valid @RequestBody BrandDTO brandDTO) {
         try {
-            // Chuyển dữ liệu từ DTO sang Entity để lưu vào DB
             Brand newBrand = new Brand();
             newBrand.setBrandName(brandDTO.getBrandName());
 
-            Brand savedBrand = brandService.save(newBrand);
+            Brand savedBrand = brandService.create(newBrand);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedBrand);
+        } catch (IllegalArgumentException e) {
+            // Trả về lỗi 400 kèm định dạng JSON
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Lỗi khi thêm mới thương hiệu");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Lỗi hệ thống khi thêm mới thương hiệu");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    // 4. PUT (Cập nhật thương hiệu)
     @PutMapping("/{id}")
     public ResponseEntity<?> updateBrand(@PathVariable Integer id, @Valid @RequestBody BrandDTO brandDTO) {
         try {
-            Brand existingBrand = brandService.findById(id);
-            if (existingBrand == null) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Không tìm thấy thương hiệu");
-            }
+            Brand brandData = new Brand();
+            brandData.setBrandName(brandDTO.getBrandName());
 
-            // Cập nhật tên thương hiệu mới
-            existingBrand.setBrandName(brandDTO.getBrandName());
-
-            Brand updatedBrand = brandService.save(existingBrand);
+            Brand updatedBrand = brandService.update(id, brandData);
             return ResponseEntity.ok(updatedBrand);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Lỗi khi cập nhật thương hiệu");
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Lỗi hệ thống khi cập nhật thương hiệu");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
 
-    // 5. DELETE (Xóa thương hiệu)
-    // 5. DELETE (Xóa thương hiệu)
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteBrand(@PathVariable Integer id) {
         try {
             Brand existingBrand = brandService.findById(id);
             if (existingBrand == null) {
-                // Trả về dạng JSON {"message": "..."}
                 return ResponseEntity.status(HttpStatus.NOT_FOUND)
                         .body(java.util.Map.of("message", "Không tìm thấy thương hiệu để xóa"));
             }
@@ -85,7 +87,6 @@ public class BrandController {
             return ResponseEntity.ok().body(java.util.Map.of("message", "Xóa thành công"));
 
         } catch (Exception e) {
-            // Sửa thông báo lỗi ở đây để trả về dạng JSON
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body(java.util.Map.of("message", "Không thể xóa thương hiệu này vì đang chứa sản phẩm! Vui lòng xóa sản phẩm trước."));
         }

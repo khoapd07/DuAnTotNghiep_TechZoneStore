@@ -11,7 +11,6 @@ import java.util.List;
 @Repository
 public interface BrandDAO extends JpaRepository<Brand, Integer> {
 
-    // Chú ý phần 0L để ép kiểu trả về là Long cho trùng khớp với BrandDTO
     @Query("SELECT new com.poly.backend.dto.BrandDTO(" +
             "b.brandId, b.brandName, " +
             "COUNT(p.productId), " +
@@ -19,4 +18,10 @@ public interface BrandDAO extends JpaRepository<Brand, Integer> {
             "FROM Brand b LEFT JOIN Product p ON p.brand = b " +
             "GROUP BY b.brandId, b.brandName")
     List<BrandDTO> findAllWithStats();
+
+    // MỚI THÊM: Kiểm tra tên trùng lúc tạo mới
+    boolean existsByBrandName(String brandName);
+
+    // MỚI THÊM: Kiểm tra tên trùng lúc cập nhật (Loại trừ ID của chính nó)
+    boolean existsByBrandNameAndBrandIdNot(String brandName, Integer brandId);
 }

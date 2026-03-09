@@ -9,25 +9,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.Map;
-
 import java.util.List;
 
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
-@CrossOrigin("*") // Make sure CORS is properly configured for local dev
+@CrossOrigin("*")
 public class CategoryController {
 
-    // Always inject Service layer, NOT DAO repository directly in controller
     private final CategoryService categoryService;
 
-    // GET ALL: /api/categories
     @GetMapping
     public ResponseEntity<List<Category>> getAll() {
         return ResponseEntity.ok(categoryService.findAll());
     }
 
-    // GET ONE: /api/categories/{id}
     @GetMapping("/{id}")
     public ResponseEntity<Category> getOne(@PathVariable Integer id) {
         Category category = categoryService.findById(id);
@@ -37,29 +33,30 @@ public class CategoryController {
         return ResponseEntity.notFound().build();
     }
 
-    // CREATE (POST): /api/categories
-    // The previous error 405 was because this was missing
     @PostMapping
-    public ResponseEntity<Category> create(@RequestBody Category category) {
-        Category savedCategory = categoryService.save(category);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedCategory);
-    }
-
-    // UPDATE (PUT): /api/categories/{id}
-    @PutMapping("/{id}")
-    public ResponseEntity<Category> update(@PathVariable Integer id, @RequestBody Category category) {
-        Category existingCategory = categoryService.findById(id);
-        if (existingCategory != null) {
-            // Update the ID to make sure we overwrite the correct record
-            category.setCategoryId(id);
-            Category updatedCategory = categoryService.save(category);
-            return ResponseEntity.ok(updatedCategory);
+    public ResponseEntity<?> create(@RequestBody Category category) {
+        try {
+            Category savedCategory = categoryService.create(category);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedCategory);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response); // Trả về lỗi 400 kèm thông báo
         }
-        return ResponseEntity.notFound().build();
     }
 
-    // DELETE: /api/categories/{id}
-    // The previous error 404 was likely because this route was missing
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable Integer id, @RequestBody Category category) {
+        try {
+            Category updatedCategory = categoryService.update(id, category);
+            return ResponseEntity.ok(updatedCategory);
+        } catch (IllegalArgumentException e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable Integer id) {
         Category existingCategory = categoryService.findById(id);
@@ -68,15 +65,12 @@ public class CategoryController {
                 categoryService.deleteById(id);
                 return ResponseEntity.ok().build();
             } catch (DataIntegrityViolationException e) {
-                // Tạo một object JSON chuẩn bằng Map
                 Map<String, String> response = new HashMap<>();
                 response.put("message", "Không thể xóa danh mục này vì đang chứa sản phẩm! Vui lòng xóa sản phẩm trước.");
-
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             } catch (Exception e) {
                 Map<String, String> response = new HashMap<>();
                 response.put("message", "Đã xảy ra lỗi hệ thống khi xóa.");
-
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
             }
         }

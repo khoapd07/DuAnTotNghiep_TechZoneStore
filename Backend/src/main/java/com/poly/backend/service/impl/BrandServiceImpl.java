@@ -24,9 +24,27 @@ public class BrandServiceImpl implements BrandService {
         return brandDAO.findById(id).orElse(null);
     }
 
+    // MỚI THÊM: Tạo mới có Validate
     @Override
-    public Brand save(Brand brand) {
+    public Brand create(Brand brand) {
+        if (brandDAO.existsByBrandName(brand.getBrandName())) {
+            throw new IllegalArgumentException("Tên thương hiệu này đã tồn tại!");
+        }
         return brandDAO.save(brand);
+    }
+
+    // MỚI THÊM: Cập nhật có Validate
+    @Override
+    public Brand update(Integer id, Brand brand) {
+        if (brandDAO.existsByBrandNameAndBrandIdNot(brand.getBrandName(), id)) {
+            throw new IllegalArgumentException("Tên thương hiệu này đã bị trùng với thương hiệu khác!");
+        }
+
+        Brand existingBrand = brandDAO.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thương hiệu!"));
+
+        existingBrand.setBrandName(brand.getBrandName());
+        return brandDAO.save(existingBrand);
     }
 
     @Override
