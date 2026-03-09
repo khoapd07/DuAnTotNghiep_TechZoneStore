@@ -69,6 +69,11 @@
                       <i class="bi bi-speedometer2 me-2"></i>Trang quản trị
                     </router-link>
                 </li>
+                <li v-if="isShipper">
+                    <router-link class="dropdown-item fw-bold text-primary" to="/shipping">
+                      <i class="bi bi-truck me-2"></i>Trang vận chuyển
+                    </router-link>
+                </li>
                 <li><router-link class="dropdown-item" to="/my-account">Tài khoản</router-link></li>
                 <li><router-link class="dropdown-item" to="/orders">Đơn hàng</router-link></li>
                 <li><hr class="dropdown-divider"></li>
@@ -96,6 +101,7 @@ const isLoggedIn = ref(false);
 const userInfo = ref('');
 const cartItems = ref([]);
 const isAdmin = ref(false);
+const isShipper = ref(false);
 
 const checkLoginStatus = () => {
   const token = localStorage.getItem('jwt_token');
@@ -122,6 +128,7 @@ const checkLoginStatus = () => {
       try {
         const roles = JSON.parse(userRolesString);
         isAdmin.value = roles.includes('ROLE_ADMIN') || roles.includes('ROLE_STAFF');
+        isShipper.value = roles.includes('ROLE_SHIPPER');
       } catch (e) {
         isAdmin.value = false;
       }
@@ -129,8 +136,10 @@ const checkLoginStatus = () => {
       try {
         const parsedUser = JSON.parse(userInfoString);
         isAdmin.value = parsedUser.role === 'Admin' || parsedUser.role === 'Staff';
+        isShipper.value = parsedUser.role === 'Shipper';
       } catch (e) {
         isAdmin.value = false;
+        isShipper.value = false;
       }
     } else {
       isAdmin.value = false;
@@ -141,6 +150,7 @@ const checkLoginStatus = () => {
     isLoggedIn.value = false;
     userInfo.value = '';
     isAdmin.value = false;
+    isShipper.value = false;
   }
   
   // LƯU Ý MỚI: Dù đăng nhập hay chưa đều phải gọi hàm lấy giỏ hàng
