@@ -100,7 +100,7 @@
                       class="badge bg-secondary text-white position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">HẾT
                       HÀNG</span>
                     <i
-                      class="bi bi-heart position-absolute top-0 end-0 m-2 fs-6 text-white cursor-pointer heart-icon"></i>
+                      class="bi bi-heart position-absolute top-0 end-0 m-2 fs-6 text-dark cursor-pointer heart-icon"></i>
                     <img :src="product.imageUrl || 'https://via.placeholder.com/150'"
                       class="img-fluid object-fit-contain" style="height: 140px;" :alt="product.name">
                   </div>
@@ -388,7 +388,7 @@ const buyNow = async (productId) => {
 }
 
 .img-wrapper {
-  background-color: #111111;
+  background-color: #FFFFFF;
   height: 180px;
 }
 
