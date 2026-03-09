@@ -13,13 +13,21 @@ import lombok.NoArgsConstructor;
 @Builder
 public class BrandDTO {
 
-    // ID có thể null khi tạo mới, nhưng sẽ có giá trị khi update hoặc get chi tiết
     private Integer brandId;
 
-    // Validation: Không được để trống (null hoặc chuỗi rỗng)
     @NotBlank(message = "Tên thương hiệu không được để trống")
-    // Validation: Độ dài tối đa 100 ký tự (khớp với Database)
     @Size(max = 100, message = "Tên thương hiệu không được quá 100 ký tự")
     private String brandName;
 
+    private Long productCount;
+    private Long totalStock;
+
+    // Thêm constructor này để map chính xác dữ liệu từ JPA Query trả về
+    public BrandDTO(Integer brandId, String brandName, Long productCount, Number totalStock) {
+        this.brandId = brandId;
+        this.brandName = brandName;
+        this.productCount = productCount != null ? productCount : 0L;
+        // Tự động convert Integer/int từ Database sang Long
+        this.totalStock = totalStock != null ? totalStock.longValue() : 0L;
+    }
 }
