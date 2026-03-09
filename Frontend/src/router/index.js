@@ -17,6 +17,7 @@ import ForgotPassword from '../components/ForgotPassword.vue'
 import Historyproduct from '../components/Historyproduct.vue'
 import OrderVote from '../components/OrderVote.vue'
 import Order from '../components/Order.vue'
+import Support from '../components/Support.vue'
 // 2. Import các trang của Quản trị viên (Admin)
 import AdminLayout from '../components/admin/AdminLayout.vue'
 import AdminDashboard from '../components/admin/Dashboard.vue'
@@ -53,6 +54,7 @@ const routes = [
   { path: '/ForgotPassword', name: 'ForgotPassword', component: ForgotPassword },
   { path: '/Historyproduct', name: 'Historyproduct', component: Historyproduct},
   { path: '/OrderVote', name: 'OrderVote', component: OrderVote},
+  { path: '/support', name: 'Support', component: Support },
 
 
 
