@@ -74,7 +74,6 @@
                 <th scope="col" class="py-3 px-4 fw-bold border-0">Khách hàng</th>
                 <th scope="col" class="py-3 fw-bold border-0">Email / Số điện thoại</th>
                 <th scope="col" class="py-3 fw-bold border-0">Địa chỉ giao hàng</th>
-                <th scope="col" class="py-3 fw-bold border-0">Điểm</th>
                 <th scope="col" class="py-3 fw-bold border-0">Trạng thái</th>
                 <th scope="col" class="py-3 fw-bold border-0 text-center">Hành động</th>
               </tr>
@@ -98,7 +97,6 @@
                   </div>
                 </td>
                 <td class="text-muted fs-7 py-3">{{ user.shippingAddress || 'Chưa cập nhật' }}</td>
-                <td class="text-dark fw-bold fs-7 py-3">{{ user.loyaltyPoints }} đ</td>
                 <td class="py-3">
                   <div class="d-flex align-items-center gap-2 fs-8 fw-bold" :class="!user.status ? 'text-danger' : 'text-success'">
                     <i class="bi bi-circle-fill" style="font-size: 6px;"></i> 
@@ -167,11 +165,7 @@
                 <textarea v-model="form.shippingAddress" class="form-control shadow-none fs-7" rows="2"></textarea>
               </div>
               <div class="row">
-                <div class="col-6 mb-3">
-                  <label class="form-label fs-8 fw-bold text-muted">Điểm tích lũy</label>
-                  <input v-model="form.loyaltyPoints" type="number" min="0" class="form-control shadow-none fs-7">
-                </div>
-                <div class="col-6 mb-3">
+                <div class="col-12 mb-3">
                   <label class="form-label fs-8 fw-bold text-muted">Trạng thái</label>
                   <select v-model="form.status" class="form-select shadow-none fs-7">
                     <option :value="true">Đang hoạt động</option>
@@ -209,7 +203,6 @@ const form = ref({
   email: '',
   phoneNumber: '',
   shippingAddress: '',
-  loyaltyPoints: 0,
   status: true 
 });
 
@@ -267,7 +260,7 @@ const deleteCustomer = async (id) => {
 
 const openAddModal = () => {
   isEditing.value = false;
-  form.value = { userId: null, username: '', password: '', fullName: '', email: '', phoneNumber: '', shippingAddress: '', loyaltyPoints: 0, status: true };
+  form.value = { userId: null, username: '', password: '', fullName: '', email: '', phoneNumber: '', shippingAddress: '', status: true };
 };
 
 const openEditModal = (user) => {
@@ -278,7 +271,6 @@ const openEditModal = (user) => {
     email: user.email || '',
     phoneNumber: user.phoneNumber || '',
     shippingAddress: user.shippingAddress || '',
-    loyaltyPoints: user.loyaltyPoints || 0,
     status: user.status
   };
 };
