@@ -132,8 +132,8 @@
 
             <div class="bg-light-gray p-3 rounded-3 text-start mx-auto border" style="max-width: 320px;">
               <div class="d-flex justify-content-between mb-2 fs-7">
-                <span class="text-muted">Mã đơn hàng:</span>
-                <span class="fw-bold text-dark">#{{ successOrderCode }}</span>
+                <span class="text-muted">Người đặt:</span>
+                <span class="fw-bold text-dark">{{ shippingInfo.fullName }}</span>
               </div>
               <div class="d-flex justify-content-between mb-2 fs-7">
                 <span class="text-muted">Số tiền:</span>
@@ -141,17 +141,19 @@
               </div>
               <div class="d-flex justify-content-between fs-7">
                 <span class="text-muted">Nội dung CK:</span>
-                <span class="fw-bold text-primary">{{ successOrderCode }}</span>
+                <span class="fw-bold text-primary">TZ {{ shippingInfo.phone }}</span>
               </div>
             </div>
             
             <p class="fs-8 text-danger fw-bold mt-3 mb-0">
-              <i class="bi bi-exclamation-triangle"></i> Lưu ý: Không thay đổi nội dung chuyển khoản để hệ thống duyệt đơn tự động.
+              <i class="bi bi-exclamation-triangle"></i> Lưu ý: Bạn chưa hoàn tất đặt hàng. Nhấn nút bên dưới sau khi chuyển khoản.
             </p>
           </div>
           <div class="modal-footer border-top-0 pt-0 d-flex gap-2 justify-content-center pb-4">
-            <button type="button" class="btn btn-outline-dark fw-bold px-4" @click="handlePayLater">Thanh toán sau</button>
-            <button type="button" class="btn btn-neon fw-bold px-4 text-dark" @click="handlePaymentDone">TÔI ĐÃ CHUYỂN KHOẢN</button>
+            <button type="button" class="btn btn-outline-dark fw-bold px-4" @click="handlePayLater">Đóng / Chọn lại</button>
+            <button type="button" class="btn btn-neon fw-bold px-4 text-dark" @click="handlePaymentDone" :disabled="loading">
+              <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span> TÔI ĐÃ CHUYỂN KHOẢN
+            </button>
           </div>
         </div>
       </div>
@@ -172,16 +174,15 @@ const loading = ref(false);
 const voucherCode = ref('');
 const orderNote = ref('');
 
-// BIẾN CHO PHẦN THANH TOÁN
-const paymentMethod = ref('COD'); // Mặc định là COD
+const paymentMethod = ref('COD'); 
 const generatedQrUrl = ref('');
 const successOrderCode = ref('');
-let qrModalInstance = null; // Lưu instance của Bootstrap Modal
+let qrModalInstance = null; 
 
-// CẤU HÌNH TÀI KHOẢN NGÂN HÀNG NHẬN TIỀN CỦA BẠN
-const BANK_ID = 'TPB'; // VD: MB, VCB, ACB, TPB...
-const BANK_ACCOUNT_NO = '31413122007'; // Thay bằng số tài khoản của bạn
-const BANK_ACCOUNT_NAME = 'PHAM DANG KHOA'; // Thay bằng tên của bạn (Không dấu)
+// CẤU HÌNH NGÂN HÀNG
+const BANK_ID = 'TPB'; 
+const BANK_ACCOUNT_NO = '31413122007'; 
+const BANK_ACCOUNT_NAME = 'PHAM DANG KHOA'; 
 
 const shippingInfo = ref({ fullName: '', phone: '', email: '', address: '' });
 
@@ -246,24 +247,80 @@ const applyVoucher = () => {
   alert("Mã giảm giá đã được ghi nhận. Hệ thống sẽ áp dụng khi bạn nhấn Đặt hàng.");
 };
 
-// --- XỬ LÝ ĐẶT HÀNG CHÍNH ---
-const handlePlaceOrder = async () => {
+// ====================================================
+// 1. KHI KHÁCH BẤM "XÁC NHẬN ĐẶT HÀNG" TRÊN FORM
+// ====================================================
+const handlePlaceOrder = () => {
   if (!shippingInfo.value.fullName || !shippingInfo.value.phone || !shippingInfo.value.address) {
     alert("Vui lòng điền đầy đủ thông tin nhận hàng bắt buộc!");
     return;
   }
 
+  if (paymentMethod.value === 'BANK') {
+    // CHUYỂN KHOẢN: Chỉ hiện Modal QR, CHƯA GỌI API lưu Data
+    showQrModal();
+  } else {
+    // COD: Gọi API lưu thẳng xuống DB
+    submitOrderToBackend();
+  }
+};
+
+// ====================================================
+// 2. HÀM HIỂN THỊ MÃ QR TẠM (Chưa lưu DB)
+// ====================================================
+const showQrModal = () => {
+  const amount = subtotal.value;
+  // Sử dụng SĐT làm nội dung chuyển khoản
+  const addInfo = encodeURIComponent(`TZ ${shippingInfo.value.phone}`); 
+  
+  generatedQrUrl.value = `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${encodeURIComponent(BANK_ACCOUNT_NAME)}`;
+  
+  const modalElement = document.getElementById('qrPaymentModal');
+  if (window.bootstrap) {
+    qrModalInstance = new window.bootstrap.Modal(modalElement);
+    qrModalInstance.show();
+  } else {
+    import('bootstrap').then(bootstrap => {
+      qrModalInstance = new bootstrap.Modal(modalElement);
+      qrModalInstance.show();
+    }).catch(err => {
+      console.error(err);
+    });
+  }
+};
+
+// ====================================================
+// 3. KHÁCH BẤM ĐÓNG MODAL / ĐỔI PHƯƠNG THỨC 
+// ====================================================
+const handlePayLater = () => {
+  if (qrModalInstance) {
+    qrModalInstance.hide();
+  }
+  cleanupModalBackdrop();
+  // KHÔNG LÀM GÌ CẢ. Để khách ở lại trang Checkout tự do thao tác tiếp
+};
+
+// ====================================================
+// 4. KHÁCH BẤM "TÔI ĐÃ CHUYỂN KHOẢN" TRÊN MODAL
+// ====================================================
+const handlePaymentDone = async () => {
+  // LÚC NÀY MỚI GỌI API ĐỂ LƯU VÀO DB
+  await submitOrderToBackend();
+};
+
+// ====================================================
+// 5. HÀM GỌI API BACKEND CHÍNH THỨC
+// ====================================================
+const submitOrderToBackend = async () => {
   const userId = getCurrentUserId();
   loading.value = true;
   
   try {
     let response;
-    // Nối thêm phương thức thanh toán vào Ghi chú để Admin nhận biết
-    // const paymentStr = paymentMethod.value === 'BANK' ? 'Chuyển khoản' : 'COD';
     
     if (userId) {
       const payload = {
-        note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value} [Thanh toán: ${paymentMethod.value}]`,
+        note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
         voucherCode: voucherCode.value,
         email: shippingInfo.value.email,
         paymentMethod: paymentMethod.value
@@ -272,7 +329,7 @@ const handlePlaceOrder = async () => {
     } 
     else {
       const payload = {
-        note: `Khách vãng lai: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value} [Thanh toán: ${paymentMethod.value}]`,
+        note: `Khách vãng lai: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
         voucherCode: voucherCode.value,
         guestFullName: shippingInfo.value.fullName,
         guestPhone: shippingInfo.value.phone,
@@ -289,99 +346,34 @@ const handlePlaceOrder = async () => {
       localStorage.removeItem('guest_cart');
     }
 
-    // LƯU TRỮ MÃ ĐƠN SAU KHI TẠO THÀNH CÔNG
     successOrderCode.value = response.data.orderCode;
     sessionStorage.removeItem('checkout_data');
     window.dispatchEvent(new Event('cart-updated'));
 
-    // RẼ NHÁNH TÙY THEO PHƯƠNG THỨC THANH TOÁN
+    // ĐÓNG MODAL (Nếu đang mở bằng BANK)
+    if (qrModalInstance) {
+      qrModalInstance.hide();
+      cleanupModalBackdrop();
+    }
+
+    // THÔNG BÁO THEO YÊU CẦU
     if (paymentMethod.value === 'BANK') {
-      // Gọi Modal QR lên
-      showQrModal();
+      alert("Đơn hàng của bạn đã được lưu, vui lòng chờ hệ thống xác nhận.");
     } else {
-      // COD -> Báo thành công và chuyển trang như cũ
       alert(`🎉 Đặt hàng thành công! Mã đơn của bạn là: ${successOrderCode.value}`);
-      alert("Cảm ơn bạn! Đơn hàng đã được ghi nhận. Hệ thống sẽ kiểm tra và xác nhận thanh toán sớm nhất.");
-      router.push(`/order/${successOrderCode.value}`);
     }
     
+    router.push(`/order/${successOrderCode.value}`);
+    
   } catch (error) {
+    console.error("Lỗi khi đặt hàng:", error);
     const errorMsg = error.response?.data || "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.";
     alert("❌ Lỗi: " + errorMsg);
-    console.error("Lỗi khi đặt hàng:", error);
   } finally {
     loading.value = false;
   }
 };
 
-// --- HÀM XỬ LÝ QR MODAL ---
-const showQrModal = () => {
-  const amount = subtotal.value;
-  const addInfo = successOrderCode.value; // Lấy mã đơn làm nội dung chuyển khoản
-  
-  // API tự tạo ảnh QR của VietQR
-  generatedQrUrl.value = `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${encodeURIComponent(BANK_ACCOUNT_NAME)}`;
-  
-  // Sử dụng Bootstrap JS để bật modal
-  const modalElement = document.getElementById('qrPaymentModal');
-  // Sử dụng window.bootstrap để trình duyệt tự lấy thư viện từ index.htmlconst payload
-  if (window.bootstrap) {
-    qrModalInstance = new window.bootstrap.Modal(modalElement);
-    qrModalInstance.show();
-  } else {
-    // Dự phòng: Nếu project dùng import NPM thì dùng cách import động
-    import('bootstrap').then(bootstrap => {
-      qrModalInstance = new bootstrap.Modal(modalElement);
-      qrModalInstance.show();
-    }).catch(err => {
-      console.error("Lỗi tải Bootstrap Modal:", err);
-      alert("Không thể mở mã QR. Vui lòng chuyển khoản với nội dung: " + successOrderCode.value);
-    });
-  }
-};
-
-const finishPayment = () => {
-  // Đóng modal
-  if (qrModalInstance) {
-    qrModalInstance.hide();
-  }
-  
-  alert("Cảm ơn bạn! Đơn hàng đã được ghi nhận. Hệ thống sẽ kiểm tra và xác nhận thanh toán sớm nhất.");
-  // Chuyển về trang Order (chờ xác nhận)
-  router.push(`/order/${successOrderCode.value}`);
-};
-
-// --- HÀM XỬ LÝ KHI BẤM "THANH TOÁN SAU" ---
-const handlePayLater = () => {
-  // Đóng modal an toàn
-  if (qrModalInstance) {
-    qrModalInstance.hide();
-  }
-  cleanupModalBackdrop();
-  
-  // Thông báo theo yêu cầu
-  alert("Chúng tôi sẽ tạm giữ đơn hàng cho bạn, vui lòng vào phần 'Đơn hàng của tôi' để thanh toán sau nhé.");
-  
-  // Chuyển về trang lịch sử đơn hàng
-  router.push('/orders');
-};
-
-// --- HÀM XỬ LÝ KHI BẤM "TÔI ĐÃ CHUYỂN KHOẢN" ---
-const handlePaymentDone = () => {
-  // Đóng modal an toàn
-  if (qrModalInstance) {
-    qrModalInstance.hide();
-  }
-  cleanupModalBackdrop();
-  
-  // Thông báo theo yêu cầu
-  alert("Đơn hàng của bạn đã được lưu, vui lòng chờ hệ thống xác nhận.");
-  
-  // Chuyển về trang Chi tiết đơn hàng
-  router.push(`/order/${successOrderCode.value}`);
-};
-
-// Hàm hỗ trợ dọn dẹp lỗi kẹt nền đen của Bootstrap
 const cleanupModalBackdrop = () => {
   const backdrop = document.querySelector('.modal-backdrop');
   if (backdrop) backdrop.remove();

@@ -77,23 +77,19 @@
               <span class="fw-black text-dark fs-5 ms-2" :class="{'text-decoration-line-through text-muted': translateStatus(order.statusName) === 'Đã hủy'}">
                 {{ formatCurrency(order.finalAmount) }}
               </span>
+              <span v-if="order.paymentMethod === 'BANK'" class="d-block fs-8 mt-1" :class="order.paymentStatus ? 'text-success fw-bold' : 'text-warning fw-bold'">
+                <i class="bi" :class="order.paymentStatus ? 'bi-check-circle-fill' : 'bi-hourglass-split'"></i> 
+                {{ order.paymentStatus ? 'Đã xác nhận thanh toán' : 'Đang chờ Admin xác nhận CK' }}
+              </span>
             </div>
             
             <div class="d-flex flex-wrap justify-content-end gap-2 order-0 order-sm-1">
               <router-link :to="`/order/${order.orderCode}`" class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2 text-decoration-none">
                 Xem chi tiết
               </router-link>
-
-              <button v-if="order.paymentMethod === 'BANK' && !order.paymentStatus && translateStatus(order.statusName) !== 'Đã hủy'" 
-                      @click="openPaymentModal(order)"
-                      data-bs-toggle="modal" data-bs-target="#orderPaymentModal"
-                      class="btn btn-primary fw-bold text-white fs-8 rounded-3 px-3 py-2 shadow-sm">
-                <i class="bi bi-qr-code-scan"></i> Thanh toán QR
-              </button>
               
               <template v-if="translateStatus(order.statusName) === 'Giao hàng thành công'">
                 <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2">Mua lại</button>
-                
                 <button v-if="hasUnreviewedItems(order)" @click="openReviewModal(order)" data-bs-toggle="modal" data-bs-target="#reviewModal" class="btn btn-neon fw-bold text-dark fs-8 rounded-3 px-3 py-2 shadow-sm">
                   Đánh giá
                 </button>
@@ -107,7 +103,10 @@
               </template>
               
               <template v-if="translateStatus(order.statusName) === 'Chờ xác nhận'">
-                <button class="btn btn-outline-danger fw-bold fs-8 rounded-3 px-3 py-2">Hủy đơn hàng</button>
+                <button @click="cancelOrder(order.orderId)" class="btn btn-outline-danger fw-bold fs-8 rounded-3 px-3 py-2">
+                  <span v-if="isCancelling === order.orderId" class="spinner-border spinner-border-sm"></span>
+                  Hủy đơn hàng
+                </button>
               </template>
 
               <template v-if="translateStatus(order.statusName) === 'Đã hủy'">
@@ -122,7 +121,7 @@
 
     </div>
 
-    <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalLabel" aria-hidden="true">
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow rounded-4">
           <div class="modal-header border-bottom-0 pb-0">
@@ -180,36 +179,6 @@
         </div>
       </div>
     </div>
-
-    <!-- . modal thanh toán -->
-    <div class="modal fade" id="orderPaymentModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-          <div class="modal-header border-bottom-0 pb-0">
-            <h5 class="modal-title fw-black fs-4 text-center w-100">Thanh toán đơn hàng</h5>
-            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body text-center pt-2 pb-4" v-if="selectedOrderForPayment">
-            <p class="text-muted fs-7 mb-3">Sử dụng App Ngân hàng quét mã QR bên dưới.</p>
-            <div class="bg-light p-3 rounded-4 d-inline-block mb-3 border">
-              <img v-if="generatedQrUrl" :src="generatedQrUrl" style="width: 250px; height: 250px; object-fit: contain;">
-              <div v-else class="spinner-border text-neon m-5" role="status"></div>
-            </div>
-            <div class="bg-light-gray p-3 rounded-3 text-start mx-auto border" style="max-width: 320px;">
-              <div class="d-flex justify-content-between mb-2 fs-7">
-                <span class="text-muted">Mã đơn hàng:</span><span class="fw-bold text-dark">#{{ selectedOrderForPayment.orderCode }}</span>
-              </div>
-              <div class="d-flex justify-content-between fs-7">
-                <span class="text-muted">Số tiền:</span><span class="fw-black text-danger">{{ formatCurrency(selectedOrderForPayment.finalAmount) }}</span>
-              </div>
-            </div>
-          </div>
-          <div class="modal-footer border-top-0 justify-content-center">
-            <button type="button" class="btn btn-neon fw-bold px-4 text-dark" @click="confirmPaymentDone" data-bs-dismiss="modal">TÔI ĐÃ CHUYỂN KHOẢN</button>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 </template>
 
@@ -224,8 +193,8 @@ const tabs = ['Tất cả', 'Chờ xác nhận', 'Đang giao', 'Đã giao', 'Đ�
 const orders = ref([]);
 const loading = ref(true);
 
-// Lưu danh sách ID các sản phẩm user đã từng đánh giá
 const userReviewedProductIds = ref([]);
+const isCancelling = ref(null); // Lưu ID đơn đang xử lý hủy
 
 const getCurrentUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
@@ -237,7 +206,12 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// 2. Lấy dữ liệu từ Backend
+// Hàm hỗ trợ lấy Token (cần cho API Hủy đơn)
+const getAuthConfig = () => {
+  const token = localStorage.getItem('jwt_token'); 
+  return { headers: { Authorization: `Bearer ${token}` } };
+};
+
 const fetchOrders = async () => {
   const userId = getCurrentUserId();
   if (!userId) {
@@ -248,13 +222,10 @@ const fetchOrders = async () => {
 
   loading.value = true;
   try {
-    // Gọi API lấy Đơn hàng
     const orderRes = await axios.get(`http://localhost:8080/api/orders/${userId}/history`);
     orders.value = orderRes.data;
 
-    // CÙNG LÚC ĐÓ: Gọi API lấy các Đánh giá mà user đã từng viết
     const reviewRes = await axios.get(`http://localhost:8080/api/reviews/user/${userId}`);
-    // Trích xuất ra mảng chỉ chứa các productId đã review (VD: [1, 5, 8])
     userReviewedProductIds.value = reviewRes.data.map(r => r.productId);
 
   } catch (error) {
@@ -267,6 +238,31 @@ const fetchOrders = async () => {
 onMounted(() => {
   fetchOrders();
 });
+
+// ==========================================
+// LOGIC HỦY ĐƠN HÀNG (DO KHÁCH HÀNG THỰC HIỆN)
+// ==========================================
+const cancelOrder = async (orderId) => {
+  // Hỏi xác nhận trước khi hủy
+  if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
+
+  isCancelling.value = orderId;
+  const userId = getCurrentUserId();
+
+  try {
+    // 4 là mã của trạng thái "Đã hủy" (Cancelled)
+    await axios.put(`http://localhost:8080/api/orders/admin/${orderId}/status?statusId=4&employeeId=${userId}`, null, getAuthConfig());
+    
+    alert("Đã hủy đơn hàng thành công!");
+    fetchOrders(); // Load lại danh sách để UI cập nhật màu xám
+
+  } catch (error) {
+    console.error("Lỗi hủy đơn:", error);
+    alert("Không thể hủy đơn hàng lúc này: " + (error.response?.data || error.message));
+  } finally {
+    isCancelling.value = null;
+  }
+};
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
@@ -320,12 +316,10 @@ const filteredOrders = computed(() => {
   return orders.value.filter(o => translateStatus(o.statusName || o.status) === activeTab.value);
 });
 
-// --- LOGIC ĐÁNH GIÁ SẢN PHẨM ---
 const selectedOrderForReview = ref(null);
 const reviewForms = ref({}); 
 const isSubmittingReview = ref(false);
 
-// Hàm kiểm tra đơn hàng này còn sản phẩm nào chưa được đánh giá không?
 const hasUnreviewedItems = (order) => {
   if (!order || !order.orderDetails) return false;
   return order.orderDetails.some(item => !userReviewedProductIds.value.includes(item.productId));
@@ -336,7 +330,6 @@ const openReviewModal = (order) => {
   reviewForms.value = {};
   
   order.orderDetails.forEach(item => {
-    // Chỉ khởi tạo form cho những SP chưa đánh giá
     if (!userReviewedProductIds.value.includes(item.productId)) {
       reviewForms.value[item.productId] = {
         rating: 5,
@@ -356,9 +349,6 @@ const submitReviews = async () => {
   try {
     for (const item of selectedOrderForReview.value.orderDetails) {
       const formData = reviewForms.value[item.productId];
-      
-      // Bỏ qua nếu form không tồn tại (sản phẩm đã đc review từ trước)
-      // Hoặc nếu người dùng để trống comment (tùy bạn cấu hình)
       if (!formData || !formData.comment.trim()) continue;
 
       const payload = {
@@ -369,8 +359,6 @@ const submitReviews = async () => {
       };
 
       await axios.post('http://localhost:8080/api/reviews/send', payload);
-      
-      // THÀNH CÔNG: Thêm ID sản phẩm này vào danh sách Đã đánh giá ngay lập tức
       userReviewedProductIds.value.push(item.productId);
       successCount++;
     }
@@ -389,30 +377,9 @@ const submitReviews = async () => {
     isSubmittingReview.value = false;
   }
 };
-
-// --- LOGIC THANH TOÁN QR ---
-const selectedOrderForPayment = ref(null);
-const generatedQrUrl = ref('');
-
-const BANK_ID = 'TPB'; 
-const BANK_ACCOUNT_NO = '31413122007'; 
-const BANK_ACCOUNT_NAME = 'PHAM DANG KHOA'; 
-
-const openPaymentModal = (order) => {
-  selectedOrderForPayment.value = order;
-  const amount = order.finalAmount;
-  const addInfo = encodeURIComponent(order.orderCode); 
-  generatedQrUrl.value = `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${encodeURIComponent(BANK_ACCOUNT_NAME)}`;
-};
-
-const confirmPaymentDone = () => {
-  alert("Yêu cầu của bạn đã được ghi nhận. Vui lòng chờ Admin xác nhận khoản thanh toán!");
-  document.querySelector('#orderPaymentModal .btn-close').click();
-};
 </script>
 
 <style scoped>
-/* CSS Giữ nguyên toàn bộ như cũ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@700&display=swap');
 
 .orders-page { font-family: 'Inter', system-ui, sans-serif; }
