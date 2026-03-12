@@ -71,6 +71,16 @@ const routes = [
         component: AdminDashboard 
       },
       { 
+        path: 'blogs',
+        name: 'AdminBlogCRUD',
+        component: AdminBlogCRUD
+      },
+      {
+        path: 'slideshow',
+        name: 'SlideShowHome',
+        component: SlideShowHome
+      },
+      { 
         path: 'orders', // URL sẽ là /admin/orders
         name: 'AdminOrderStatus', 
         component: AdminOrderStatus 
