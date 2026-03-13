@@ -30,6 +30,9 @@ import AdminBrandCRUD from '../components/admin/BrandCRUD.vue'
 import Report from '../components/admin/Report.vue'
 import VoucherCRUD from '../components/admin/VoucherCRUD.vue'
 
+import BlogCRUD from '../components/admin/BlogCRUD.vue'
+import SlideShowHome from '../components/admin/SlideShowHome.vue'
+
 
 //import cho shipper
 import Shipping from '../components/shipping/Shipping.vue'
@@ -73,7 +76,7 @@ const routes = [
       { 
         path: 'blogs',
         name: 'AdminBlogCRUD',
-        component: AdminBlogCRUD
+        component: BlogCRUD
       },
       {
         path: 'slideshow',
