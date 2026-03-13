@@ -158,4 +158,46 @@ public class ProductServiceImpl implements ProductService {
             product.setBrand(brand);
         }
     }
+    @Override
+    public long getTotalProductsCount() {
+        return productDAO.count();
+    }
+
+    @Override
+    public long getLowStockProductsCount() {
+        return productDAO.countByStockQuantityLessThan(16);
+    }
+
+    @Override
+    public Long getTotalStockQuantity() {
+        Long total = productDAO.sumTotalStockQuantity();
+        return total != null ? total : 0L; // Trả về 0 nếu null
+    }
+
+    @Override
+    public List<ProductDTO> getFeaturedProducts() {
+        Pageable top2 = PageRequest.of(0, 2);
+
+        // 1. Thử lấy 2 sản phẩm bán chạy nhất từ các đơn hàng
+        List<Product> featured = productDAO.findBestSellingProducts(top2);
+
+        // 2. FALLBACK: Nếu danh sách rỗng (do database chưa có đơn hàng nào)
+        // -> Lấy tự động 2 sản phẩm có giá cao nhất để giao diện không bị trống
+        if (featured == null || featured.isEmpty()) {
+            featured = productDAO.findTop2ByOrderByPriceDesc();
+        }
+
+        return featured.stream()
+                .map(this::mapToDTO)
+                .toList();
+    }
+    @Override
+    public Page<ProductDTO> getProducts(String keyword, Integer categoryId, Integer brandId, BigDecimal minPrice, BigDecimal maxPrice, Boolean isSale, int page, int size, String sortBy, String sortDir) {
+        Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Truyền thêm isSale vào đây
+        Page<Product> productPage = productDAO.searchAndFilterProducts(keyword, categoryId, brandId, minPrice, maxPrice, isSale, pageable);
+        return productPage.map(this::mapToDTO);
+    }
 }

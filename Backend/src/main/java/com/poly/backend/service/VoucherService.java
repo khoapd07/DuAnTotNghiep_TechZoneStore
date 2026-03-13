@@ -8,4 +8,6 @@ public interface VoucherService {
     Voucher findById(Integer id);
     Voucher save(Voucher voucher);
     void deleteById(Integer id);
+    // MỚI THÊM
+    Voucher findByCode(String code);
 }

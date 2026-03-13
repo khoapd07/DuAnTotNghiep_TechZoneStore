@@ -22,20 +22,24 @@ import java.util.Map;
 public class ProductController {
 
     private final ProductService productService;
-    private final ProductDAO productDAO;
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getProductStats() {
         Map<String, Object> stats = new HashMap<>();
-        stats.put("total", productDAO.count());
-        stats.put("lowStock", productDAO.countByStockQuantityLessThan(16));
-
-        // MỚI THÊM: Lấy tổng số lượng tồn kho
-        Long totalStock = productDAO.sumTotalStockQuantity();
-        stats.put("totalStockQuantity", totalStock != null ? totalStock : 0);
+        // Đã gọi qua Service thay vì gọi trực tiếp DAO
+        stats.put("total", productService.getTotalProductsCount());
+        stats.put("lowStock", productService.getLowStockProductsCount());
+        stats.put("totalStockQuantity", productService.getTotalStockQuantity());
 
         return ResponseEntity.ok(stats);
     }
+
+    // MỚI THÊM: API Lấy 2 sản phẩm nổi bật
+    @GetMapping("/featured")
+    public ResponseEntity<List<ProductDTO>> getFeaturedProducts() {
+        return ResponseEntity.ok(productService.getFeaturedProducts());
+    }
+    
 
     @GetMapping
     public ResponseEntity<Page<ProductDTO>> getAllProducts(
@@ -44,12 +48,14 @@ public class ProductController {
             @RequestParam(value = "brandId", required = false) Integer brandId,
             @RequestParam(value = "minPrice", required = false) BigDecimal minPrice,
             @RequestParam(value = "maxPrice", required = false) BigDecimal maxPrice,
+            @RequestParam(value = "isSale", required = false) Boolean isSale, // MỚI THÊM
             @RequestParam(value = "page", defaultValue = "0") int page,
             @RequestParam(value = "size", defaultValue = "10") int size,
             @RequestParam(value = "sortBy", defaultValue = "createdAt") String sortBy,
             @RequestParam(value = "sortDir", defaultValue = "desc") String sortDir
     ) {
-        Page<ProductDTO> products = productService.getProducts(keyword, categoryId, brandId, minPrice, maxPrice, page, size, sortBy, sortDir);
+        // Truyền isSale vào service
+        Page<ProductDTO> products = productService.getProducts(keyword, categoryId, brandId, minPrice, maxPrice, isSale, page, size, sortBy, sortDir);
         return ResponseEntity.ok(products);
     }
 

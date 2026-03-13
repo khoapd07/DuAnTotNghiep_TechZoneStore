@@ -24,4 +24,12 @@ public interface ProductService {
     // --- CÁC HÀM LẤY SẢN PHẨM CHO TRANG CHỦ ---
     List<ProductDTO> getDiscountedProducts();
     List<ProductDTO> getTop8NewestProducts();
+
+    // --- CÁC HÀM MỚI CHO STATS VÀ FEATURED ---
+    long getTotalProductsCount();
+    long getLowStockProductsCount();
+    Long getTotalStockQuantity();
+    List<ProductDTO> getFeaturedProducts();
+
+    Page<ProductDTO> getProducts(String keyword, Integer categoryId, Integer brandId, BigDecimal minPrice, BigDecimal maxPrice, Boolean isSale, int page, int size, String sortBy, String sortDir);
 }
