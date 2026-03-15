@@ -43,6 +43,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy danh mục!"));
 
         existingCategory.setCategoryName(category.getCategoryName());
+        existingCategory.setAttributes(category.getAttributes());
         return categoryDAO.save(existingCategory);
     }
 

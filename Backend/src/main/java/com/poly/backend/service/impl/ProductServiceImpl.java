@@ -1,9 +1,11 @@
 package com.poly.backend.service.impl;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.poly.backend.dto.ProductDTO;
+import com.poly.backend.entity.ProductVariant;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -65,7 +67,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public ProductDTO createProduct(ProductDTO dto) {
-        // MỚI THÊM: Validate trùng tên
         if (productDAO.existsByName(dto.getName())) {
             throw new IllegalArgumentException("Tên sản phẩm này đã tồn tại!");
         }
@@ -74,13 +75,22 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         mapToEntity(dto, product);
 
+        // Nạp biến thể màu sắc vào Entity
+        if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
+            List<ProductVariant> variants = new ArrayList<>();
+            for (ProductVariant v : dto.getVariants()) {
+                v.setProduct(product); // Nối với sản phẩm cha
+                variants.add(v);
+            }
+            product.setVariants(variants);
+        }
+
         Product savedProduct = productDAO.save(product);
         return mapToDTO(savedProduct);
     }
 
     @Override
     public ProductDTO updateProduct(Integer id, ProductDTO dto) {
-        // MỚI THÊM: Validate trùng tên khi cập nhật
         if (productDAO.existsByNameAndProductIdNot(dto.getName(), id)) {
             throw new IllegalArgumentException("Tên sản phẩm này đã bị trùng với một sản phẩm khác!");
         }
@@ -90,6 +100,21 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + id));
 
         mapToEntity(dto, existingProduct);
+
+        // Xóa các màu cũ đi
+        if (existingProduct.getVariants() != null) {
+            existingProduct.getVariants().clear();
+        } else {
+            existingProduct.setVariants(new ArrayList<>());
+        }
+
+        // Nạp màu mới (từ form Admin) vào
+        if (dto.getVariants() != null) {
+            for (ProductVariant v : dto.getVariants()) {
+                v.setProduct(existingProduct);
+                existingProduct.getVariants().add(v);
+            }
+        }
 
         Product updatedProduct = productDAO.save(existingProduct);
         return mapToDTO(updatedProduct);
@@ -134,6 +159,7 @@ public class ProductServiceImpl implements ProductService {
                 .categoryName(product.getCategory() != null ? product.getCategory().getCategoryName() : null)
                 .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
                 .brandName(product.getBrand() != null ? product.getBrand().getBrandName() : null)
+                .variants(product.getVariants()) // Đưa variants ra JSON gửi về Frontend
                 .build();
     }
 
@@ -158,6 +184,7 @@ public class ProductServiceImpl implements ProductService {
             product.setBrand(brand);
         }
     }
+
     @Override
     public long getTotalProductsCount() {
         return productDAO.count();
@@ -171,32 +198,25 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Long getTotalStockQuantity() {
         Long total = productDAO.sumTotalStockQuantity();
-        return total != null ? total : 0L; // Trả về 0 nếu null
+        return total != null ? total : 0L;
     }
 
     @Override
     public List<ProductDTO> getFeaturedProducts() {
         Pageable top2 = PageRequest.of(0, 2);
-
-        // 1. Thử lấy 2 sản phẩm bán chạy nhất từ các đơn hàng
         List<Product> featured = productDAO.findBestSellingProducts(top2);
-
-        // 2. FALLBACK: Nếu danh sách rỗng (do database chưa có đơn hàng nào)
-        // -> Lấy tự động 2 sản phẩm có giá cao nhất để giao diện không bị trống
         if (featured == null || featured.isEmpty()) {
             featured = productDAO.findTop2ByOrderByPriceDesc();
         }
-
         return featured.stream()
                 .map(this::mapToDTO)
                 .toList();
     }
+
     @Override
     public Page<ProductDTO> getProducts(String keyword, Integer categoryId, Integer brandId, BigDecimal minPrice, BigDecimal maxPrice, Boolean isSale, int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-
-        // Truyền thêm isSale vào đây
         Page<Product> productPage = productDAO.searchAndFilterProducts(keyword, categoryId, brandId, minPrice, maxPrice, isSale, pageable);
         return productPage.map(this::mapToDTO);
     }

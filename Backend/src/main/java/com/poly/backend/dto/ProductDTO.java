@@ -1,5 +1,6 @@
 package com.poly.backend.dto;
 
+import com.poly.backend.entity.ProductVariant;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -8,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -55,5 +57,7 @@ public class ProductDTO {
     private String categoryName;
 
     private String brandName;
+
+    private List<ProductVariant> variants;
 
 }

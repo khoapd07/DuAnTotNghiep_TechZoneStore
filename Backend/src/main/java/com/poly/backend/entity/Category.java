@@ -25,6 +25,9 @@ public class Category {
     @Column(name = "category_name", columnDefinition = "NVARCHAR(100)", nullable = false)
     private String categoryName;
 
+    @Column(name = "attributes", columnDefinition = "NVARCHAR(MAX)")
+    private String attributes;
+
     // --- MỚI THÊM: Quan hệ 1-Nhiều với Product ---
     @JsonIgnore // Cực kỳ quan trọng: Tránh lỗi lặp vô tận (Category gọi Product -> Product gọi Category)
     @OneToMany(mappedBy = "category", fetch = FetchType.LAZY)

@@ -60,6 +60,7 @@
             <thead class="border-bottom">
               <tr class="text-muted fs-8 text-uppercase">
                 <th class="py-3 px-4 fw-bold border-0">Tên Danh Mục</th>
+                <th class="py-3 fw-bold border-0 text-center">Tùy chọn hiển thị</th>
                 <th class="py-3 fw-bold border-0 text-center">Số Lượng SP</th>
                 <th class="py-3 fw-bold border-0 text-center">Tồn Kho</th> 
                 <th class="py-3 fw-bold border-0 text-center" style="width: 150px;">Hành Động</th>
@@ -69,6 +70,9 @@
               <tr v-for="cat in categoryList" :key="cat.categoryId" class="border-bottom-dashed">
                 <td class="py-3 px-4">
                   <span class="fw-bold fs-7 text-dark">{{ cat.categoryName }}</span>
+                </td>
+                <td class="text-center py-3">
+                  <span class="text-muted fs-8">{{ getAttributesCount(cat.attributes) }} tùy chọn</span>
                 </td>
                 <td class="text-center py-3">
                   <span class="badge bg-light text-dark border fs-8 px-2 py-1">
@@ -92,7 +96,7 @@
                 </td>
               </tr>
               <tr v-if="categoryList.length === 0">
-                <td colspan="4" class="text-center py-4 text-muted fs-7">Chưa có danh mục nào.</td>
+                <td colspan="5" class="text-center py-4 text-muted fs-7">Chưa có danh mục nào.</td>
               </tr>
             </tbody>
           </table>
@@ -102,16 +106,39 @@
 
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal d-block" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg rounded-4">
           <div class="modal-header border-bottom p-3">
             <h5 class="fw-black m-0 fs-6">{{ isEditing ? 'CẬP NHẬT DANH MỤC' : 'THÊM DANH MỤC MỚI' }}</h5>
             <button type="button" class="btn-close shadow-none" @click="showModal = false"></button>
           </div>
-          <div class="modal-body p-4">
-            <div class="mb-3">
+          <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+            <div class="mb-4">
               <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên danh mục <span class="text-danger">*</span></label>
-              <input type="text" v-model="form.categoryName" class="form-control fs-7" placeholder="Nhập tên danh mục">
+              <input type="text" v-model="form.categoryName" class="form-control fs-7" placeholder="Nhập tên danh mục (Ví dụ: Laptop, Bàn phím...)">
+            </div>
+
+            <div class="mb-3 border rounded-3 p-3 bg-light">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <label class="fs-8 fw-bold text-dark text-uppercase mb-0">Các tùy chọn thuộc tính cho danh mục này</label>
+                <button type="button" @click="addAttribute" class="btn btn-sm btn-dark fs-8 fw-bold">
+                  <i class="bi bi-plus"></i> Thêm tùy chọn
+                </button>
+              </div>
+              
+              <div v-if="attributesList.length === 0" class="text-center text-muted fs-8 py-2">
+                Chưa có tùy chọn nào. Bấm "Thêm tùy chọn" để tạo (Ví dụ: RAM 16GB, Linear Red...).
+              </div>
+
+              <div v-for="(attr, index) in attributesList" :key="index" class="d-flex gap-2 mb-2 align-items-start bg-white p-2 rounded shadow-sm border">
+                <div class="flex-grow-1">
+                  <input type="text" v-model="attr.title" class="form-control form-control-sm mb-1 fs-8 fw-bold" placeholder="Tên tùy chọn (Tối đa 15 ký tự)" maxlength="15">
+                  <input type="text" v-model="attr.desc" class="form-control form-control-sm fs-9 text-muted" placeholder="Mô tả ngắn (Tối đa 30 ký tự)" maxlength="30">
+                </div>
+                <button type="button" @click="removeAttribute(index)" class="btn btn-sm btn-outline-danger shadow-none border-0">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
             </div>
           </div>
           <div class="modal-footer border-top p-3">
@@ -132,7 +159,8 @@ const categoryList = ref([]);
 const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
-const form = reactive({ categoryName: '' });
+const form = reactive({ categoryName: '', attributes: '' });
+const attributesList = ref([]); 
 
 const getProductCount = (cat) => {
   if (cat.productCount !== undefined) return cat.productCount;
@@ -146,6 +174,14 @@ const getStockCount = (cat) => {
     return cat.products.reduce((sum, p) => sum + (p.stockQuantity || 0), 0);
   }
   return 0;
+};
+
+const getAttributesCount = (attributesJson) => {
+  if (!attributesJson) return 0;
+  try {
+    const parsed = JSON.parse(attributesJson);
+    return Array.isArray(parsed) ? parsed.length : 0;
+  } catch (e) { return 0; }
 };
 
 const totalProducts = computed(() => {
@@ -168,10 +204,19 @@ const fetchCategories = async () => {
   } catch (e) { console.error(e); }
 };
 
+const addAttribute = () => {
+  attributesList.value.push({ title: '', desc: '' });
+};
+
+const removeAttribute = (index) => {
+  attributesList.value.splice(index, 1);
+};
+
 const openAddModal = () => {
   isEditing.value = false;
   currentId.value = null;
   form.categoryName = '';
+  attributesList.value = [];
   showModal.value = true;
 };
 
@@ -179,15 +224,34 @@ const openEditModal = (cat) => {
   isEditing.value = true;
   currentId.value = cat.categoryId;
   form.categoryName = cat.categoryName;
+  
+  if (cat.attributes) {
+    try {
+      attributesList.value = JSON.parse(cat.attributes);
+    } catch (e) {
+      attributesList.value = [];
+    }
+  } else {
+    attributesList.value = [];
+  }
   showModal.value = true;
 };
 
 const saveCategory = async () => {
-  // 1. VALIDATE Ở FRONTEND
   if (!form.categoryName || form.categoryName.trim() === '') {
     alert("Vui lòng nhập tên danh mục!");
     return;
   }
+
+  // Cập nhật logic validate độ dài: Title 15, Desc 30
+  const isTooLong = attributesList.value.some(attr => attr.title.length > 15 || attr.desc.length > 30);
+  if (isTooLong) {
+      alert("Lỗi: Tên tùy chọn không được vượt quá 15 ký tự, mô tả không được vượt quá 30 ký tự!");
+      return;
+  }
+
+  const validAttributes = attributesList.value.filter(attr => attr.title.trim() !== '');
+  form.attributes = validAttributes.length > 0 ? JSON.stringify(validAttributes) : null;
 
   try {
     const headers = getAuthHeader();
@@ -199,11 +263,10 @@ const saveCategory = async () => {
       alert("Thêm mới thành công!");
     }
     
-    showModal.value = false; // Đóng modal
-    fetchCategories(); // Load lại bảng
+    showModal.value = false;
+    fetchCategories(); 
     
   } catch (error) {
-    // 2. BẮT LỖI TỪ BACKEND (Trùng tên, v.v...)
     const errorMsg = error.response?.data?.message || error.response?.data || "Không thể thực hiện! Vui lòng thử lại.";
     if (typeof errorMsg === 'string') {
       alert(errorMsg);
@@ -241,36 +304,18 @@ onMounted(() => fetchCategories());
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
+.fs-9 { font-size: 0.65rem; }
 
-/* Custom Colors */
 .text-neon { color: #00FF33 !important; }
 .bg-neon { background-color: #00FF33 !important; }
 .btn-neon { background-color: #00FF33; border: none; }
 .btn-neon:hover { background-color: #00e62e; }
 
-/* Sidebar Nav */
-.custom-nav .nav-link {
-  padding: 0.6rem 1rem;
-  transition: all 0.2s ease;
-}
-.custom-nav .nav-link.active {
-  background-color: rgba(0, 255, 51, 0.1);
-  color: #00FF33 !important;
-  border-left: 4px solid #00FF33;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-}
-.custom-nav .nav-link:hover:not(.active) {
-  background-color: #f8f9fa;
-}
-
-/* Bảng dữ liệu */
 .table th { letter-spacing: 0.5px; }
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
 .cursor-pointer { cursor: pointer; }
 
-/* Tránh giật UI khi hover dòng bảng */
 .table-hover tbody tr:hover td {
   background-color: #f8f9fa;
 }
