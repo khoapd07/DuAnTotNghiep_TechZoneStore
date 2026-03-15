@@ -30,6 +30,9 @@ import AdminBrandCRUD from '../components/admin/BrandCRUD.vue'
 import Report from '../components/admin/Report.vue'
 import VoucherCRUD from '../components/admin/VoucherCRUD.vue'
 
+import BlogCRUD from '../components/admin/BlogCRUD.vue'
+import SlideShowHome from '../components/admin/SlideShowHome.vue'
+
 
 //import cho shipper
 import Shipping from '../components/shipping/Shipping.vue'
@@ -69,6 +72,16 @@ const routes = [
         path: '', // Khi vào /admin sẽ load Dashboard
         name: 'AdminDashboard', 
         component: AdminDashboard 
+      },
+      { 
+        path: 'blogs',
+        name: 'AdminBlogCRUD',
+        component: BlogCRUD
+      },
+      {
+        path: 'slideshow',
+        name: 'SlideShowHome',
+        component: SlideShowHome
       },
       { 
         path: 'orders', // URL sẽ là /admin/orders

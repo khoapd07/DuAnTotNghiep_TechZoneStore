@@ -52,4 +52,7 @@ public class EmployeeDTO {
 
     private Boolean status; // Trạng thái làm việc (Active/Locked)
 
+    private Integer roleId;
+    private String roleName;
+
 }
