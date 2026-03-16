@@ -19,4 +19,6 @@ public class CategoryDTO {
     @Size(max = 100, message = "Tên loại sản phẩm không được quá 100 ký tự")
     private String categoryName;
 
+    private String attributes;
+
 }

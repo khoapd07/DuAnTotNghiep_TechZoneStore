@@ -6,6 +6,7 @@ import com.poly.backend.entity.Category;
 public interface CategoryService {
     List<Category> findAll();
     Category findById(Integer id);
-    Category save(Category category);
+    Category create(Category category); // Hàm tạo mới
+    Category update(Integer id, Category category); // Hàm cập nhật
     void deleteById(Integer id);
 }

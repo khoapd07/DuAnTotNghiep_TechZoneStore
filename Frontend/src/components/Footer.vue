@@ -1,7 +1,10 @@
+
+
 <template>
   <footer class="bg-dark-custom text-white py-3 mt-auto">
     <div class="container narrow-container">
-      <div class="row g-3 pt-2"> <div class="col-lg-4 col-md-6 pe-md-5">
+      <div class="row g-3 pt-2"> 
+        <div class="col-lg-4 col-md-6 pe-md-5">
           <router-link class="text-decoration-none d-inline-block mb-2" to="/">
             <h3 class="fw-black text-white m-0 d-flex align-items-center gap-1">
               TECHZONE <span class="text-neon">//</span>
@@ -13,7 +16,9 @@
         </div>
 
         <div class="col-lg-2 col-md-6">
-          <h6 class="fw-bold text-uppercase mb-3 fs-7 text-white">DANH MỤC</h6> <ul class="list-unstyled d-flex flex-column gap-2 fs-7 mb-0"> <li><a href="#" class="text-white text-decoration-none footer-link">Review phần cứng</a></li>
+          <h6 class="fw-bold text-uppercase mb-3 fs-7 text-white">DANH MỤC</h6> 
+          <ul class="list-unstyled d-flex flex-column gap-2 fs-7 mb-0"> 
+            <li><a href="#" class="text-white text-decoration-none footer-link">Review phần cứng</a></li>
             <li><a href="#" class="text-white text-decoration-none footer-link">Tin tức công nghệ</a></li>
             <li><a href="#" class="text-white text-decoration-none footer-link">Thủ thuật Game</a></li>
             <li><a href="#" class="text-white text-decoration-none footer-link">Build PC</a></li>
@@ -40,7 +45,6 @@
             </a>
           </div>
         </div>
-
       </div>
 
       <div class="d-flex flex-column flex-md-row justify-content-between align-items-center border-top border-secondary pt-3 mt-3 pb-2 fs-7 text-light">

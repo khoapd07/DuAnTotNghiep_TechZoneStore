@@ -32,6 +32,7 @@ import VoucherCRUD from '../components/admin/VoucherCRUD.vue'
 
 import BlogCRUD from '../components/admin/BlogCRUD.vue'
 import SlideShowHome from '../components/admin/SlideShowHome.vue'
+import AdminChat from '../components/admin/AdminChat.vue'
 
 
 //import cho shipper
@@ -122,6 +123,11 @@ const routes = [
         path: 'vouchers',
         name: 'VoucherCRUD',
         component: VoucherCRUD
+      },
+      {
+        path: 'chat',
+        name: 'AdminChat',
+        component: AdminChat
       }
     ]
   },

@@ -5,10 +5,12 @@ import com.poly.backend.entity.Brand;
 import com.poly.backend.dto.BrandDTO;
 
 public interface BrandService {
-    // Đổi sang trả về BrandDTO
     List<BrandDTO> findAllWithStats();
-
     Brand findById(Integer id);
-    Brand save(Brand brand);
+
+    // MỚI THÊM: Tách hàm save thành create và update
+    Brand create(Brand brand);
+    Brand update(Integer id, Brand brand);
+
     void deleteById(Integer id);
 }
