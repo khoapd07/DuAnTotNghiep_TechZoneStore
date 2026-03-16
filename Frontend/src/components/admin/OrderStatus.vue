@@ -82,6 +82,12 @@
                         :class="order.paymentStatus ? 'bg-success text-white' : 'bg-warning text-dark'">
                     {{ order.paymentStatus ? 'Đã thu tiền' : 'Chưa thu tiền' }}
                   </span>
+
+                  <div v-if="order.statusId === 4 && order.paymentMethod === 'BANK' && order.paymentStatus" 
+                       class="text-danger fs-9 fw-bold mt-1 flash-alert">
+                    <i class="bi bi-exclamation-circle-fill"></i> CẦN HOÀN TIỀN
+                  </div>
+                  
                 </td>
 
                 <td>

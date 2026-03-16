@@ -32,23 +32,20 @@ public class OrderServiceImpl implements OrderService {
     @Autowired private VoucherDAO voucherDAO;
     @Autowired private UserDAO userDAO;
     @Autowired private EmailService emailService;
+    @Autowired private CartItemDAO cartItemDAO;
 
     @Override
-    @Transactional // Rất quan trọng: Bị lỗi ở bất kỳ bước nào là Rollback toàn bộ, không trừ tiền oan
+    @Transactional // Rất quan trọng: Bị lỗi ở bất kỳ bước nào là Rollback toàn bộ
     public OrderResponseDTO placeOrder(Integer userId, OrderRequestDTO request) {
-
-        // 1. Lấy Giỏ hàng & Kiểm tra rỗng
-        Cart cart = cartDAO.findByUser_UserId(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy giỏ hàng"));
-
-        if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giỏ hàng đang trống!");
-        }
 
         User customer = userDAO.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
 
-        // 2. Tạo đơn hàng mới
+        // LẤY GIỎ HÀNG TỪ DATABASE RA TRƯỚC KHI LÀM BẤT CỨ VIỆC GÌ
+        Cart cart = cartDAO.findByUser_UserId(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy giỏ hàng"));
+
+        // 1. Tạo đơn hàng mới
         Order order = new Order();
         order.setCustomer(customer);
         order.setNote(request.getNote());
@@ -62,43 +59,88 @@ public class OrderServiceImpl implements OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái đơn hàng"));
         order.setStatus(status);
 
-        // 3. Xử lý từng món hàng, Tính tiền & Trừ tồn kho
+        // 2. Xử lý từng món hàng, Tính tiền & Trừ tồn kho
         BigDecimal totalMoney = BigDecimal.ZERO;
         List<OrderDetail> orderDetails = new ArrayList<>();
 
-        for (CartItem item : cart.getCartItems()) {
-            Product product = item.getProduct();
+        // NẾU FRONTEND TRUYỀN LÊN DANH SÁCH (Dùng cho "Mua lại" hoặc "Thanh toán từ Checkout")
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
 
-            // Kéo data mới nhất từ DB để kiểm tra tồn kho lần cuối trước khi chốt đơn
-            Product currentProduct = productDAO.findById(product.getProductId()).get();
-            if (currentProduct.getStockQuantity() < item.getQuantity()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Sản phẩm '" + currentProduct.getName() + "' chỉ còn " + currentProduct.getStockQuantity() + " chiếc!");
+            // Tạo 1 list ảo để chứa các món cần xóa (Tránh lỗi xóa trực tiếp khi đang lặp)
+            List<CartItem> itemsToRemove = new ArrayList<>();
+
+            for (GuestCartItemDTO requestItem : request.getItems()) {
+                // 1. Tìm xem món khách tick chọn có thật sự nằm trong giỏ hàng DB không
+                CartItem cartItem = cart.getCartItems().stream()
+                        .filter(i -> i.getProduct().getProductId().equals(requestItem.getProductId()))
+                        .findFirst()
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm không có trong giỏ hàng"));
+
+                Product product = cartItem.getProduct();
+
+                // Kiểm tra tồn kho
+                if (product.getStockQuantity() < requestItem.getQuantity()) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + product.getName() + " không đủ số lượng");
+                }
+
+                // Trừ tồn kho
+                product.setStockQuantity(product.getStockQuantity() - requestItem.getQuantity());
+                productDAO.save(product);
+
+                // Tính tiền
+                BigDecimal price = product.getSalePrice() != null ? product.getSalePrice() : product.getPrice();
+                totalMoney = totalMoney.add(price.multiply(new BigDecimal(requestItem.getQuantity())));
+
+                // Tạo OrderDetail
+                OrderDetail detail = new OrderDetail();
+                detail.setOrder(order);
+                detail.setProduct(product);
+                detail.setQuantity(requestItem.getQuantity()); // Lấy số lượng khách chọn
+                detail.setPrice(price);
+                orderDetails.add(detail);
+
+                // Thêm vào danh sách chờ xóa khỏi giỏ
+                itemsToRemove.add(cartItem);
             }
 
-            // Trừ tồn kho
-            currentProduct.setStockQuantity(currentProduct.getStockQuantity() - item.getQuantity());
-            productDAO.save(currentProduct);
+            // XÓA NHỮNG MÓN ĐÃ MUA KHỎI GIỎ HÀNG AN TOÀN
+            cart.getCartItems().removeAll(itemsToRemove);
+            cartItemDAO.deleteAll(itemsToRemove);
 
-            // Chốt giá bán (Có sale lấy sale, không có lấy giá gốc)
-            BigDecimal applyPrice = (currentProduct.getSalePrice() != null && currentProduct.getSalePrice().compareTo(BigDecimal.ZERO) > 0)
-                    ? currentProduct.getSalePrice() : currentProduct.getPrice();
+        } else {
+            // GIỮ LẠI LOGIC CŨ LÀM DỰ PHÒNG (Trường hợp Frontend không truyền items)
+            if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giỏ hàng đang trống!");
+            }
 
-            totalMoney = totalMoney.add(applyPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
+            for (CartItem cartItem : cart.getCartItems()) {
+                Product product = cartItem.getProduct();
+                if (product.getStockQuantity() < cartItem.getQuantity()) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + product.getName() + " không đủ số lượng");
+                }
 
-            // Thêm vào chi tiết hóa đơn
-            orderDetails.add(OrderDetail.builder()
-                    .order(order)
-                    .product(currentProduct)
-                    .quantity(item.getQuantity())
-                    .price(applyPrice) // LƯU GIÁ THỰC TẾ LÚC MUA
-                    .build());
+                product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
+                productDAO.save(product);
+
+                BigDecimal price = product.getSalePrice() != null ? product.getSalePrice() : product.getPrice();
+                totalMoney = totalMoney.add(price.multiply(new BigDecimal(cartItem.getQuantity())));
+
+                OrderDetail detail = new OrderDetail();
+                detail.setOrder(order);
+                detail.setProduct(product);
+                detail.setQuantity(cartItem.getQuantity());
+                detail.setPrice(price);
+                orderDetails.add(detail);
+            }
+            // Xóa sạch giỏ hàng DB
+            cart.getCartItems().clear();
+            cartItemDAO.deleteAll(cart.getCartItems());
         }
 
         order.setTotalMoney(totalMoney);
-        order.setOrderDetails(orderDetails);
+        order.setOrderDetails(orderDetails); // Gắn danh sách chi tiết vào đơn hàng
 
-        // 4. Áp dụng Voucher (Nếu khách có nhập)
+        // 3. Áp dụng Voucher (Nếu khách có nhập)
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
             Voucher voucher = voucherDAO.findByCode(request.getVoucherCode())
@@ -129,13 +171,10 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
         order.setPaymentStatus(false);
 
-        // 5. Lưu hóa đơn vào Database
+        // 4. Lưu hóa đơn vào Database
         Order savedOrder = orderDAO.save(order);
 
-        // 6. Dọn sạch Giỏ hàng
-        cart.getCartItems().clear();
-        cartDAO.save(cart);
-
+        // Gửi email xác nhận
         String sendToEmail = (request.getEmail() != null && !request.getEmail().isEmpty())
                 ? request.getEmail() : customer.getEmail();
         emailService.sendOrderConfirmation(sendToEmail, savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());

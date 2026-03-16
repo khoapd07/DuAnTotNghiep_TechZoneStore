@@ -150,6 +150,19 @@ const handleLogin = async () => {
     };
     localStorage.setItem('user_info', JSON.stringify(userInfo));
 
+    // Gọi sau khi lưu user_info và token thành công
+    const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]');
+    if (guestCart.length > 0) {
+        const mergeData = guestCart.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity
+        }));
+        // Gọi API merge của bạn
+        await axios.post(`http://localhost:8080/api/cart/${userInfo.userId}/merge`, mergeData);
+        // Xóa giỏ hàng local đi sau khi đã gộp thành công
+        localStorage.removeItem('guest_cart'); 
+    }
+
     // 3. (Tùy chọn) Kích hoạt event để các component khác (như Header) biết trạng thái đăng nhập thay đổi
     window.dispatchEvent(new Event('auth-change'));
 

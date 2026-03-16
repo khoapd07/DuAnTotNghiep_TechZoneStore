@@ -117,16 +117,19 @@ public class CartServiceImpl implements CartService {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
             }
             item.setQuantity(newQuantity);
+            cartItemDAO.save(item);
         } else {
             // NẾU CHƯA CÓ -> TẠO MỚI
             if (request.getQuantity() > product.getStockQuantity()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
             }
-            cart.getCartItems().add(CartItem.builder()
+            CartItem newItem = CartItem.builder()
                     .cart(cart)
                     .product(product)
                     .quantity(request.getQuantity())
-                    .build());
+                    .build();
+            cart.getCartItems().add(newItem);
+            cartItemDAO.save(newItem);
         }
 
         return mapToDTO(cartDAO.save(cart));

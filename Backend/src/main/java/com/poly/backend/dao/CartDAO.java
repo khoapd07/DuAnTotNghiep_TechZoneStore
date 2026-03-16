@@ -1,6 +1,7 @@
 package com.poly.backend.dao;
 
 import com.poly.backend.entity.Cart;
+import com.poly.backend.entity.User;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -23,6 +24,8 @@ public interface CartDAO extends JpaRepository<Cart, Integer> {
     @Modifying
     @Query("DELETE FROM Cart c WHERE c.user.userId = :userId")
     void deleteByUserId(@Param("userId") Integer userId);
+
+    Optional<Cart> findByUser(User user);
 
 
 }

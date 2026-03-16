@@ -323,7 +323,12 @@ const submitOrderToBackend = async () => {
         note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
         voucherCode: voucherCode.value,
         email: shippingInfo.value.email,
-        paymentMethod: paymentMethod.value
+        paymentMethod: paymentMethod.value,
+        items: cartData.value.items.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price
+  }))
       };
       response = await axios.post(`${API_BASE}/orders/${userId}/place`, payload, getAuthConfig());
     } 

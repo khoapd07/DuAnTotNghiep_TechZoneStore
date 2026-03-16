@@ -84,19 +84,23 @@
                   <span class="text-muted">Phí vận chuyển</span>
                   <span class="text-success fw-bold">Miễn phí</span>
                 </div>
-                <div class="d-flex justify-content-between">
-                  <span class="text-muted">Thuế (VAT 10%)</span>
-                  <span class="fw-bold">{{ formatCurrency(tax) }}</span>
                 </div>
-              </div>
 
               <div class="d-flex justify-content-between align-items-end mb-4">
-                <h6 class="fw-black m-0 fs-6">Tổng cộng</h6>
+                <h5 class="fw-black m-0 fs-6">Tổng cộng</h5>
                 <div class="text-end">
-                  <h4 class="text-neon fw-black mb-0">{{ formatCurrency(total) }}</h4>
-                  <small class="text-muted fs-9">DỰA TRÊN SẢN PHẨM ĐÃ CHỌN</small>
+                  <h5 class=" fw-black mb-0">{{ formatCurrency(subtotal) }}</h5>
+                  <!-- <small class="text-muted fs-9">ĐÃ BAO GỒM VAT</small> -->
                 </div>
               </div>
+              
+              <div class="d-flex justify-content-between align-items-end mb-4">
+                
+                  <small class="text-muted fs-9">TỔNG CỘNG GIÁ TRỊ ĐÃ BAO GỒM THUẾ VAT</small>
+                
+              </div>
+
+              
 
               <button @click="goToCheckout" class="btn btn-neon w-100 fw-black py-3 rounded-3 d-flex align-items-center justify-content-center gap-2 fs-7 text-dark shadow-sm">
                 TIẾN HÀNH THANH TOÁN <i class="bi bi-lightning-fill"></i>
@@ -127,16 +131,13 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios'; 
-
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-
 const API_URL = 'http://localhost:8080/api/cart';
 
 const cartItems = ref([]);
 const selectAll = ref(false);
-
 let debounceTimer;
 
 const getCurrentUserId = () => {
@@ -149,22 +150,15 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// -----------------------------------------
-// 1. KẾT NỐI API / LOCALSTORAGE: LẤY DỮ LIỆU
-// -----------------------------------------
 const fetchCart = async () => {
   const userId = getCurrentUserId();
   
   if (!userId) {
-    // KHÁCH VÃNG LAI: Lấy từ localStorage
     const guestCart = localStorage.getItem('guest_cart');
     if (guestCart) {
       const parsedCart = JSON.parse(guestCart);
-      
-      // SỬA LỖI Ở ĐÂY: Gắn mặc định selected = true cho các item từ localStorage
       cartItems.value = parsedCart.map(item => ({
         ...item,
-        // Nếu đã có trạng thái selected lưu trước đó thì lấy, không thì mặc định là true (được tích sẵn)
         selected: item.selected !== undefined ? item.selected : true 
       }));
     } else {
@@ -173,7 +167,6 @@ const fetchCart = async () => {
     return;
   }
 
-  // ĐÃ ĐĂNG NHẬP: Lấy từ API
   try {
     const response = await axios.get(`${API_URL}/${userId}`);
     const backendItems = response.data.items || response.data;
@@ -200,10 +193,6 @@ onMounted(() => {
   fetchCart(); 
 });
 
-// -----------------------------------------
-// 2. LOGIC GIAO DIỆN (CHECKBOX & TÍNH TIỀN)
-// -----------------------------------------
-// Hàm lưu lại trạng thái selected vào localStorage cho khách vãng lai
 const saveGuestCartState = () => {
   if (!getCurrentUserId()) {
     localStorage.setItem('guest_cart', JSON.stringify(cartItems.value));
@@ -212,7 +201,7 @@ const saveGuestCartState = () => {
 
 const toggleSelectAll = () => {
   cartItems.value.forEach(item => item.selected = selectAll.value);
-  saveGuestCartState(); // Lưu lại khi nhấn chọn tất cả
+  saveGuestCartState(); 
 };
 
 const selectedCount = computed(() => cartItems.value.filter(item => item.selected).length);
@@ -223,17 +212,15 @@ const subtotal = computed(() => {
     .reduce((total, item) => total + (item.price * item.quantity), 0);
 });
 
-const tax = computed(() => subtotal.value * 0.1);
-const total = computed(() => subtotal.value + tax.value);
+// ❌ ĐÃ XÓA 2 BIẾN NÀY KHỎI CODE ĐỂ TRÁNH LỖI THỪA BIẾN
+// const tax = computed(() => subtotal.value * 0.1);
+// const total = computed(() => subtotal.value + tax.value);
 
-// -----------------------------------------
-// 3. LOGIC CẬP NHẬT SỐ LƯỢNG
-// -----------------------------------------
+
 const syncQuantityWithBackend = (productId, newQuantity) => {
   const userId = getCurrentUserId();
 
   if (!userId) {
-    // Xử lý Local Storage cho khách vãng lai (giữ nguyên code cũ)
     const itemIndex = cartItems.value.findIndex(i => i.productId === productId);
     if (itemIndex !== -1) {
       cartItems.value[itemIndex].quantity = newQuantity;
@@ -243,11 +230,9 @@ const syncQuantityWithBackend = (productId, newQuantity) => {
     return;
   }
 
-  // ĐÃ ĐĂNG NHẬP: GỌI API
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(async () => {
     try {
-      // ĐÃ SỬA: URL có thêm /${userId}/add
       await axios.put(`${API_URL}/${userId}/update`, { 
         productId: productId,
         quantity: newQuantity
@@ -278,24 +263,19 @@ const updateQty = (item) => {
   syncQuantityWithBackend(item.productId, item.quantity);
 };
 
-// -----------------------------------------
-// 4. LOGIC XÓA SẢN PHẨM
-// -----------------------------------------
 const removeItem = async (productId) => {
   if (confirm('Bạn muốn xóa sản phẩm này khỏi giỏ hàng?')) {
     const userId = getCurrentUserId();
 
     if (!userId) {
-      // KHÁCH VÃNG LAI
       cartItems.value = cartItems.value.filter(i => i.productId !== productId);
       localStorage.setItem('guest_cart', JSON.stringify(cartItems.value));
       window.dispatchEvent(new Event('cart-updated'));
       return;
     }
 
-    // ĐÃ ĐĂNG NHẬP
     try {
-      await axios.delete(`${API_URL}/remove/${productId}`); 
+      await axios.delete(`${API_URL}/${userId}/remove/${productId}`);
       await fetchCart();
       window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
@@ -309,14 +289,12 @@ const clearCart = async () => {
     const userId = getCurrentUserId();
 
     if (!userId) {
-      // KHÁCH VÃNG LAI
       cartItems.value = [];
       localStorage.removeItem('guest_cart');
       window.dispatchEvent(new Event('cart-updated'));
       return;
     }
 
-    // ĐÃ ĐĂNG NHẬP
     try {
       await axios.delete(`${API_URL}/${userId}/clear`);
       cartItems.value = [];
@@ -334,33 +312,22 @@ const formatCurrency = (value) => {
 const goToCheckout = () => {
   const userId = getCurrentUserId();
   
-  // if (!userId) {
-  //   alert('Vui lòng đăng nhập để tiến hành thanh toán!');
-  //   // router.push('/login'); // Chuyển sang trang đăng nhập nếu cần
-  //   return;
-  // }
-
-  // Kiểm tra xem có sản phẩm nào được chọn không (dựa trên biến computed selectedCount của bạn)
   if (selectedCount.value === 0) {
     alert('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!');
     return;
   }
 
-  // Lưu thông tin tóm tắt đơn hàng vào sessionStorage
   const selectedItems = cartItems.value.filter(item => item.selected);
   const checkoutData = {
     items: selectedItems,
+    // ĐÃ SỬA: Đẩy thẳng giá trị subtotal vào tổng cộng, bỏ đi phần tính thuế
     subtotal: subtotal.value,
-    tax: tax.value,
-    total: total.value
+    total: subtotal.value
   };
   sessionStorage.setItem('checkout_data', JSON.stringify(checkoutData));
 
-  // Chuyển hướng sang trang Thanh toán
   router.push('/checkout');
 };
-
-
 </script>
 
 <style scoped>

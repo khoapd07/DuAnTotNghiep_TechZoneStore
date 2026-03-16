@@ -2,6 +2,8 @@ package com.poly.backend.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class OrderRequestDTO {
     // Không nhận productId hay totalMoney từ Frontend để bảo mật
@@ -9,4 +11,6 @@ public class OrderRequestDTO {
     private String voucherCode;  // Mã giảm giá khách nhập (Nếu có)
     private String email;
     private String paymentMethod;
+
+    private List<GuestCartItemDTO> items;
 }
