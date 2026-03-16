@@ -20,11 +20,13 @@
           </div>
           <div class="d-flex align-items-center gap-2">
             <span class="text-muted fw-bold fs-8 text-nowrap">SẮP XẾP:</span>
-            <select v-model="filters.sortBy" @change="handleFilterChange"
+            <select v-model="currentSort" @change="updateSort"
               class="form-select form-select-sm border-0 bg-light fw-bold custom-select-width shadow-none fs-8">
-              <option value="createdAt">Mới nhất</option>
-              <option value="price">Giá tăng dần</option>
-              <option value="name">Tên A-Z</option>
+              <option value="createdAt-desc">Mới nhất</option>
+              <option value="discount-desc">Giảm giá</option>
+              <option value="price-asc">Giá tăng dần</option>
+              <option value="price-desc">Giá giảm dần</option>
+              <option value="name-asc">Tên A-Z</option>
             </select>
           </div>
         </div>
@@ -182,10 +184,10 @@ const totalPages = ref(0);
 const totalElements = ref(0);
 const loading = ref(false);
 
-// Biến lưu trữ index của khoảng giá đang chọn
 const selectedPriceRange = ref(null);
 
-// Danh sách khoảng giá theo yêu cầu
+const currentSort = ref('createdAt-desc');
+
 const priceRanges = [
   { label: '0 - 10 triệu', min: 0, max: 10000000 },
   { label: '10 - 20 triệu', min: 10000000, max: 20000000 },
@@ -201,11 +203,27 @@ const filters = reactive({
   brandId: null,
   minPrice: null,
   maxPrice: null,
+  isSale: null, // MỚI THÊM: Truyền trạng thái sale lên API
   page: 0,
-  size: 15, // Đã sửa từ 6 lên 15
+  size: 15,
   sortBy: 'createdAt',
   sortDir: 'desc'
 });
+
+// CẬP NHẬT: Xử lý khi chọn "Giảm giá"
+const updateSort = () => {
+  if (currentSort.value === 'discount-desc') {
+    filters.isSale = true; // Kích hoạt bộ lọc giảm giá
+    filters.sortBy = 'createdAt'; // Mặc định xếp mới nhất cho giảm giá
+    filters.sortDir = 'desc';
+  } else {
+    filters.isSale = null; // Tắt bộ lọc giảm giá
+    const parts = currentSort.value.split('-');
+    filters.sortBy = parts[0];
+    filters.sortDir = parts[1];
+  }
+  handleFilterChange();
+};
 
 const formatCurrency = (value) => {
   if (!value) return "0 VNĐ";
@@ -226,7 +244,6 @@ const fetchProducts = async () => {
   }
 };
 
-// Hàm xử lý khi chọn khoảng giá
 const setPriceRange = (range) => {
   if (range) {
     filters.minPrice = range.min;
@@ -279,23 +296,18 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// CẬP NHẬT LẠI HÀM ADD TO CART
 const addToCart = async (productId) => {
   const userId = getCurrentUserId();
   const productToAdd = products.value.find(p => p.productId === productId);
   if (!productToAdd) return;
 
   if (userId) {
-    // 1. ĐÃ ĐĂNG NHẬP: GỌI API LƯU VÀO DATABASE
     try {
       const payload = {
         productId: productId,
         quantity: 1 
-        // Bỏ customerId ở payload đi nếu CartItemRequestDTO của bạn không bắt buộc, 
-        // vì userId đã được truyền trên URL rồi.
       };
 
-      // ĐÃ SỬA: Chèn thêm userId vào giữa URL
       await axios.post(`http://localhost:8080/api/cart/${userId}/add`, payload);
 
       alert("Đã thêm sản phẩm vào giỏ hàng!");
@@ -305,7 +317,6 @@ const addToCart = async (productId) => {
       alert(error.response?.data || "Không thể thêm vào giỏ hàng");
     }
   } else {
-    // 2. LÀ KHÁCH VÃNG LAI: LƯU VÀO LOCAL STORAGE (Giữ nguyên như cũ)
     let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
     const existingItemIndex = guestCart.findIndex(i => i.productId === productId);
 
@@ -327,7 +338,6 @@ const addToCart = async (productId) => {
   }
 };
 
-// --- MUA NGAY (Thêm rồi chuyển trang luôn) ---
 const buyNow = async (productId) => {
   await addToCart(productId);
   router.push('/cart');

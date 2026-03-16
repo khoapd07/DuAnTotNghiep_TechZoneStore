@@ -109,6 +109,14 @@ public class VoucherController {
                             return ResponseEntity.badRequest().body("Đơn hàng chưa đạt giá trị tối thiểu " + v.getMinOrderValue());
                         }
 
+                        // MỚI THÊM: LOGIC CHẶN NGÀY CHO MÃ FLASHSALE
+                        if (v.getCode().equalsIgnoreCase("FLASHSALE")) {
+                            java.time.DayOfWeek dayOfWeek = now.getDayOfWeek();
+                            if (dayOfWeek != java.time.DayOfWeek.SATURDAY && dayOfWeek != java.time.DayOfWeek.SUNDAY) {
+                                return ResponseEntity.badRequest().body("Rất tiếc! Mã FLASHSALE chỉ được áp dụng vào Thứ 7 và Chủ Nhật.");
+                            }
+                        }
+
                         return ResponseEntity.ok(v.getDiscountAmount());
                     })
                     .orElse(ResponseEntity.status(404).body("Mã giảm giá không tồn tại."));
@@ -117,4 +125,5 @@ public class VoucherController {
             return ResponseEntity.badRequest().body("Giá trị đơn hàng không hợp lệ (phải là số).");
         }
     }
+
 }

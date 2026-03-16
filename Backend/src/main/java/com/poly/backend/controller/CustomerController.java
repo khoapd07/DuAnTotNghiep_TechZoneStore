@@ -30,6 +30,17 @@ public class CustomerController {
         return ResponseEntity.ok(customerDTO);
     }
 
+    // THÊM MỚI: API Tạo khách hàng
+    @PostMapping
+    public ResponseEntity<?> createCustomer(@RequestBody CustomerDTO dto) {
+        try {
+            return ResponseEntity.ok(customerService.create(dto));
+        } catch (IllegalArgumentException e) {
+            // Trả về mã lỗi 400 và câu thông báo tiếng Việt
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
+
     // 3. Cập nhật trạng thái
     @PutMapping("/{id}/toggle-status")
     public ResponseEntity<String> toggleStatus(@PathVariable Integer id) {
@@ -40,12 +51,19 @@ public class CustomerController {
 
     // 4. Cập nhật thông tin khách hàng
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerDTO> updateCustomer(@PathVariable Integer id, @RequestBody CustomerDTO dto) {
-        // Đảm bảo ID trên URL khớp với ID trong Body
-        dto.setUserId(id);
-        CustomerDTO updatedDto = customerService.save(dto);
-
-        if (updatedDto == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(updatedDto);
+    public ResponseEntity<?> updateCustomer(@PathVariable Integer id, @RequestBody CustomerDTO dto) {
+        try {
+            dto.setUserId(id);
+            CustomerDTO updatedDto = customerService.save(dto);
+            return ResponseEntity.ok(updatedDto);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
+        }
+    }
+    // THÊM MỚI: API Xóa khách hàng
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteCustomer(@PathVariable Integer id) {
+        customerService.deleteById(id);
+        return ResponseEntity.ok("Xóa thành công");
     }
 }

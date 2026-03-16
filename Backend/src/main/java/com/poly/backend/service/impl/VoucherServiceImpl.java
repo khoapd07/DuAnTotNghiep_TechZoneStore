@@ -28,4 +28,10 @@ public class VoucherServiceImpl implements VoucherService {
     public void deleteById(Integer id) {
         voucherDAO.deleteById(id);
     }
+
+    // MỚI THÊM
+    @Override
+    public Voucher findByCode(String code) {
+        return voucherDAO.findByCode(code).orElse(null);
+    }
 }

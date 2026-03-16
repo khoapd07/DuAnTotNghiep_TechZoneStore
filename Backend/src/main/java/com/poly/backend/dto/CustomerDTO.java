@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -37,4 +39,9 @@ public class CustomerDTO {
 
     // Status của tài khoản (Active/Locked)
     private Boolean status;
+
+    // --- CÁC TRƯỜNG THÊM MỚI ---
+    private String username; // Dùng khi tạo mới
+    private String password; // Dùng khi tạo mới
+    private LocalDateTime createdAt; // Dùng để thống kê khách mới trong tháng
 }

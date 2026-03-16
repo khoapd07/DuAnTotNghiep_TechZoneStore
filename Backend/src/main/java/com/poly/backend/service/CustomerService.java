@@ -12,4 +12,5 @@ public interface CustomerService {
     void deleteById(Integer id);
 
     String toggleStatus(Integer id);
+    CustomerDTO create(CustomerDTO dto);
 }

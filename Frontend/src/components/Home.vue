@@ -104,34 +104,24 @@
       </div>
 
       <div class="row g-4">
-        <div class="col-md-6">
+        <div class="col-md-6" v-for="product in featuredProducts" :key="'featured-' + product.productId">
           <div class="card h-100 flex-row border-0 shadow-sm overflow-hidden bg-white rounded-3">
             <div class="w-50 bg-dark">
-              <img src="https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500" class="w-100 h-100 object-fit-cover" alt="Laptop">
+              <img :src="product.imageUrl || 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500'" class="w-100 h-100 object-fit-cover" :alt="product.name">
             </div>
             <div class="card-body w-50 p-4 d-flex flex-column">
-              <h5 class="fw-bold mb-2">LAPTOP G-PRO TITAN V3</h5>
-              <p class="text-muted small mb-auto">RTX 4090, Intel Core i9-14900HX, 64GB RAM. Quái vật hiệu năng cho mọi tựa game AAA.</p>
-              <h4 class="text-neon fw-bold my-3">$2,499.00</h4>
-              <button class="btn btn-dark w-100 fw-bold border-neon text-neon">MUA NGAY</button>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-6">
-          <div class="card h-100 flex-row border-0 shadow-sm overflow-hidden bg-white rounded-3">
-            <div class="w-50 bg-dark">
-              <img src="https://images.unsplash.com/photo-1587831990711-23ca6441447b?w=500" class="w-100 h-100 object-fit-cover" alt="PC Build">
-            </div>
-            <div class="card-body w-50 p-4 d-flex flex-column">
-              <h5 class="fw-bold mb-2">PC BUILD: NEON GHOST</h5>
-              <p class="text-muted small mb-auto">Custom water cooling, LED ARGB Sync, linh kiện cao cấp từ TechZone.</p>
-              <h4 class="text-neon fw-bold my-3">$3,850.00</h4>
+              <h5 class="fw-bold mb-2 line-clamp-1" :title="product.name">{{ product.name }}</h5>
+              <p class="text-muted small mb-auto line-clamp-2">{{ product.description || 'Sản phẩm cao cấp tại TechZone.' }}</p>
+              <h4 class="text-neon fw-bold my-3">
+                {{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
+              </h4>
               <button class="btn btn-dark w-100 fw-bold border-neon text-neon">MUA NGAY</button>
             </div>
           </div>
         </div>
       </div>
     </section>
+
     <section class="container narrow-container mb-5">
       <div class="d-flex justify-content-between align-items-end mb-4 border-bottom border-dark border-2 pb-2">
         <h3 class="fw-bold mb-0 text-uppercase">SẢN PHẨM MỚI</h3>
@@ -168,16 +158,18 @@
     <section class="container narrow-container mb-5">
       <div class="bg-neon rounded-4 px-4 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center shadow-sm">
         <div class="text-dark mb-2 mb-md-0">
-          <h2 class="fw-black text-uppercase mb-1 fs-5">FLASH SALE CUỐI TUẦN!</h2>
-          <p class="m-0 fw-medium small" style="font-size: 13px;">Ưu đãi lên đến 40% cho các dòng linh kiện PC.</p>
+          <h2 class="fw-black text-uppercase mb-1 fs-5">
+            {{ flashSaleVoucher?.name || 'FLASH SALE CUỐI TUẦN!' }}
+          </h2>
+          <p class="m-0 fw-medium small" style="font-size: 13px;">
+            Ưu đãi giảm ngay <span class="fw-bold text-danger">{{ formatCurrency(flashSaleVoucher?.discountAmount || 1000000) }}</span> cho đơn hàng linh kiện.
+          </p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-          <div class="d-flex gap-1 fw-bold fs-5">
-            <div class="bg-dark text-neon rounded px-2 py-1 lh-1">02</div><span class="align-self-center">:</span>
-            <div class="bg-dark text-neon rounded px-2 py-1 lh-1">14</div><span class="align-self-center">:</span>
-            <div class="bg-dark text-neon rounded px-2 py-1 lh-1">56</div>
+        <div class="d-flex align-items-center gap-2 mt-3 mt-md-0">
+          <div class="fw-bold text-dark me-2 small">
+            Hôm nay: <span class="bg-dark text-neon px-2 py-1 rounded d-inline-block">{{ currentTime }}</span>
           </div>
-          <button class="btn btn-dark fw-bold px-3 py-2 ms-2 fs-7">SĂN DEAL NGAY</button>
+          <button @click="claimFlashSale" class="btn btn-dark fw-bold px-3 py-2 fs-7 text-nowrap">SĂN VOUCHER NGAY</button>
         </div>
       </div>
     </section>
@@ -234,23 +226,66 @@
       </div>
     </section>
 
+    <div v-if="showFlashSaleModal" class="modal-backdrop-custom d-flex align-items-center justify-content-center">
+      <div class="modal-content-custom bg-white rounded-4 shadow-lg p-4 position-relative text-center mx-3">
+        <button @click="closeModal" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Close"></button>
+        
+        <div class="mb-2 mt-2">
+          <i class="bi bi-ticket-perforated-fill text-neon" style="font-size: 3rem; filter: drop-shadow(0px 4px 6px rgba(0,255,51,0.3));"></i>
+        </div>
+        
+        <h3 class="fw-black mb-3 text-uppercase">🔥 Ưu đãi cực hời 🔥</h3>
+        
+        <p class="mb-4 text-dark fs-5">
+          Mã giảm giá của bạn là:<br>
+          <span class="bg-dark text-neon fs-2 fw-black px-4 py-2 rounded-3 d-inline-block mt-2 tracking-wide border border-neon">
+            {{ flashSaleVoucher?.code || 'FLASHSALE' }}
+          </span>
+        </p>
+
+        <p class="text-muted small lh-base mb-4 px-md-2">
+          Ưu đãi cực hời vào cuối tuần khi nhập mã Flash Sale vào mỗi ngày <strong>T7, CN hàng tuần</strong>. Sự kiện sẽ kéo dài từ ngày <strong>13/03/2026</strong> đến ngày <strong>14/04/2026</strong>.
+        </p>
+
+        <button @click="closeModal" class="btn btn-dark w-100 fw-bold py-2 fs-6 border-neon text-neon">
+          ĐÃ HIỂU & LƯU MÃ
+        </button>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
+const featuredProducts = ref([]);
 const latestProducts = ref([]);
 const discountedProducts = ref([]);
+const flashSaleVoucher = ref(null);
 const saleContainer = ref(null);
+const currentTime = ref('');
+let timeInterval = null;
 
-// Hàm ép cuộn lên đầu trang khi bấm "Xem tất cả"
+// Biến điều khiển Modal
+const showFlashSaleModal = ref(false);
+
+const updateCurrentTime = () => {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const year = now.getFullYear();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  currentTime.value = `${day}/${month}/${year} - ${hours}:${minutes}:${seconds}`;
+};
+
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'instant' });
 };
 
-// Hàm điều khiển trượt ngang (300px mỗi lần bấm)
 const scrollSale = (direction) => {
   if (saleContainer.value) {
     const scrollAmount = 300; 
@@ -279,15 +314,31 @@ const calculateDiscount = (price, salePrice) => {
   return roundedDiscount;
 };
 
+// ĐÃ XÓA CHECK IF (!flashSaleVoucher.value) GÂY RA ALERT
+const claimFlashSale = () => {
+  // Bật modal hiển thị mã lên mọi lúc
+  showFlashSaleModal.value = true;
+};
+
+const closeModal = () => {
+  showFlashSaleModal.value = false;
+};
+
 const fetchData = async () => {
   try {
-    const [latestRes, discountedRes] = await Promise.all([
+    const [featuredRes, latestRes, discountedRes, flashSaleRes] = await Promise.all([
+      axios.get('http://localhost:8080/api/product/featured'),
       axios.get('http://localhost:8080/api/product/latest'),
-      axios.get('http://localhost:8080/api/product/discounted')
+      axios.get('http://localhost:8080/api/product/discounted'),
+      axios.get('http://localhost:8080/api/vouchers/code/FLASHSALE').catch(() => null)
     ]);
     
+    featuredProducts.value = featuredRes.data;
     latestProducts.value = latestRes.data;
     discountedProducts.value = discountedRes.data;
+    if (flashSaleRes && flashSaleRes.data) {
+      flashSaleVoucher.value = flashSaleRes.data;
+    }
   } catch (error) {
     console.error("Lỗi khi tải dữ liệu trang chủ:", error);
   }
@@ -295,6 +346,12 @@ const fetchData = async () => {
 
 onMounted(() => {
   fetchData();
+  updateCurrentTime(); 
+  timeInterval = setInterval(updateCurrentTime, 1000); 
+});
+
+onUnmounted(() => {
+  if (timeInterval) clearInterval(timeInterval);
 });
 </script>
 
@@ -319,6 +376,13 @@ onMounted(() => {
 .line-clamp-1 {
   display: -webkit-box;
   -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;  
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;  
   overflow: hidden;
 }
@@ -427,5 +491,40 @@ onMounted(() => {
 }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #00FF33; 
+}
+
+/* =========================================
+   CSS CHO CUSTOM MODAL
+   ========================================= */
+.modal-backdrop-custom {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.65);
+  z-index: 1050;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content-custom {
+  max-width: 480px;
+  width: 100%;
+  animation: slideUp 0.3s ease-out;
+}
+
+.tracking-wide {
+  letter-spacing: 2px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 </style>
