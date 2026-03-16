@@ -1,9 +1,15 @@
 <template>
-  <Header v-if="!isAdminRoute" /> 
-  
-  <router-view /> 
-  
-  <Footer v-if="!isAdminRoute" />
+  <div id="app" class="d-flex flex-column min-vh-100">
+    <Header v-if="!isAdminRoute" /> 
+    
+    <main class="flex-grow-1">
+      <router-view /> 
+    </main>
+    
+    <Footer v-if="!isAdminRoute" />
+
+    <ChatWidget v-if="!isAdminRoute" />
+  </div>
 </template>
 
 <script setup>
@@ -11,6 +17,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Header from './components/Header.vue'
 import Footer from './components/Footer.vue'
+import ChatWidget from './components/ChatWidget.vue' // Nhớ import ChatWidget vào nhé
 
 const route = useRoute()
 

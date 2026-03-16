@@ -18,6 +18,7 @@ import Historyproduct from '../components/Historyproduct.vue'
 import OrderVote from '../components/OrderVote.vue'
 import Order from '../components/Order.vue'
 import Support from '../components/Support.vue'
+import CheckoutVietQR from '../components/CheckoutVietQR.vue'
 // 2. Import các trang của Quản trị viên (Admin)
 import AdminLayout from '../components/admin/AdminLayout.vue'
 import AdminDashboard from '../components/admin/Dashboard.vue'
@@ -32,6 +33,7 @@ import VoucherCRUD from '../components/admin/VoucherCRUD.vue'
 
 import BlogCRUD from '../components/admin/BlogCRUD.vue'
 import SlideShowHome from '../components/admin/SlideShowHome.vue'
+import AdminChat from '../components/admin/AdminChat.vue'
 
 
 //import cho shipper
@@ -58,6 +60,7 @@ const routes = [
   { path: '/Historyproduct', name: 'Historyproduct', component: Historyproduct},
   { path: '/OrderVote', name: 'OrderVote', component: OrderVote},
   { path: '/support', name: 'Support', component: Support },
+  { path: '/checkout-vietqr', name: 'CheckoutVietQR', component: CheckoutVietQR },
 
 
 
@@ -122,6 +125,11 @@ const routes = [
         path: 'vouchers',
         name: 'VoucherCRUD',
         component: VoucherCRUD
+      },
+      {
+        path: 'chat',
+        name: 'AdminChat',
+        component: AdminChat
       }
     ]
   },

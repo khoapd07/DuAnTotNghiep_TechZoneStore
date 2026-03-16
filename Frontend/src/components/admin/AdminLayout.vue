@@ -47,6 +47,13 @@
               <i class="bi bi-people"></i> <span class="fw-bold fs-7">Khách hàng</span>
             </router-link>
           </li>
+
+          <li class="nav-item">
+            <router-link to="/admin/chat" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
+              <i class="bi bi-chat-dots"></i> <span class="fw-bold fs-7">Chat CSKH</span>
+            </router-link>
+          </li>
+
           <li class="nav-item">
             <router-link to="/admin/employees" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
               <i class="bi bi-person-vcard"></i> <span class="fw-bold fs-7">Nhân viên</span>
