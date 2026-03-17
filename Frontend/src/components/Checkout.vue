@@ -60,8 +60,13 @@
 
             <label class="form-label fs-8 fw-bold text-muted text-uppercase">Mã giảm giá</label>
             <div class="input-group mb-4">
-              <input v-model="voucherCode" type="text" class="form-control custom-input fs-7" placeholder="Nhập mã của bạn">
-              <button @click="applyVoucher" class="btn btn-dark fw-bold px-3 fs-7 border-0" type="button">ÁP DỤNG</button>
+              <input v-model="voucherCode" type="text" class="form-control custom-input fs-7" placeholder="Nhập mã của bạn" :disabled="discountAmount > 0">
+              
+              <button v-if="discountAmount === 0" @click="applyVoucher" class="btn btn-dark fw-bold px-3 fs-7 border-0" type="button" :disabled="isCheckingVoucher">
+                <span v-if="isCheckingVoucher" class="spinner-border spinner-border-sm me-1"></span> ÁP DỤNG
+              </button>
+              
+              <button v-else @click="removeVoucher" class="btn btn-danger fw-bold px-3 fs-7 border-0" type="button">HỦY MÃ</button>
             </div>
 
             <div class="d-flex flex-column gap-2 fs-7 mb-3">
@@ -73,10 +78,16 @@
                 <span class="text-muted">Phí vận chuyển</span>
                 <span class="text-success fw-bold">Miễn phí</span>
               </div>
+              
+              <div v-if="discountAmount > 0" class="d-flex justify-content-between text-danger">
+                <span class="fw-bold">Giảm giá (Voucher)</span>
+                <span class="fw-bold">- {{ formatCurrency(discountAmount) }}</span>
+              </div>
+
               <hr class="my-2 opacity-10">
               <div class="d-flex justify-content-between align-items-end">
                 <span class="fw-black text-uppercase">Tổng cộng</span>
-                <h4 class="text-neon fw-black mb-0">{{ formatCurrency(subtotal) }}</h4>
+                <h4 class="text-neon fw-black mb-0">{{ formatCurrency(finalAmount) }}</h4>
               </div>
             </div>
           </div>
@@ -137,7 +148,7 @@
               </div>
               <div class="d-flex justify-content-between mb-2 fs-7">
                 <span class="text-muted">Số tiền:</span>
-                <span class="fw-black text-danger fs-5">{{ formatCurrency(subtotal) }}</span>
+                <span class="fw-black text-danger fs-5">{{ formatCurrency(finalAmount) }}</span>
               </div>
               <div class="d-flex justify-content-between fs-7">
                 <span class="text-muted">Nội dung CK:</span>
@@ -173,6 +184,10 @@ const cartData = ref({ items: [], cartTotal: 0 });
 const loading = ref(false);
 const voucherCode = ref('');
 const orderNote = ref('');
+
+// THÊM CÁC BIẾN QUẢN LÝ VOUCHER
+const discountAmount = ref(0);
+const isCheckingVoucher = ref(false);
 
 const paymentMethod = ref('COD'); 
 const generatedQrUrl = ref('');
@@ -238,13 +253,50 @@ onMounted(() => {
 
 const subtotal = computed(() => cartData.value.cartTotal || 0);
 
+// TÍNH TỔNG TIỀN CUỐI CÙNG SAU KHI TRỪ VOUCHER
+const finalAmount = computed(() => {
+  const final = subtotal.value - discountAmount.value;
+  return final < 0 ? 0 : final;
+});
+
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
 };
 
-const applyVoucher = () => {
-  if (!voucherCode.value) return;
-  alert("Mã giảm giá đã được ghi nhận. Hệ thống sẽ áp dụng khi bạn nhấn Đặt hàng.");
+// ====================================================
+// LOGIC ÁP DỤNG & KIỂM TRA MÃ GIẢM GIÁ
+// ====================================================
+const applyVoucher = async () => {
+  if (!voucherCode.value || voucherCode.value.trim() === '') {
+    alert("Vui lòng nhập mã giảm giá!");
+    return;
+  }
+  
+  isCheckingVoucher.value = true;
+  try {
+    const response = await axios.get(`${API_BASE}/vouchers/check`, {
+      params: {
+        code: voucherCode.value.trim(),
+        orderValue: subtotal.value
+      }
+    });
+    
+    // API trả về trực tiếp số tiền giảm
+    discountAmount.value = response.data;
+    alert("Áp dụng mã giảm giá thành công!");
+  } catch (error) {
+    console.error("Lỗi áp dụng voucher:", error);
+    discountAmount.value = 0;
+    const errorMsg = error.response?.data || "Mã giảm giá không tồn tại hoặc đã hết hạn.";
+    alert("❌ Lỗi: " + errorMsg);
+  } finally {
+    isCheckingVoucher.value = false;
+  }
+};
+
+const removeVoucher = () => {
+  voucherCode.value = '';
+  discountAmount.value = 0;
 };
 
 // ====================================================
@@ -269,8 +321,7 @@ const handlePlaceOrder = () => {
 // 2. HÀM HIỂN THỊ MÃ QR TẠM (Chưa lưu DB)
 // ====================================================
 const showQrModal = () => {
-  const amount = subtotal.value;
-  // Sử dụng SĐT làm nội dung chuyển khoản
+  const amount = finalAmount.value; // DÙNG SỐ TIỀN ĐÃ TRỪ VOUCHER
   const addInfo = encodeURIComponent(`TZ ${shippingInfo.value.phone}`); 
   
   generatedQrUrl.value = `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${encodeURIComponent(BANK_ACCOUNT_NAME)}`;
@@ -297,7 +348,6 @@ const handlePayLater = () => {
     qrModalInstance.hide();
   }
   cleanupModalBackdrop();
-  // KHÔNG LÀM GÌ CẢ. Để khách ở lại trang Checkout tự do thao tác tiếp
 };
 
 // ====================================================
@@ -321,21 +371,21 @@ const submitOrderToBackend = async () => {
     if (userId) {
       const payload = {
         note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
-        voucherCode: voucherCode.value,
+        voucherCode: voucherCode.value.trim(), // Truyền mã voucher lên để Backend lưu
         email: shippingInfo.value.email,
         paymentMethod: paymentMethod.value,
         items: cartData.value.items.map(item => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        price: item.price
-  }))
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price
+        }))
       };
       response = await axios.post(`${API_BASE}/orders/${userId}/place`, payload, getAuthConfig());
     } 
     else {
       const payload = {
         note: `Khách vãng lai: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
-        voucherCode: voucherCode.value,
+        voucherCode: voucherCode.value.trim(), // Truyền mã voucher lên
         guestFullName: shippingInfo.value.fullName,
         guestPhone: shippingInfo.value.phone,
         guestEmail: shippingInfo.value.email,
