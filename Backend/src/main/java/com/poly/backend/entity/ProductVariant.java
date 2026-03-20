@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.math.BigDecimal;
 
 @Data
 @NoArgsConstructor
@@ -31,4 +32,12 @@ public class ProductVariant {
 
     @Column(name = "image_url")
     private String imageUrl;
+
+    // MỚI THÊM: Mapping chuẩn xác với cột price trong DB
+    @Column(name = "price")
+    private BigDecimal price;
+
+    // MỚI THÊM: Mapping chuẩn xác với cột sale_price trong DB
+    @Column(name = "sale_price")
+    private BigDecimal salePrice;
 }

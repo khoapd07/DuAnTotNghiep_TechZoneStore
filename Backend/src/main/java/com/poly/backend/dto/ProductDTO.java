@@ -58,6 +58,10 @@ public class ProductDTO {
 
     private String brandName;
 
+    private String capacities;
+
+    private String attributes;
+
     private List<ProductVariant> variants;
 
 }

@@ -6,18 +6,18 @@
         <ol class="breadcrumb fs-8 fw-medium mb-0">
           <li class="breadcrumb-item"><router-link to="/" class="text-muted text-decoration-none">Trang chủ</router-link></li>
           <li class="breadcrumb-item"><a href="#" class="text-muted text-decoration-none">{{ product.categoryName }}</a></li>
-          <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">{{ product.name }}</li>
+          <li class="breadcrumb-item active text-dark fw-bold" aria-current="page">{{ displayName }}</li>
         </ol>
       </nav>
 
       <div class="row g-5 mb-5">
         <div class="col-lg-7">
           <div class="main-image-box border rounded-3 position-relative d-flex justify-content-center align-items-center mb-3 bg-white overflow-hidden">
-            <span v-if="product.salePrice" class="badge bg-danger text-white position-absolute top-0 start-0 m-3 z-1 fw-bold fs-8 px-3 py-1">GIẢM GIÁ</span>
+            <span v-if="currentSalePrice" class="badge bg-danger text-white position-absolute top-0 start-0 m-3 z-1 fw-bold fs-8 px-3 py-1">GIẢM GIÁ</span>
             <img :src="currentImage" 
                  class="img-fluid object-fit-contain w-100 h-100" 
                  style="max-height: 500px; mix-blend-mode: multiply;" 
-                 :alt="product.name" 
+                 :alt="displayName" 
                  @error="handleImageError">
           </div>
           
@@ -40,7 +40,7 @@
         </div>
 
         <div class="col-lg-5">
-          <h2 class="fw-black mb-1 text-uppercase text-dark">{{ product.name }}</h2>
+          <h2 class="fw-black mb-1 text-uppercase text-dark">{{ displayName }}</h2>
           
           <div class="d-flex align-items-center gap-2 mb-3 fs-8">
             <div class="text-dark d-flex gap-1 fw-bold">
@@ -52,9 +52,9 @@
           </div>
           
           <div class="d-flex align-items-end gap-3 mb-4">
-            <h2 class="text-dark fw-black mb-0 fs-2">{{ formatCurrency(product.salePrice || product.price) }}</h2>
-            <span v-if="product.salePrice" class="text-muted text-decoration-line-through fs-6 mb-1">{{ formatCurrency(product.price) }}</span>
-            <span v-if="product.salePrice" class="badge bg-light text-dark border fs-9">-15%</span>
+            <h2 class="text-primary fw-black mb-0 fs-2">{{ formatCurrency(currentSalePrice || currentPrice) }}</h2>
+            <span v-if="currentSalePrice" class="text-muted text-decoration-line-through fs-6 mb-1">{{ formatCurrency(currentPrice) }}</span>
+            <span v-if="currentSalePrice" class="badge bg-danger-subtle text-danger border border-danger-subtle fs-9">-{{ calculateDiscount(currentPrice, currentSalePrice) }}%</span>
           </div>
           <p class="fs-8 text-muted mb-4 line-height-lg">{{ product.description }}</p>
 
@@ -65,24 +65,39 @@
                 v-for="variant in product.variants"
                 :key="variant.variantId"
                 @click="selectVariant(variant)"
-                class="btn bg-white d-flex align-items-center gap-2 px-3 py-2 rounded-2 border transition-all"
-                :class="selectedVariantId === variant.variantId ? 'border-dark border-2' : 'border-light-subtle hover-border-dark'"
+                class="btn bg-white d-flex align-items-center gap-2 px-3 py-2 rounded-2 border transition-all shadow-none"
+                :class="selectedVariantId === variant.variantId ? 'border-primary border-2' : 'border-light-subtle hover-border-dark'"
               >
                 <img v-if="variant.imageUrl" :src="getImageUrl(variant.imageUrl)" class="rounded-1 object-fit-cover border" style="width: 24px; height: 24px; mix-blend-mode: multiply;" alt="color">
-                <span class="fs-8 fw-bold" :class="selectedVariantId === variant.variantId ? 'text-dark' : 'text-muted'">
+                <span class="fs-8 fw-bold" :class="selectedVariantId === variant.variantId ? 'text-primary' : 'text-dark'">
                   {{ variant.colorName }}
                 </span>
               </button>
             </div>
           </div>
 
-          <div class="switch-section mb-4" v-if="categoryAttributes && categoryAttributes.length > 0">
+          <div class="capacity-section mb-4" v-if="parsedCapacities && parsedCapacities.length > 0">
+            <div class="fw-bold fs-8 text-dark mb-2 text-uppercase">{{ capacityLabel }}</div>
+            <div class="d-flex gap-2 flex-wrap">
+              <button
+                v-for="(cap, index) in parsedCapacities"
+                :key="index"
+                @click="selectCapacity(cap)"
+                class="btn bg-white px-4 py-2 rounded-2 border transition-all shadow-none"
+                :class="selectedCapacity && selectedCapacity.capacityName === cap.capacityName ? 'border-primary border-2 fw-bold text-primary' : 'border-light-subtle hover-border-dark text-dark'"
+              >
+                <span class="fs-8">{{ cap.capacityName }}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="switch-section mb-4" v-if="parsedAttributes && parsedAttributes.length > 0">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <span class="fw-bold fs-8 text-dark text-uppercase">TÙY CHỌN </span>
               <a href="#" class="text-muted fs-8 text-decoration-none">HƯỚNG DẪN CHỌN</a>
             </div>
             <div class="d-flex gap-2 flex-wrap">
-              <div v-for="(attr, index) in categoryAttributes" :key="index"
+              <div v-for="(attr, index) in parsedAttributes" :key="index"
                    class="attr-box border border-dark rounded-2 p-2 text-center flex-grow-1 cursor-pointer hover-bg-light">
                 <div class="fs-8 fw-bold text-dark">{{ attr.title }}</div>
                 <div class="fs-9 text-muted">{{ attr.desc }}</div>
@@ -214,10 +229,66 @@ const product = ref(null);
 const similarProducts = ref([]);
 const reviews = ref([]); 
 const quantity = ref(1);
-const categoryAttributes = ref([]); 
 
 const currentImage = ref('');
 const selectedVariantId = ref(null);
+const lastClicked = ref('none'); // LƯU VẾT HÀNH ĐỘNG: 'color' hoặc 'capacity'
+
+const capacityLabel = ref(''); 
+const parsedCapacities = ref([]);
+const selectedCapacity = ref(null);
+const parsedAttributes = ref([]); 
+
+const selectedVariantData = computed(() => {
+  if (!product.value || !product.value.variants) return null;
+  return product.value.variants.find(v => v.variantId === selectedVariantId.value);
+});
+
+const displayName = computed(() => {
+  if (!product.value) return '';
+  return selectedCapacity.value ? `${product.value.name} ${selectedCapacity.value.capacityName}` : product.value.name;
+});
+
+// LOGIC TÍNH GIÁ MỚI: Ưu tiên dựa trên hành động bấm cuối cùng của user
+const currentPrice = computed(() => {
+  if (!product.value) return 0;
+  
+  // 1. Nếu hành động cuối là bấm Màu sắc, và màu có giá tiền -> Lấy giá màu
+  if (lastClicked.value === 'color' && selectedVariantData.value && selectedVariantData.value.price > 0) {
+    return selectedVariantData.value.price;
+  }
+  // 2. Nếu hành động cuối là bấm Dung lượng, và dung lượng có giá tiền -> Lấy giá dung lượng
+  if (lastClicked.value === 'capacity' && selectedCapacity.value && selectedCapacity.value.price > 0) {
+    return selectedCapacity.value.price;
+  }
+  
+  // 3. Dự phòng (khi mới load trang): Ưu tiên Dung lượng > Màu sắc > Gốc
+  if (selectedCapacity.value && selectedCapacity.value.price > 0) return selectedCapacity.value.price;
+  if (selectedVariantData.value && selectedVariantData.value.price > 0) return selectedVariantData.value.price;
+  
+  return product.value.price;
+});
+
+const currentSalePrice = computed(() => {
+  if (!product.value) return null;
+  
+  if (lastClicked.value === 'color' && selectedVariantData.value && selectedVariantData.value.price > 0) {
+    return selectedVariantData.value.salePrice || null;
+  }
+  if (lastClicked.value === 'capacity' && selectedCapacity.value && selectedCapacity.value.price > 0) {
+    return selectedCapacity.value.salePrice || null;
+  }
+  
+  if (selectedCapacity.value && selectedCapacity.value.price > 0) return selectedCapacity.value.salePrice || null;
+  if (selectedVariantData.value && selectedVariantData.value.price > 0) return selectedVariantData.value.salePrice || null;
+  
+  return product.value.salePrice;
+});
+
+const calculateDiscount = (price, salePrice) => {
+  if (!price || !salePrice || price <= 0 || salePrice >= price) return 0;
+  return Math.round(((price - salePrice) / price) * 100);
+};
 
 const getImageUrl = (url) => {
   if (!url) return 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image';
@@ -227,7 +298,7 @@ const getImageUrl = (url) => {
 
 const handleImageError = (e) => { e.target.src = 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image'; };
 
-const formatCurrency = (value) => value ? value.toLocaleString('vi-VN') + ' VNĐ' : "0 VNĐ";
+const formatCurrency = (value) => value ? value.toLocaleString('vi-VN') + ' đ' : "0 đ";
 
 const averageRating = computed(() => reviews.value.length ? (reviews.value.reduce((a, r) => a + r.rating, 0) / reviews.value.length).toFixed(1) : "0.0");
 
@@ -249,14 +320,20 @@ const setMainImage = (url) => {
   }
 };
 
-// ĐÃ SỬA: Nếu click vào màu có hình thì đổi hình, không có thì về hình mặc định của sản phẩm
+// CẬP NHẬT HÀM CLICK ĐỂ ĐÁNH DẤU HÀNH ĐỘNG
 const selectVariant = (variant) => {
   selectedVariantId.value = variant.variantId;
+  lastClicked.value = 'color'; // Đánh dấu vừa click vào Màu
   if (variant.imageUrl) {
     currentImage.value = getImageUrl(variant.imageUrl);
   } else {
     currentImage.value = getImageUrl(product.value.imageUrl);
   }
+};
+
+const selectCapacity = (cap) => {
+  selectedCapacity.value = cap;
+  lastClicked.value = 'capacity'; // Đánh dấu vừa click vào Dung lượng
 };
 
 const fetchProductDetail = async (id) => {
@@ -266,6 +343,36 @@ const fetchProductDetail = async (id) => {
     
     currentImage.value = getImageUrl(product.value.imageUrl);
     selectedVariantId.value = null;
+    lastClicked.value = 'none';
+    
+    parsedCapacities.value = [];
+    selectedCapacity.value = null;
+    capacityLabel.value = '';
+    
+    if (product.value.capacities) {
+      try {
+        let parsed = JSON.parse(product.value.capacities);
+        if (Array.isArray(parsed)) {
+            capacityLabel.value = 'DUNG LƯỢNG (ROM)';
+            parsedCapacities.value = parsed;
+        } else {
+            capacityLabel.value = parsed.label;
+            parsedCapacities.value = parsed.values;
+        }
+        
+        if (parsedCapacities.value.length > 0) {
+          selectedCapacity.value = parsedCapacities.value[0];
+          lastClicked.value = 'capacity'; // Mặc định dung lượng đang được ưu tiên
+        }
+      } catch (e) { console.error("Lỗi parse capacities", e); }
+    }
+
+    parsedAttributes.value = [];
+    if (product.value.attributes) {
+      try {
+        parsedAttributes.value = JSON.parse(product.value.attributes);
+      } catch (e) { console.error("Lỗi parse attributes", e); }
+    }
 
     if (product.value.variants && product.value.variants.length > 0) {
       const mainVariantIndex = product.value.variants.findIndex(v => v.imageUrl && v.imageUrl === product.value.imageUrl);
@@ -276,17 +383,6 @@ const fetchProductDetail = async (id) => {
       if (product.value.variants[0].imageUrl === product.value.imageUrl) {
         selectedVariantId.value = product.value.variants[0].variantId;
       }
-    }
-
-    if (product.value.categoryId) {
-      try {
-        const catRes = await axios.get(`http://localhost:8080/api/categories/${product.value.categoryId}`);
-        if (catRes.data && catRes.data.attributes) {
-          categoryAttributes.value = JSON.parse(catRes.data.attributes);
-        } else {
-          categoryAttributes.value = [];
-        }
-      } catch (e) { console.error("Không lấy được thuộc tính danh mục", e); }
     }
 
     await Promise.all([fetchSimilarProducts(), fetchReviews()]);
@@ -340,8 +436,8 @@ const handleAddToCart = async (productObj, qtyToAdd) => {
     } else {
       guestCart.push({
         productId: pId,
-        name: productObj.name,
-        price: productObj.salePrice || productObj.price,
+        name: displayName.value,
+        price: currentSalePrice.value || currentPrice.value,
         quantity: qtyToAdd,
         img: productObj.imageUrl || 'https://via.placeholder.com/150'
       });
@@ -373,6 +469,9 @@ onMounted(() => fetchProductDetail(route.params.id));
 .hover-bg-light:hover { background-color: #f8f9fa !important; }
 .hover-border-dark:hover { border-color: #212529 !important; }
 .transition-all { transition: all 0.2s ease-in-out; }
+
+.text-primary { color: #0047FF !important; }
+.border-primary { border-color: #0047FF !important; }
 
 .attr-box {
   word-break: break-word;

@@ -75,11 +75,10 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         mapToEntity(dto, product);
 
-        // Nạp biến thể màu sắc vào Entity
         if (dto.getVariants() != null && !dto.getVariants().isEmpty()) {
             List<ProductVariant> variants = new ArrayList<>();
             for (ProductVariant v : dto.getVariants()) {
-                v.setProduct(product); // Nối với sản phẩm cha
+                v.setProduct(product);
                 variants.add(v);
             }
             product.setVariants(variants);
@@ -101,14 +100,12 @@ public class ProductServiceImpl implements ProductService {
 
         mapToEntity(dto, existingProduct);
 
-        // Xóa các màu cũ đi
         if (existingProduct.getVariants() != null) {
             existingProduct.getVariants().clear();
         } else {
             existingProduct.setVariants(new ArrayList<>());
         }
 
-        // Nạp màu mới (từ form Admin) vào
         if (dto.getVariants() != null) {
             for (ProductVariant v : dto.getVariants()) {
                 v.setProduct(existingProduct);
@@ -159,7 +156,9 @@ public class ProductServiceImpl implements ProductService {
                 .categoryName(product.getCategory() != null ? product.getCategory().getCategoryName() : null)
                 .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
                 .brandName(product.getBrand() != null ? product.getBrand().getBrandName() : null)
-                .variants(product.getVariants()) // Đưa variants ra JSON gửi về Frontend
+                .variants(product.getVariants())
+                .capacities(product.getCapacities())
+                .attributes(product.getAttributes()) // LẤY THUỘC TÍNH
                 .build();
     }
 
@@ -171,6 +170,8 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(dto.getDescription());
         product.setImageUrl(dto.getImageUrl());
         product.setActive(dto.getActive() != null ? dto.getActive() : true);
+        product.setCapacities(dto.getCapacities());
+        product.setAttributes(dto.getAttributes()); // LƯU THUỘC TÍNH
 
         if (dto.getCategoryId() != null) {
             Category category = categoryDAO.findById(dto.getCategoryId())

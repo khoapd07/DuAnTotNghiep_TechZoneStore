@@ -56,9 +56,15 @@ public class Product {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    private String capacities;
+
+    private String attributes;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id")
     private Brand brand;
+
+
 
     @OneToMany(mappedBy = "product", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariant> variants;

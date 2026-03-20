@@ -23,7 +23,6 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryDAO.findById(id).orElse(null);
     }
 
-    // THÊM MỚI (Có Validate trùng tên)
     @Override
     public Category create(Category category) {
         if (categoryDAO.existsByCategoryName(category.getCategoryName())) {
@@ -32,7 +31,6 @@ public class CategoryServiceImpl implements CategoryService {
         return categoryDAO.save(category);
     }
 
-    // CẬP NHẬT (Có Validate trùng tên, bỏ qua chính nó)
     @Override
     public Category update(Integer id, Category category) {
         if (categoryDAO.existsByCategoryNameAndCategoryIdNot(category.getCategoryName(), id)) {
@@ -43,7 +41,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy danh mục!"));
 
         existingCategory.setCategoryName(category.getCategoryName());
-        existingCategory.setAttributes(category.getAttributes());
+        // Đã xóa thuộc tính attributes cũ ở đây
         return categoryDAO.save(existingCategory);
     }
 
