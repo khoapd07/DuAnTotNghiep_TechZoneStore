@@ -1,6 +1,5 @@
 package com.poly.backend.controller;
 
-import com.poly.backend.dao.ProductDAO;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
