@@ -4,10 +4,7 @@
       
       <header class="d-flex justify-content-between align-items-center mb-4">
         <div>
-          <h3 class="fw-black text-dark mb-1 fs-4">Quản lý đơn hàng</h3>
-          <div class="d-flex align-items-center gap-2 text-muted fs-7">
-            <i class="bi bi-search"></i> <span>Tìm kiếm mã đơn hàng, khách hàng...</span>
-          </div>
+          <h3 class="fw-black text-dark mb-0 fs-4">Quản lý đơn hàng</h3>
         </div>
         <div class="d-flex gap-3 align-items-center">
           <div class="d-flex align-items-center gap-2">
@@ -46,6 +43,32 @@
         </div>
       </div>
 
+      <div class="card border-0 shadow-sm rounded-4 p-3 mb-4 bg-white">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="input-group">
+              <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+              <input v-model="searchQuery" type="text" class="form-control bg-light border-start-0 ps-0 shadow-none fs-7" placeholder="Tìm mã đơn, tên KH, SĐT...">
+            </div>
+          </div>
+          <div class="col-md-4">
+            <select v-model="filterStatus" class="form-select bg-light shadow-none fs-7 fw-bold text-muted">
+              <option value="ALL">Tất cả Trạng thái</option>
+              <option v-for="st in dbStatuses" :key="st.statusId" :value="st.statusId">
+                {{ st.description }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <select v-model="filterPayment" class="form-select bg-light shadow-none fs-7 fw-bold text-muted">
+              <option value="ALL">Tất cả Thanh toán</option>
+              <option value="COD">Tiền mặt (COD)</option>
+              <option value="BANK">Chuyển khoản (VietQR)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div class="card border-0 shadow-sm rounded-4 p-3 mb-3">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
@@ -61,15 +84,18 @@
               </tr>
             </thead>
             <tbody v-if="!loading">
-              <tr v-for="order in orderList" :key="order.orderId" class="border-bottom-dashed cursor-pointer">
+              <tr v-if="filteredOrders.length === 0">
+                <td colspan="7" class="text-center py-5 text-muted">
+                  <i class="bi bi-inbox fs-2 d-block mb-2"></i>
+                  <span class="fw-bold">Không tìm thấy đơn hàng nào phù hợp với bộ lọc!</span>
+                </td>
+              </tr>
+              
+              <tr v-for="order in filteredOrders" :key="order.orderId" class="border-bottom-dashed cursor-pointer">
                 <td class="fw-bold fs-7 text-dark px-3">{{ order.orderCode }}</td>
                 <td>
-                  <div class="d-flex align-items-center gap-2">
-                    <div class="avatar-text bg-secondary text-white fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 32px; height: 32px; font-size: 0.75rem;">
-                      {{ getInitials(extractCustomerInfo(order.note).name) }}
-                    </div>
-                    <span class="fw-bold fs-7 text-dark">{{ extractCustomerInfo(order.note).name }}</span>
-                  </div>
+                  <span class="fw-bold fs-7 text-dark d-block">{{ extractCustomerInfo(order.note).name }}</span>
+                  <small class="text-muted fs-8">{{ extractCustomerInfo(order.note).phone }}</small>
                 </td>
                 <td class="text-muted fs-7">{{ formatDate(order.orderDate) }}</td>
                 <td class="fw-bold fs-7 text-dark">{{ formatCurrency(order.finalAmount) }}</td>
@@ -87,7 +113,6 @@
                        class="text-danger fs-9 fw-bold mt-1 flash-alert">
                     <i class="bi bi-exclamation-circle-fill"></i> CẦN HOÀN TIỀN
                   </div>
-                  
                 </td>
 
                 <td>
@@ -105,7 +130,7 @@
               </tr>
             </tbody>
             <tbody v-else>
-              <tr><td colspan="6" class="text-center py-4"><span class="spinner-border text-success"></span> Đang tải...</td></tr>
+              <tr><td colspan="7" class="text-center py-4"><span class="spinner-border text-success"></span> Đang tải...</td></tr>
             </tbody>
           </table>
         </div>
@@ -131,17 +156,14 @@
             <div class="form-check form-switch cursor-pointer">
               <input class="form-check-input" type="checkbox" role="switch" id="paymentStatusSwitch" 
                      :checked="selectedOrder.paymentStatus"
-                      
                      :disabled="selectedOrder.paymentMethod !== 'BANK'"
-
                      @change="togglePaymentStatus(selectedOrder)">
               <label class="form-check-label fw-bold fs-8" for="paymentStatusSwitch"
                      :class="selectedOrder.paymentStatus ? 'text-success' : 'text-danger'">
                 {{ selectedOrder.paymentStatus ? 'Đã thu tiền' : 'Chưa thu tiền' }}
               </label>
-
               <small v-if="selectedOrder.paymentMethod !== 'BANK'" class="d-block text-muted fs-9 fst-italic mt-1">
-                (Đơn COD sẽ tự động cập nhật khi Shipper giao thành công)
+                (Tự động cập nhật khi Shipper giao)
               </small>
             </div>
           </div>
@@ -161,7 +183,6 @@
               {{ isSaving ? '...' : 'Lưu' }}
             </button>
           </div>
-          
           <small v-if="availableStatuses.length <= 1" class="text-danger fs-9 mt-1 d-block fw-bold">
             Đơn hàng đã kết thúc quy trình, không thể thay đổi trạng thái.
           </small>
@@ -239,7 +260,11 @@ const selectedOrder = ref(null);
 const selectedOrderEditStatus = ref(0);
 const isSaving = ref(false);
 
-// Biến lưu thông tin người đang đăng nhập
+// BIẾN LƯU TRỮ CHO BỘ LỌC & TÌM KIẾM
+const searchQuery = ref('');
+const filterStatus = ref('ALL');
+const filterPayment = ref('ALL');
+
 const currentUser = ref({
   id: null,
   name: 'Admin TechZone'
@@ -248,7 +273,6 @@ const currentUser = ref({
 const API_URL = 'http://localhost:8080/api/orders';
 
 onMounted(async () => {
-  // Lấy thông tin user từ LocalStorage
   const userStr = localStorage.getItem('user_info');
   if (userStr) {
     const userObj = JSON.parse(userStr);
@@ -281,34 +305,59 @@ const fetchOrders = async () => {
   }
 };
 
+// ==========================================
+// HÀM FILTER VÀ SEARCH
+// ==========================================
+const filteredOrders = computed(() => {
+  return orderList.value.filter(order => {
+    // 1. Lọc theo trạng thái
+    if (filterStatus.value !== 'ALL' && order.statusId !== filterStatus.value) {
+      return false;
+    }
+    
+    // 2. Lọc theo phương thức thanh toán
+    if (filterPayment.value !== 'ALL' && order.paymentMethod !== filterPayment.value) {
+      return false;
+    }
+
+    // 3. Tìm kiếm theo Text (Mã, Tên, SĐT)
+    if (searchQuery.value) {
+      const query = searchQuery.value.toLowerCase().trim();
+      const code = (order.orderCode || '').toLowerCase();
+      const customer = extractCustomerInfo(order.note);
+      const name = customer.name.toLowerCase();
+      const phone = customer.phone.toLowerCase();
+
+      if (!code.includes(query) && !name.includes(query) && !phone.includes(query)) {
+        return false;
+      }
+    }
+
+    return true; // Thỏa mãn mọi điều kiện
+  });
+});
+
 const viewOrderDetail = (order) => {
   selectedOrder.value = order;
   selectedOrderEditStatus.value = order.statusId; 
 };
 
-// Cập nhật trạng thái (Gửi kèm ID người thao tác)
 const updateStatus = async () => {
   if (!selectedOrder.value) return;
 
-  // =========================================================
-  // RÀNG BUỘC: Đơn BANK thì BẮT BUỘC phải "Đã thu tiền" 
-  // mới được phép chuyển lên "Đã xác nhận" (statusId = 1)
-  // =========================================================
   if (
     selectedOrder.value.paymentMethod === 'BANK' && 
     !selectedOrder.value.paymentStatus && 
-    selectedOrderEditStatus.value == 1 // 1 là trạng thái Đã xác nhận
+    selectedOrderEditStatus.value == 1 
   ) {
     alert("CẢNH BÁO: Đơn hàng này là Chuyển khoản (VietQR). \nVui lòng kiểm tra tài khoản và gạt công tắc 'Đã thu tiền' trước khi Xác nhận đơn!");
-    return; // Dừng lại, không gọi API lưu
+    return; 
   }
   
   isSaving.value = true;
   
-  // Tạo URL gửi request
   let url = `${API_URL}/admin/${selectedOrder.value.orderId}/status?statusId=${selectedOrderEditStatus.value}`;
   
-  // Nếu có user đang đăng nhập, đính kèm employeeId vào URL
   if (currentUser.value.id) {
     url += `&employeeId=${currentUser.value.id}`;
   }
@@ -325,7 +374,7 @@ const updateStatus = async () => {
   }
 };
 
-// --- CÁC HÀM HỖ TRỢ BÊN DƯỚI GIỮ NGUYÊN ---
+// Thống kê dựa trên dữ liệu gốc (orderList)
 const stats = computed(() => {
   return {
     total: orderList.value.length,
@@ -375,43 +424,25 @@ const getStatusClass = (id) => {
   return 'bg-secondary text-white';
 };
 
-// Tùy thuộc vào trạng thái HIỆN TẠI, Admin chỉ được chọn các trạng thái TIẾP THEO hợp lý
 const availableStatuses = computed(() => {
   if (!selectedOrder.value) return [];
-  
   const currentStatus = selectedOrder.value.statusId;
 
-  // Lọc danh sách status từ DB dựa trên quy tắc
   return dbStatuses.value.filter(st => {
     const targetStatus = st.statusId;
-    
-    // Luôn cho phép hiển thị lại trạng thái hiện tại
     if (targetStatus === currentStatus) return true;
 
-    // Quy tắc chuyển trạng thái
     switch (currentStatus) {
-      case 0: // Từ [Chờ xác nhận] -> Chỉ được [Đã xác nhận] hoặc [Hủy]
-        return targetStatus === 1 || targetStatus === 4;
-      
-      case 1: // Từ [Đã xác nhận] -> Chỉ được [Đang giao] hoặc [Hủy]
-        return targetStatus === 2 || targetStatus === 4;
-      
-      case 2: // Từ [Đang giao] -> Chỉ được [Hoàn thành] hoặc [Hủy/Giao thất bại]
-        return targetStatus === 3 || targetStatus === 4;
-      
-      case 3: // [Hoàn thành] -> Không cho đổi nữa (Kết thúc quy trình)
-        return false; 
-      
-      case 4: // [Đã hủy] -> Không cho đổi nữa
-        return false;
-        
-      default:
-        return false;
+      case 0: return targetStatus === 1 || targetStatus === 4;
+      case 1: return targetStatus === 2 || targetStatus === 4;
+      case 2: return targetStatus === 3 || targetStatus === 4;
+      case 3: return false; 
+      case 4: return false;
+      default: return false;
     }
   });
 });
 
-// Cập nhật trạng thái Thu Tiền (Gạt công tắc)
 const togglePaymentStatus = async (order) => {
   const newStatus = !order.paymentStatus;
   try {
@@ -419,7 +450,6 @@ const togglePaymentStatus = async (order) => {
     order.paymentStatus = newStatus;
   } catch (error) {
     alert("Lỗi cập nhật thanh toán: " + (error.response?.data || error.message));
-    // Revert lại trạng thái trên UI nếu API lỗi
     order.paymentStatus = !newStatus; 
   }
 };
@@ -432,6 +462,7 @@ const togglePaymentStatus = async (order) => {
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
+.fs-9 { font-size: 0.65rem; }
 .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .table th { letter-spacing: 0.5px; }
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
