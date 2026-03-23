@@ -75,7 +75,7 @@ public class VoucherController {
         return ResponseEntity.notFound().build();
     }
 
-    // ------- GIỮ NGUYÊN CODE CŨ CỦA BẠN BÊN DƯỚI -------
+
     @GetMapping("/check")
     public ResponseEntity<?> checkVoucher(
             @RequestParam(value = "code", required = false) String code,
