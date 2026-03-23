@@ -119,6 +119,7 @@
 </template>
 
 <script setup>
+//commit (thêm phần tra cứu đơn hàng vào Header.vue) - 20/03/2026
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
