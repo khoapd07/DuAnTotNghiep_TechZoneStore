@@ -141,6 +141,10 @@ const handleLogin = async () => {
 
     // 1. Lưu JWT token vào localStorage
     localStorage.setItem('jwt_token', data.token);
+    
+    // Lưu thời gian hết hạn của token (24 giờ = 86400000 ms)
+    const expiryTime = new Date().getTime() + 86400000;
+    localStorage.setItem('token_expiry', expiryTime.toString());
 
     // 2. Lưu thông tin người dùng (Lưu ý: Không lưu mật khẩu)
     const userInfo = {

@@ -15,6 +15,9 @@
           <li class="nav-item"><router-link class="nav-link text-dark" to="/products">Sản phẩm</router-link></li>
           <li class="nav-item"><router-link class="nav-link text-dark" to="/blog">Blog</router-link></li>
           <li class="nav-item"><router-link class="nav-link text-dark" to="/support">Hỗ trợ</router-link></li>
+          <li class="nav-item">
+            <a href="#" class="nav-link text-dark" data-bs-toggle="modal" data-bs-target="#trackOrderModal">Tra cứu đơn</a>
+          </li>
         </ul>
 
         <ul class="navbar-nav align-items-center gap-3">
@@ -88,7 +91,31 @@
         </ul>
       </div>
     </div>
+
+    
   </nav>
+  
+  <div class="modal fade" id="trackOrderModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+          <div class="modal-header border-bottom-0 pb-0">
+            <h5 class="modal-title fw-black fs-4 text-center w-100">Tra cứu đơn hàng</h5>
+            <button type="button" class="btn-close shadow-none position-absolute end-0 me-3" data-bs-dismiss="modal" aria-label="Close" id="closeTrackModalBtn"></button>
+          </div>
+          <div class="modal-body text-center pt-2 pb-4 px-4">
+            <p class="text-muted fs-7 mb-4">Nhập mã đơn hàng của bạn (Ví dụ: TZ-20260302-1234) để kiểm tra tình trạng vận chuyển.</p>
+            <form @submit.prevent="handleSearchOrder">
+              <div class="input-group mb-3">
+                <input v-model="searchOrderCode" type="text" class="form-control bg-light border-0 px-4 py-3 rounded-start-pill shadow-none fs-7" placeholder="Nhập mã đơn hàng..." required>
+                <button class="btn btn-neon fw-bold px-4 py-3 rounded-end-pill text-dark border-0" type="submit">
+                  TÌM KIẾM
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup>
@@ -103,6 +130,21 @@ const cartItems = ref([]);
 const isAdmin = ref(false);
 const isShipper = ref(false);
 
+// Biến quản lý tra cứu đơn hàng
+const searchOrderCode = ref('');
+
+const handleSearchOrder = () => {
+  if (!searchOrderCode.value.trim()) return;
+
+  // Đóng modal
+  const closeBtn = document.getElementById('closeTrackModalBtn');
+  if (closeBtn) closeBtn.click();
+
+  // Chuyển hướng đến trang chi tiết đơn hàng
+  router.push(`/order/${searchOrderCode.value.trim()}`);
+  searchOrderCode.value = '';
+};
+
 const checkLoginStatus = () => {
   const token = localStorage.getItem('jwt_token');
   const userRolesString = localStorage.getItem('user_role'); 
@@ -111,7 +153,6 @@ const checkLoginStatus = () => {
   if (token) {
     isLoggedIn.value = true;
     
-    // XỬ LÝ LẤY TÊN HIỂN THỊ
     if (userInfoString) {
       try {
         const parsedUser = JSON.parse(userInfoString);
@@ -123,7 +164,6 @@ const checkLoginStatus = () => {
       userInfo.value = 'User';
     }
     
-    // XỬ LÝ QUYỀN (ROLE)
     if (userRolesString) {
       try {
         const roles = JSON.parse(userRolesString);
@@ -146,14 +186,12 @@ const checkLoginStatus = () => {
     }
     
   } else {
-    // KHÁCH VÃNG LAI
     isLoggedIn.value = false;
     userInfo.value = '';
     isAdmin.value = false;
     isShipper.value = false;
   }
   
-  // LƯU Ý MỚI: Dù đăng nhập hay chưa đều phải gọi hàm lấy giỏ hàng
   fetchMiniCart(); 
 };
 
@@ -162,7 +200,6 @@ const fetchMiniCart = async () => {
     const token = localStorage.getItem('jwt_token');
     
     if (token) {
-      // 1. NẾU CÓ TOKEN (Đã đăng nhập) => Gọi API lên Backend
       const userInfoString = localStorage.getItem('user_info');
       if (!userInfoString) return;
 
@@ -175,20 +212,17 @@ const fetchMiniCart = async () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // ĐÃ SỬA: Lấy mảng items từ response giống bên Cart.vue
-      const backendItems = response.data.items || response.data; // Phòng hờ nếu trả về thẳng list
+      const backendItems = response.data.items || response.data; 
       
-      // Map dữ liệu cho giống với template mới sửa ở trên
       cartItems.value = backendItems.map(bItem => ({
         productId: bItem.productId,
         name: bItem.productName,
-        price: bItem.salePrice || bItem.price, // Ưu tiên giá sale
+        price: bItem.salePrice || bItem.price,
         quantity: bItem.quantity,
         img: bItem.imageUrl
       }));
 
     } else {
-      // 2. NẾU KHÔNG CÓ TOKEN (Khách vãng lai) => Lấy từ localStorage Frontend
       const guestCart = localStorage.getItem('guest_cart');
       if (guestCart) {
         cartItems.value = JSON.parse(guestCart);
@@ -212,8 +246,6 @@ const handleLogout = () => {
   localStorage.removeItem('user_info');
   
   isLoggedIn.value = false;
-  
-  // Chuyển về load giỏ hàng khách thay vì clear sạch
   fetchMiniCart(); 
   
   window.dispatchEvent(new Event('auth-change'));
@@ -238,17 +270,18 @@ onUnmounted(() => {
 
 <style scoped>
 nav.navbar {
-  position: sticky; /* Giữ thanh header đứng yên khi cuộn trang */
+  position: sticky;
   top: 0;
-  z-index: 1050 !important; /* Đảm bảo luôn đè lên mọi thứ (kể cả cột tóm tắt đơn hàng z-index 1020) */
+  z-index: 1050 !important; 
 }
-/* Phần CSS bạn cứ giữ nguyên giống file cũ của bạn */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
 .text-neon { color: #00FF33 !important; }
 .bg-neon { background-color: #00FF33 !important; }
 .text-neon-dark { color: #00cc29 !important; }
+.btn-neon { background-color: #00FF33; border: none; transition: 0.2s all; }
+.btn-neon:hover { background-color: #00cc29; }
 
 .narrow-container {
   max-width: 1200px !important; 
