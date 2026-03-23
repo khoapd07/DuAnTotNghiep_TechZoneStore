@@ -97,9 +97,9 @@ public class CartServiceImpl implements CartService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm"));
 
         // CHỐT CHẶN: Ép kiểm tra số lượng tồn kho
-        if (request.getQuantity() > product.getStockQuantity()) {
+        if (request.getQuantity() > product.getTotalStock()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!#:" + product.getStockQuantity());
+                    "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!#:" + product.getTotalStock());
         }
 
         if (cart.getCartItems() == null) cart.setCartItems(new ArrayList<>());
@@ -113,15 +113,15 @@ public class CartServiceImpl implements CartService {
             CartItem item = existingItem.get();
             int newQuantity = item.getQuantity() + request.getQuantity();
 
-            if (newQuantity > product.getStockQuantity()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
+            if (newQuantity > product.getTotalStock()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!");
             }
             item.setQuantity(newQuantity);
             cartItemDAO.save(item);
         } else {
             // NẾU CHƯA CÓ -> TẠO MỚI
-            if (request.getQuantity() > product.getStockQuantity()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
+            if (request.getQuantity() > product.getTotalStock()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!");
             }
             CartItem newItem = CartItem.builder()
                     .cart(cart)
@@ -142,8 +142,8 @@ public class CartServiceImpl implements CartService {
         Product product = productDAO.findById(request.getProductId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm"));
 
-        if (request.getQuantity() > product.getStockQuantity()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getStockQuantity() + " sản phẩm!");
+        if (request.getQuantity() > product.getTotalStock()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!");
         }
 
         Optional<CartItem> existingItem = cart.getCartItems().stream()

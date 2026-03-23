@@ -41,7 +41,7 @@ public class Category {
             return 0;
         }
         return this.products.stream()
-                .mapToInt(product -> product.getStockQuantity() != null ? product.getStockQuantity() : 0)
+                .mapToInt(product -> product.getTotalStock() != null ? product.getTotalStock() : 0)
                 .sum();
     }
 }

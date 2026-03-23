@@ -27,10 +27,11 @@ public interface ProductDAO extends JpaRepository<Product, Integer> {
             @Param("max") BigDecimal maxPrice,
             Pageable pageable);
 
-    Long countByStockQuantityLessThan(Integer threshold);
+    @Query("SELECT COUNT(p) FROM Product p WHERE (SELECT COALESCE(SUM(v.stockQuantity), 0) FROM ProductVariant v WHERE v.product = p) < :qty")
+    long countByTotalStockLessThan(@Param("qty") Integer qty);
 
     // MỚI THÊM: Tính tổng số lượng tồn kho của tất cả sản phẩm
-    @Query("SELECT SUM(p.stockQuantity) FROM Product p")
+    @Query("SELECT SUM(v.stockQuantity) FROM ProductVariant v")
     Long sumTotalStockQuantity();
 
     // MỚI THÊM: Kiểm tra tên trùng lúc tạo mới

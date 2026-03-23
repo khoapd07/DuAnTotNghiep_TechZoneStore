@@ -51,8 +51,8 @@
                 <th class="py-3 px-4 fw-bold border-0">Hình Ảnh</th>
                 <th class="py-3 fw-bold border-0">Tên Sản Phẩm</th>
                 <th class="py-3 fw-bold border-0">Danh Mục</th>
-                <th class="py-3 fw-bold border-0">Giá Bán</th>
-                <th class="py-3 fw-bold border-0">Tồn Kho</th>
+                <th class="py-3 fw-bold border-0">Giá Mặc Định</th>
+                <th class="py-3 fw-bold border-0">Tổng Tồn Kho</th>
                 <th class="py-3 fw-bold border-0 text-center">Hành Động</th>
               </tr>
             </thead>
@@ -117,15 +117,15 @@
 
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal d-block" tabindex="-1">
-      <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-dialog modal-dialog-centered modal-xl">
         <div class="modal-content border-0 shadow-lg rounded-4">
           <div class="modal-header border-bottom p-3">
             <h5 class="fw-black m-0 fs-6">{{ isEditing ? 'CẬP NHẬT SẢN PHẨM' : 'THÊM SẢN PHẨM MỚI' }}</h5>
             <button type="button" class="btn-close shadow-none" @click="showModal = false"></button>
           </div>
-          <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
+          <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
             <div class="row g-3">
-              <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm <span class="text-danger">*</span></label><input type="text" v-model="form.name" class="form-control fs-7"></div>
+              <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm (Cha) <span class="text-danger">*</span></label><input type="text" v-model="form.name" class="form-control fs-7"></div>
               
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Danh mục <span class="text-danger">*</span></label>
@@ -141,129 +141,79 @@
                 </select>
               </div>
 
-              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng <span class="text-danger">*</span></label><input type="number" v-model="form.stockQuantity" class="form-control fs-7"></div>
-              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán Gốc <span class="text-danger">*</span></label><input type="number" v-model="form.price" class="form-control fs-7"></div>
-              <div class="col-md-4"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM Gốc</label><input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống..."></div>
+              <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán Gốc (Hiển thị) <span class="text-danger">*</span></label><input type="number" v-model="form.price" class="form-control fs-7"></div>
+              <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM Gốc (Hiển thị)</label><input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống..."></div>
               
               <div class="col-12 mt-3">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Link hình ảnh chính</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Link hình ảnh đại diện</label>
                 <input type="text" v-model="form.imageUrl" class="form-control fs-7" placeholder="Nhập link hình ảnh bìa">
               </div>
 
               <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mô tả ngắn</label><textarea v-model="form.description" class="form-control fs-7" rows="2"></textarea></div>
 
               <div class="col-12 mt-4">
-                <div class="border rounded bg-light p-3">
-                  <h6 class="fw-bold text-dark fs-8 text-uppercase mb-3">Tùy chọn mặc định của Ảnh chính</h6>
+                <div class="border rounded bg-primary-subtle border-primary-subtle p-3">
+                  <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-black text-primary fs-7 text-uppercase m-0">
+                      <i class="bi bi-magic me-1"></i> Trình tạo Ma trận Biến thể (SKU)
+                    </h6>
+                  </div>
                   <div class="row g-2">
-                    <div class="col-md-4">
-                      <label class="fs-9 fw-bold text-muted mb-1">Tên màu (Của ảnh chính)</label>
-                      <input type="text" v-model="form.mainColorName" class="form-control form-control-sm fs-8" placeholder="VD: Đen, Trắng...">
+                    <div class="col-md-5">
+                      <label class="fs-9 fw-bold text-muted mb-1">Các Màu Sắc (Cách nhau bằng dấu phẩy)</label>
+                      <input type="text" v-model="setupColors" class="form-control form-control-sm fs-8 border-primary" placeholder="VD: Đen, Trắng, Xanh">
                     </div>
-                    <div class="col-md-4">
-                      <label class="fs-9 fw-bold text-muted mb-1">Tên nhóm phân loại 2</label>
-                      <input type="text" v-model="form.capacityLabel" class="form-control form-control-sm fs-8 text-primary fw-bold" placeholder="VD: Dung lượng, Size, Loại...">
+                    <div class="col-md-5">
+                      <label class="fs-9 fw-bold text-muted mb-1">Các Phân loại 2 (Cách nhau bằng dấu phẩy)</label>
+                      <input type="text" v-model="setupOption2s" class="form-control form-control-sm fs-8 border-primary" placeholder="VD: 64GB, 128GB (hoặc để trống)">
                     </div>
-                    <div class="col-md-4">
-                      <label class="fs-9 fw-bold text-muted mb-1">Giá trị mặc định phân loại 2</label>
-                      <input type="text" v-model="form.mainCapacityName" class="form-control form-control-sm fs-8" placeholder="VD: 256GB, Size M...">
+                    <div class="col-md-2 d-flex align-items-end">
+                      <button @click="generateMatrix" class="btn btn-primary btn-sm w-100 fw-bold fs-8 shadow-sm">
+                        Tạo tổ hợp <i class="bi bi-arrow-right"></i>
+                      </button>
                     </div>
                   </div>
+                  <div class="fs-9 text-muted mt-2 fst-italic">* Yên tâm! Bấm tạo tổ hợp sẽ CHỈ THÊM các dòng mới, không xóa các dòng bạn đã nhập ở dưới.</div>
                 </div>
               </div>
               
-              <div class="col-12 mt-4">
+              <div class="col-12 mt-3">
                 <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-3">
-                  <div>
-                    <label class="fs-8 fw-bold text-dark text-uppercase mb-0">Các màu sắc khác (Đổi giá nếu cần)</label>
-                  </div>
-                  <button type="button" @click="addVariant" class="btn btn-sm btn-dark fs-8 fw-bold"><i class="bi bi-plus"></i> Thêm màu phụ</button>
+                  <label class="fs-8 fw-bold text-dark text-uppercase mb-0">Danh sách Biến thể chi tiết ({{ form.variants.length }} SKU)</label>
+                  <button type="button" @click="addSingleVariant" class="btn btn-sm btn-outline-dark fs-8 fw-bold"><i class="bi bi-plus"></i> Thêm 1 dòng thủ công</button>
                 </div>
                 
-                <div v-if="form.variants.length === 0" class="text-center text-muted fs-8 py-3 border rounded bg-light">
-                  Chưa có màu sắc phụ nào. Bấm "Thêm màu phụ" để tạo mới.
+                <div v-if="form.variants.length === 0" class="text-center text-muted fs-8 py-4 border rounded bg-light">
+                  Chưa có biến thể nào. Sử dụng trình tạo ma trận ở trên.
                 </div>
                 
-                <div v-for="(v, index) in form.variants" :key="'var-'+index" class="d-flex gap-2 mb-2 align-items-start p-2 border rounded bg-light">
-                  <div class="flex-grow-1 row g-2">
-                    <div class="col-md-6">
-                      <input type="text" v-model="v.colorName" class="form-control form-control-sm fs-8 fw-bold" placeholder="Tên màu (VD: Đen)">
-                    </div>
-                    <div class="col-md-6">
-                      <input type="text" v-model="v.imageUrl" class="form-control form-control-sm fs-8" placeholder="Link hình ảnh màu này">
-                    </div>
-                    <div class="col-md-6">
-                      <input type="number" v-model="v.price" class="form-control form-control-sm fs-8" placeholder="Giá bán riêng (0 = Giá gốc)">
-                    </div>
-                    <div class="col-md-6">
-                      <input type="number" v-model="v.salePrice" class="form-control form-control-sm fs-8" placeholder="Giá KM riêng">
-                    </div>
-                  </div>
-                  <button type="button" @click="removeVariant(index)" class="btn btn-sm btn-outline-danger border-0 shadow-none h-100">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
-                </div>
-              </div>
-
-              <div class="col-12 mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-3">
-                  <div>
-                    <label class="fs-8 fw-bold text-dark text-uppercase mb-0">Phân loại 2 khác (Thay đổi giá)</label>
-                    <div class="fs-9 text-muted mt-1">Lưu ý: Hệ thống ưu tiên lấy giá của phân loại này thay vì giá gốc.</div>
-                  </div>
-                  <button type="button" @click="addCapacity" class="btn btn-sm btn-dark fs-8 fw-bold"><i class="bi bi-plus"></i> Thêm phân loại 2</button>
-                </div>
-                
-                <div v-if="form.capacities.length === 0" class="text-center text-muted fs-8 py-3 border rounded bg-light">
-                  Sản phẩm này không chia giá theo phân loại 2.
-                </div>
-                
-                <div v-for="(cap, index) in form.capacities" :key="'cap-'+index" class="d-flex gap-2 mb-2 align-items-start p-2 border rounded bg-light">
-                  <div class="flex-grow-1 row g-2">
-                    <div class="col-md-4">
-                      <label class="fs-9 fw-bold text-muted mb-1">Tên phân loại</label>
-                      <input type="text" v-model="cap.capacityName" class="form-control form-control-sm fs-8 fw-bold" placeholder="VD: 512GB, Size L...">
-                    </div>
-                    <div class="col-md-4">
-                      <label class="fs-9 fw-bold text-muted mb-1">Giá bán riêng</label>
-                      <input type="number" v-model="cap.price" class="form-control form-control-sm fs-8" placeholder="Nhập giá bán">
-                    </div>
-                    <div class="col-md-4">
-                      <label class="fs-9 fw-bold text-muted mb-1">Giá KM riêng</label>
-                      <input type="number" v-model="cap.salePrice" class="form-control form-control-sm fs-8" placeholder="Để trống nếu không giảm">
-                    </div>
-                  </div>
-                  <button type="button" @click="removeCapacity(index)" class="btn btn-sm btn-outline-danger border-0 shadow-none mt-4">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
-                </div>
-              </div>
-
-              <div class="col-12 mt-4">
-                <div class="d-flex justify-content-between align-items-center mb-2 border-top pt-3">
-                  <div>
-                    <label class="fs-8 fw-bold text-dark text-uppercase mb-0">Các tùy chọn hiển thị (Thông tin thêm)</label>
-                    <div class="fs-9 text-muted mt-1">Ví dụ: Màn hình - 120Hz, Switch - Linear Red...</div>
-                  </div>
-                  <button type="button" @click="addAttribute" class="btn btn-sm btn-dark fs-8 fw-bold"><i class="bi bi-plus"></i> Thêm tùy chọn</button>
-                </div>
-                
-                <div v-if="form.attributes.length === 0" class="text-center text-muted fs-8 py-3 border rounded bg-light">
-                  Sản phẩm này chưa có tùy chọn thông tin thêm.
-                </div>
-                
-                <div v-for="(attr, index) in form.attributes" :key="'attr-'+index" class="d-flex gap-2 mb-2 align-items-start p-2 border rounded bg-light">
-                  <div class="flex-grow-1 row g-2">
-                    <div class="col-md-5">
-                      <input type="text" v-model="attr.title" class="form-control form-control-sm fs-8 fw-bold" placeholder="Tên (VD: Switch)" maxlength="15">
-                    </div>
-                    <div class="col-md-7">
-                      <input type="text" v-model="attr.desc" class="form-control form-control-sm fs-8" placeholder="Mô tả (VD: Linear Red)" maxlength="30">
-                    </div>
-                  </div>
-                  <button type="button" @click="removeAttribute(index)" class="btn btn-sm btn-outline-danger border-0 shadow-none">
-                    <i class="bi bi-x-lg"></i>
-                  </button>
+                <div class="table-responsive" v-else>
+                  <table class="table table-bordered table-sm align-middle fs-8">
+                    <thead class="bg-light">
+                      <tr class="text-center text-muted text-uppercase">
+                        <th style="width: 15%">Màu Sắc <span class="text-danger">*</span></th>
+                        <th style="width: 15%">Phân loại 2 (ROM/Size)</th>
+                        <th style="width: 25%">Link Hình Ảnh</th>
+                        <th style="width: 15%">Giá Bán</th>
+                        <th style="width: 15%">Giá KM</th>
+                        <th style="width: 10%">Kho (Đọc)</th>
+                        <th style="width: 5%">Xóa</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr v-for="(v, index) in form.variants" :key="'matrix-'+index">
+                        <td><input type="text" v-model="v.colorName" class="form-control form-control-sm fs-8 fw-bold" placeholder="VD: Đen"></td>
+                        <td><input type="text" v-model="v.option2Value" class="form-control form-control-sm fs-8" placeholder="VD: 64GB"></td>
+                        <td><input type="text" v-model="v.imageUrl" class="form-control form-control-sm fs-8" placeholder="Link ảnh..."></td>
+                        <td><input type="number" v-model="v.price" class="form-control form-control-sm fs-8 text-end" placeholder="0"></td>
+                        <td><input type="number" v-model="v.salePrice" class="form-control form-control-sm fs-8 text-end" placeholder="KM"></td>
+                        <td><input type="number" :value="v.stockQuantity" class="form-control form-control-sm fs-8 text-center text-danger fw-bold bg-white" disabled></td>
+                        <td class="text-center">
+                          <button type="button" @click="removeVariant(index)" class="btn btn-sm btn-link text-danger p-0 shadow-none"><i class="bi bi-trash"></i></button>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
@@ -297,21 +247,18 @@ const currentId = ref(null);
 
 const stats = reactive({ total: 0, lowStock: 0, totalStockQuantity: 0 });
 
+const setupColors = ref('');
+const setupOption2s = ref('');
+
 const form = reactive({ 
   name: '', 
   categoryId: null,
   brandId: null,
   price: 0, 
   salePrice: null, 
-  stockQuantity: 0, 
   imageUrl: '', 
-  mainColorName: '',
-  capacityLabel: 'Dung lượng (ROM)', // THÊM TÊN NHÓM PHÂN LOẠI
-  mainCapacityName: '', 
   description: '',
-  variants: [],
-  capacities: [],
-  attributes: []
+  variants: []
 });
 
 const calculateDiscount = (price, salePrice) => {
@@ -375,36 +322,47 @@ watch(searchQuery, () => {
   currentPage.value = 1;
 });
 
-const addVariant = () => {
-  form.variants.push({ colorName: '', imageUrl: '', price: 0, salePrice: '' });
+const generateMatrix = () => {
+  let colors = setupColors.value.split(',').map(s => s.trim()).filter(Boolean);
+  let opts = setupOption2s.value.split(',').map(s => s.trim()).filter(Boolean);
+  
+  if (colors.length === 0) colors = ['Tiêu chuẩn'];
+  if (opts.length === 0) opts = ['']; 
+
+  colors.forEach(c => {
+    opts.forEach(o => {
+      const exists = form.variants.some(v => v.colorName === c && (v.option2Value || '') === o);
+      
+      if (!exists) {
+        form.variants.push({ 
+          colorName: c, 
+          option2Value: o, 
+          price: 0, 
+          salePrice: null, 
+          stockQuantity: 0, 
+          imageUrl: '' 
+        });
+      }
+    });
+  });
+};
+
+const addSingleVariant = () => {
+  form.variants.push({ colorName: 'Mới', option2Value: '', imageUrl: '', price: 0, salePrice: null, stockQuantity: 0 });
 };
 
 const removeVariant = (index) => {
   form.variants.splice(index, 1);
 };
 
-const addCapacity = () => {
-  form.capacities.push({ capacityName: '', price: 0, salePrice: '' });
-};
-
-const removeCapacity = (index) => {
-  form.capacities.splice(index, 1);
-};
-
-const addAttribute = () => {
-  form.attributes.push({ title: '', desc: '' });
-};
-
-const removeAttribute = (index) => {
-  form.attributes.splice(index, 1);
-};
-
 const openAddModal = () => {
   isEditing.value = false;
   currentId.value = null;
+  setupColors.value = '';
+  setupOption2s.value = '';
   Object.assign(form, { 
     name: '', categoryId: null, brandId: null, price: 0, salePrice: null, 
-    stockQuantity: 0, imageUrl: '', mainColorName: '', capacityLabel: 'Dung lượng (ROM)', mainCapacityName: '', description: '', variants: [], capacities: [], attributes: [] 
+    imageUrl: '', description: '', variants: []
   });
   showModal.value = true;
 };
@@ -417,45 +375,17 @@ const openEditModal = (p) => {
   form.brandId = p.brandId; 
   form.salePrice = p.salePrice || null; 
   
-  form.mainColorName = '';
-  let otherVariants = [];
-
   if (p.variants && p.variants.length > 0) {
-    const mainVariantIndex = p.variants.findIndex(v => v.imageUrl === p.imageUrl);
-    if (mainVariantIndex !== -1) {
-      form.mainColorName = p.variants[mainVariantIndex].colorName;
-      otherVariants = p.variants.filter((v, idx) => idx !== mainVariantIndex);
-    } else {
-      otherVariants = [...p.variants];
-    }
+    form.variants = JSON.parse(JSON.stringify(p.variants));
+    const uniqueColors = [...new Set(p.variants.map(v => v.colorName).filter(Boolean))];
+    const uniqueOpts = [...new Set(p.variants.map(v => v.option2Value).filter(Boolean))];
+    setupColors.value = uniqueColors.join(', ');
+    setupOption2s.value = uniqueOpts.join(', ');
+  } else {
+    form.variants = [];
+    setupColors.value = '';
+    setupOption2s.value = '';
   }
-  form.variants = JSON.parse(JSON.stringify(otherVariants));
-
-  form.mainCapacityName = '';
-  form.capacityLabel = 'Dung lượng (ROM)';
-  let otherCapacities = [];
-  if (p.capacities) {
-      try {
-          let parsedCaps = JSON.parse(p.capacities);
-          if (Array.isArray(parsedCaps)) {
-              // Tương thích ngược với dữ liệu cũ
-              if (parsedCaps.length > 0) {
-                  form.mainCapacityName = parsedCaps[0].capacityName;
-                  otherCapacities = parsedCaps.slice(1);
-              }
-          } else {
-              // Định dạng JSON mới chứa label
-              form.capacityLabel = parsedCaps.label || 'Dung lượng (ROM)';
-              let vals = parsedCaps.values || [];
-              if (vals.length > 0) {
-                  form.mainCapacityName = vals[0].capacityName;
-                  otherCapacities = vals.slice(1);
-              }
-          }
-      } catch(e) {}
-  }
-  form.capacities = otherCapacities;
-  form.attributes = p.attributes ? JSON.parse(p.attributes) : [];
 
   showModal.value = true;
 };
@@ -473,53 +403,31 @@ const saveProduct = async () => {
   if (form.price === null || form.price === undefined || form.price < 0) {
     alert("Vui lòng nhập giá bán lớn hơn hoặc bằng 0!"); return;
   }
+  if (form.variants.length === 0) {
+    alert("Bạn phải tạo ít nhất 1 biến thể (Bấm nút Tạo tổ hợp)!"); return;
+  }
 
   let finalVariants = form.variants.filter(v => v.colorName && v.colorName.trim() !== '').map(v => ({
       ...v,
+      option2Value: v.option2Value && v.option2Value.trim() !== '' ? v.option2Value.trim() : null,
       price: Number(v.price) || 0,
-      salePrice: v.salePrice && Number(v.salePrice) > 0 ? Number(v.salePrice) : null
+      salePrice: v.salePrice && Number(v.salePrice) > 0 ? Number(v.salePrice) : null,
+      stockQuantity: v.stockQuantity || 0 
   }));
-
-  if (form.mainColorName && form.mainColorName.trim() !== '' && form.imageUrl) {
-    finalVariants.unshift({
-      colorName: form.mainColorName.trim(),
-      imageUrl: form.imageUrl,
-      price: Number(form.price) || 0,
-      salePrice: form.salePrice ? Number(form.salePrice) : null
-    });
-  }
-
-  let validCapacities = form.capacities.filter(c => c.capacityName && c.capacityName.trim() !== '').map(c => ({
-      capacityName: c.capacityName.trim(),
-      price: Number(c.price) || 0,
-      salePrice: c.salePrice && Number(c.salePrice) > 0 ? Number(c.salePrice) : null
-  }));
-
-  if (form.mainCapacityName && form.mainCapacityName.trim() !== '') {
-    validCapacities.unshift({
-        capacityName: form.mainCapacityName.trim(),
-        price: Number(form.price) || 0,
-        salePrice: form.salePrice ? Number(form.salePrice) : null
-    });
-  }
-
-  let validAttributes = form.attributes.filter(a => a.title && a.title.trim() !== '');
 
   try {
     const headers = getAuthHeader();
-    const payload = { ...form, variants: finalVariants };
-    payload.salePrice = payload.salePrice ? Number(payload.salePrice) : null;
-    payload.attributes = validAttributes.length > 0 ? JSON.stringify(validAttributes) : null;
-
-    // LƯU Ý: Chuyển mảng thành dạng object có chứa nhãn label để Backend lưu thành 1 cục String
-    if (validCapacities.length > 0) {
-         payload.capacities = JSON.stringify({
-             label: form.capacityLabel && form.capacityLabel.trim() !== '' ? form.capacityLabel.trim() : 'Phân loại',
-             values: validCapacities
-         });
-    } else {
-         payload.capacities = null;
-    }
+    const payload = { 
+      name: form.name,
+      categoryId: form.categoryId,
+      brandId: form.brandId,
+      price: Number(form.price),
+      salePrice: form.salePrice ? Number(form.salePrice) : null,
+      imageUrl: form.imageUrl,
+      description: form.description,
+      variants: finalVariants,
+      attributes: null // Đã xóa attributes tĩnh, gửi null để Backend dọn dẹp
+    };
 
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/product/${currentId.value}`, payload, { headers });

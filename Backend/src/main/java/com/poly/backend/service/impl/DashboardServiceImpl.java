@@ -42,7 +42,7 @@ public class DashboardServiceImpl implements DashboardService {
         double orderGrowth = calculateGrowth(ordersThisPeriod.doubleValue(), ordersLastPeriod.doubleValue());
 
         // --- TÍNH SẢN PHẨM HẾT HÀNG (Lấy ở hiện tại) ---
-        Long outOfStock = productDAO.countByStockQuantityLessThan(16);
+        Long outOfStock = productDAO.countByTotalStockLessThan(16);
 
         return DashboardStatsDTO.builder()
                 .totalRevenue(revThisPeriod.doubleValue()) // Trả về doanh thu 7 ngày qua

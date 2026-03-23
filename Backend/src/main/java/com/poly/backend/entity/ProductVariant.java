@@ -21,23 +21,32 @@ public class ProductVariant {
     @Column(name = "variant_id")
     private Integer variantId;
 
-    // Liên kết n-1 về Product
     @ManyToOne
     @JoinColumn(name = "product_id", nullable = false)
-    @JsonIgnore // Tránh lỗi đệ quy lặp vô tận khi parse JSON
+    @JsonIgnore
     private Product product;
+
+    // ĐÃ THÊM: Mã SKU
+    @Column(name = "sku_code", unique = true)
+    private String skuCode;
 
     @Column(name = "color_name", nullable = false)
     private String colorName;
 
+    // ĐÃ THÊM: Phân loại 2
+    @Column(name = "option2_value")
+    private String option2Value;
+
     @Column(name = "image_url")
     private String imageUrl;
 
-    // MỚI THÊM: Mapping chuẩn xác với cột price trong DB
     @Column(name = "price")
     private BigDecimal price;
 
-    // MỚI THÊM: Mapping chuẩn xác với cột sale_price trong DB
     @Column(name = "sale_price")
     private BigDecimal salePrice;
+
+    // ĐÃ THÊM: Số lượng tồn kho theo biến thể
+    @Column(name = "stock_quantity", nullable = false)
+    private Integer stockQuantity;
 }

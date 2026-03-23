@@ -21,21 +21,13 @@
                  @error="handleImageError">
           </div>
           
-          <div class="d-flex gap-2 thumbnail-list">
-            <div @click="setMainImage(getImageUrl(product.imageUrl))" 
+          <div class="d-flex gap-2 thumbnail-list flex-wrap">
+            <div v-for="(imgUrl, index) in uniqueThumbnails" :key="'thumb-'+index"
+                 @click="setMainImage(getImageUrl(imgUrl))" 
                  class="thumb-item border rounded-2 cursor-pointer overflow-hidden" 
-                 :class="{'border-dark border-2': currentImage === getImageUrl(product.imageUrl)}">
-              <img :src="getImageUrl(product.imageUrl)" class="img-fluid object-fit-cover w-100 h-100" style="mix-blend-mode: multiply;" @error="handleImageError">
+                 :class="{'border-dark border-2': currentImage === getImageUrl(imgUrl)}">
+              <img :src="getImageUrl(imgUrl)" class="img-fluid object-fit-cover w-100 h-100" style="mix-blend-mode: multiply;" @error="handleImageError">
             </div>
-            
-            <template v-for="variant in product.variants" :key="'thumb-'+variant.variantId">
-              <div v-if="variant.imageUrl && variant.imageUrl !== product.imageUrl"
-                   @click="selectVariant(variant)" 
-                   class="thumb-item border rounded-2 cursor-pointer overflow-hidden"
-                   :class="{'border-dark border-2': currentImage === getImageUrl(variant.imageUrl)}">
-                <img :src="getImageUrl(variant.imageUrl)" class="img-fluid object-fit-cover w-100 h-100" style="mix-blend-mode: multiply;" @error="handleImageError">
-              </div>
-            </template>
           </div>
         </div>
 
@@ -48,7 +40,7 @@
             </div>
             <span class="text-muted">{{ reviews.length }} đánh giá</span>
             <span class="text-muted">•</span>
-            <span class="text-dark fw-bold">● {{ product.stockQuantity > 0 ? 'CÒN HÀNG' : 'HẾT HÀNG' }}</span>
+            <span class="text-dark fw-bold">● {{ stockStatusText }}</span>
           </div>
           
           <div class="d-flex align-items-end gap-3 mb-4">
@@ -58,50 +50,36 @@
           </div>
           <p class="fs-8 text-muted mb-4 line-height-lg">{{ product.description }}</p>
 
-          <div class="color-section mb-4" v-if="product.variants && product.variants.length > 0">
+          <div class="color-section mb-4" v-if="uniqueColors.length > 0 && uniqueColors[0] !== 'Tiêu chuẩn'">
             <div class="fw-bold fs-8 text-dark mb-2 text-uppercase">MÀU SẮC</div>
             <div class="d-flex gap-2 flex-wrap">
               <button
-                v-for="variant in product.variants"
-                :key="variant.variantId"
-                @click="selectVariant(variant)"
+                v-for="color in uniqueColors"
+                :key="color"
+                @click="selectColor(color)"
                 class="btn bg-white d-flex align-items-center gap-2 px-3 py-2 rounded-2 border transition-all shadow-none"
-                :class="selectedVariantId === variant.variantId ? 'border-primary border-2' : 'border-light-subtle hover-border-dark'"
+                :class="selectedColor === color ? 'border-primary border-2' : 'border-light-subtle hover-border-dark'"
               >
-                <img v-if="variant.imageUrl" :src="getImageUrl(variant.imageUrl)" class="rounded-1 object-fit-cover border" style="width: 24px; height: 24px; mix-blend-mode: multiply;" alt="color">
-                <span class="fs-8 fw-bold" :class="selectedVariantId === variant.variantId ? 'text-primary' : 'text-dark'">
-                  {{ variant.colorName }}
+                <img v-if="getColorImage(color)" :src="getImageUrl(getColorImage(color))" class="rounded-1 object-fit-cover border" style="width: 24px; height: 24px; mix-blend-mode: multiply;" alt="color">
+                <span class="fs-8 fw-bold" :class="selectedColor === color ? 'text-primary' : 'text-dark'">
+                  {{ color }}
                 </span>
               </button>
             </div>
           </div>
 
-          <div class="capacity-section mb-4" v-if="parsedCapacities && parsedCapacities.length > 0">
-            <div class="fw-bold fs-8 text-dark mb-2 text-uppercase">{{ capacityLabel }}</div>
+          <div class="capacity-section mb-4" v-if="uniqueOption2s.length > 0">
+            <div class="fw-bold fs-8 text-dark mb-2 text-uppercase">TÙY CHỌN PHÂN LOẠI</div>
             <div class="d-flex gap-2 flex-wrap">
               <button
-                v-for="(cap, index) in parsedCapacities"
-                :key="index"
-                @click="selectCapacity(cap)"
+                v-for="opt in uniqueOption2s"
+                :key="opt"
+                @click="selectedOption2 = opt"
                 class="btn bg-white px-4 py-2 rounded-2 border transition-all shadow-none"
-                :class="selectedCapacity && selectedCapacity.capacityName === cap.capacityName ? 'border-primary border-2 fw-bold text-primary' : 'border-light-subtle hover-border-dark text-dark'"
+                :class="selectedOption2 === opt ? 'border-primary border-2 fw-bold text-primary' : 'border-light-subtle hover-border-dark text-dark'"
               >
-                <span class="fs-8">{{ cap.capacityName }}</span>
+                <span class="fs-8">{{ opt }}</span>
               </button>
-            </div>
-          </div>
-
-          <div class="switch-section mb-4" v-if="parsedAttributes && parsedAttributes.length > 0">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <span class="fw-bold fs-8 text-dark text-uppercase">TÙY CHỌN </span>
-              <a href="#" class="text-muted fs-8 text-decoration-none">HƯỚNG DẪN CHỌN</a>
-            </div>
-            <div class="d-flex gap-2 flex-wrap">
-              <div v-for="(attr, index) in parsedAttributes" :key="index"
-                   class="attr-box border border-dark rounded-2 p-2 text-center flex-grow-1 cursor-pointer hover-bg-light">
-                <div class="fs-8 fw-bold text-dark">{{ attr.title }}</div>
-                <div class="fs-9 text-muted">{{ attr.desc }}</div>
-              </div>
             </div>
           </div>
 
@@ -112,14 +90,14 @@
                 <span class="fw-bold px-3">{{ quantity }}</span>
                 <button class="btn btn-sm btn-link text-dark text-decoration-none fw-bold px-2 shadow-none" @click="quantity++">+</button>
               </div>
-             <button @click="addToCartMain" :disabled="product.stockQuantity <= 0" class="btn btn-neon fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2 shadow-sm text-dark">
+             <button @click="addToCartMain" :disabled="!selectedVariantData || selectedVariantData.stockQuantity <= 0" class="btn btn-neon fw-bold flex-grow-1 d-flex align-items-center justify-content-center gap-2 shadow-sm text-dark">
                 <i class="bi bi-cart-plus fs-5"></i> THÊM VÀO GIỎ HÀNG
               </button>
               <button class="btn btn-outline-dark rounded-2 px-3 d-flex align-items-center justify-content-center shadow-none">
                 <i class="bi bi-heart"></i>
               </button>
             </div>
-            <button @click="buyNowMain" :disabled="product.stockQuantity <= 0" class="btn btn-neon fw-bold w-100 py-3 fs-6 text-dark shadow-sm">
+            <button @click="buyNowMain" :disabled="!selectedVariantData || selectedVariantData.stockQuantity <= 0" class="btn btn-neon fw-bold w-100 py-3 fs-6 text-dark shadow-sm">
               MUA NGAY
             </button>
           </div>
@@ -231,59 +209,75 @@ const reviews = ref([]);
 const quantity = ref(1);
 
 const currentImage = ref('');
-const selectedVariantId = ref(null);
-const lastClicked = ref('none'); // LƯU VẾT HÀNH ĐỘNG: 'color' hoặc 'capacity'
+const selectedColor = ref('');
+const selectedOption2 = ref('');
+const lastClicked = ref('none');
 
-const capacityLabel = ref(''); 
-const parsedCapacities = ref([]);
-const selectedCapacity = ref(null);
-const parsedAttributes = ref([]); 
+const uniqueThumbnails = computed(() => {
+  if (!product.value) return [];
+  const urls = new Set();
+  if (product.value.imageUrl) urls.add(product.value.imageUrl);
+  if (product.value.variants) {
+    product.value.variants.forEach(v => {
+      if (v.imageUrl) urls.add(v.imageUrl);
+    });
+  }
+  return Array.from(urls);
+});
+
+const uniqueColors = computed(() => {
+  if (!product.value || !product.value.variants) return [];
+  return [...new Set(product.value.variants.map(v => v.colorName).filter(Boolean))];
+});
+
+const uniqueOption2s = computed(() => {
+  if (!product.value || !product.value.variants) return [];
+  return [...new Set(product.value.variants.map(v => v.option2Value).filter(Boolean))];
+});
 
 const selectedVariantData = computed(() => {
   if (!product.value || !product.value.variants) return null;
-  return product.value.variants.find(v => v.variantId === selectedVariantId.value);
+  return product.value.variants.find(v => 
+    v.colorName === selectedColor.value && 
+    ((!v.option2Value && !selectedOption2.value) || v.option2Value === selectedOption2.value)
+  );
 });
 
 const displayName = computed(() => {
   if (!product.value) return '';
-  return selectedCapacity.value ? `${product.value.name} ${selectedCapacity.value.capacityName}` : product.value.name;
+  let name = product.value.name;
+  if (selectedColor.value && selectedColor.value !== 'Tiêu chuẩn') name += ` - ${selectedColor.value}`;
+  if (selectedOption2.value) name += ` ${selectedOption2.value}`;
+  return name;
 });
 
-// LOGIC TÍNH GIÁ MỚI: Ưu tiên dựa trên hành động bấm cuối cùng của user
 const currentPrice = computed(() => {
   if (!product.value) return 0;
-  
-  // 1. Nếu hành động cuối là bấm Màu sắc, và màu có giá tiền -> Lấy giá màu
   if (lastClicked.value === 'color' && selectedVariantData.value && selectedVariantData.value.price > 0) {
     return selectedVariantData.value.price;
   }
-  // 2. Nếu hành động cuối là bấm Dung lượng, và dung lượng có giá tiền -> Lấy giá dung lượng
-  if (lastClicked.value === 'capacity' && selectedCapacity.value && selectedCapacity.value.price > 0) {
-    return selectedCapacity.value.price;
-  }
-  
-  // 3. Dự phòng (khi mới load trang): Ưu tiên Dung lượng > Màu sắc > Gốc
-  if (selectedCapacity.value && selectedCapacity.value.price > 0) return selectedCapacity.value.price;
   if (selectedVariantData.value && selectedVariantData.value.price > 0) return selectedVariantData.value.price;
-  
   return product.value.price;
 });
 
 const currentSalePrice = computed(() => {
   if (!product.value) return null;
-  
   if (lastClicked.value === 'color' && selectedVariantData.value && selectedVariantData.value.price > 0) {
     return selectedVariantData.value.salePrice || null;
   }
-  if (lastClicked.value === 'capacity' && selectedCapacity.value && selectedCapacity.value.price > 0) {
-    return selectedCapacity.value.salePrice || null;
-  }
-  
-  if (selectedCapacity.value && selectedCapacity.value.price > 0) return selectedCapacity.value.salePrice || null;
   if (selectedVariantData.value && selectedVariantData.value.price > 0) return selectedVariantData.value.salePrice || null;
-  
   return product.value.salePrice;
 });
+
+const stockStatusText = computed(() => {
+  if (!selectedVariantData.value) return 'LỰA CHỌN KHÔNG CÓ SẴN';
+  return selectedVariantData.value.stockQuantity > 0 ? `CÒN HÀNG (${selectedVariantData.value.stockQuantity})` : 'TẠM HẾT HÀNG';
+});
+
+const getColorImage = (color) => {
+   const match = product.value.variants.find(v => v.colorName === color && v.imageUrl);
+   return match ? match.imageUrl : null;
+};
 
 const calculateDiscount = (price, salePrice) => {
   if (!price || !salePrice || price <= 0 || salePrice >= price) return 0;
@@ -312,28 +306,14 @@ const formatDate = (dateString) => {
 
 const setMainImage = (url) => {
   currentImage.value = url;
-  if (product.value.variants && product.value.variants.length > 0) {
-    const matched = product.value.variants.find(v => v.imageUrl && getImageUrl(v.imageUrl) === url);
-    selectedVariantId.value = matched ? matched.variantId : null;
-  } else {
-    selectedVariantId.value = null;
-  }
 };
 
-// CẬP NHẬT HÀM CLICK ĐỂ ĐÁNH DẤU HÀNH ĐỘNG
-const selectVariant = (variant) => {
-  selectedVariantId.value = variant.variantId;
-  lastClicked.value = 'color'; // Đánh dấu vừa click vào Màu
-  if (variant.imageUrl) {
-    currentImage.value = getImageUrl(variant.imageUrl);
-  } else {
-    currentImage.value = getImageUrl(product.value.imageUrl);
-  }
-};
-
-const selectCapacity = (cap) => {
-  selectedCapacity.value = cap;
-  lastClicked.value = 'capacity'; // Đánh dấu vừa click vào Dung lượng
+const selectColor = (color) => {
+  selectedColor.value = color;
+  lastClicked.value = 'color';
+  const img = getColorImage(color);
+  if (img) currentImage.value = getImageUrl(img);
+  else currentImage.value = getImageUrl(product.value.imageUrl);
 };
 
 const fetchProductDetail = async (id) => {
@@ -342,48 +322,10 @@ const fetchProductDetail = async (id) => {
     product.value = res.data;
     
     currentImage.value = getImageUrl(product.value.imageUrl);
-    selectedVariantId.value = null;
     lastClicked.value = 'none';
-    
-    parsedCapacities.value = [];
-    selectedCapacity.value = null;
-    capacityLabel.value = '';
-    
-    if (product.value.capacities) {
-      try {
-        let parsed = JSON.parse(product.value.capacities);
-        if (Array.isArray(parsed)) {
-            capacityLabel.value = 'DUNG LƯỢNG (ROM)';
-            parsedCapacities.value = parsed;
-        } else {
-            capacityLabel.value = parsed.label;
-            parsedCapacities.value = parsed.values;
-        }
-        
-        if (parsedCapacities.value.length > 0) {
-          selectedCapacity.value = parsedCapacities.value[0];
-          lastClicked.value = 'capacity'; // Mặc định dung lượng đang được ưu tiên
-        }
-      } catch (e) { console.error("Lỗi parse capacities", e); }
-    }
 
-    parsedAttributes.value = [];
-    if (product.value.attributes) {
-      try {
-        parsedAttributes.value = JSON.parse(product.value.attributes);
-      } catch (e) { console.error("Lỗi parse attributes", e); }
-    }
-
-    if (product.value.variants && product.value.variants.length > 0) {
-      const mainVariantIndex = product.value.variants.findIndex(v => v.imageUrl && v.imageUrl === product.value.imageUrl);
-      if (mainVariantIndex > 0) {
-        const [mainVariant] = product.value.variants.splice(mainVariantIndex, 1);
-        product.value.variants.unshift(mainVariant);
-      }
-      if (product.value.variants[0].imageUrl === product.value.imageUrl) {
-        selectedVariantId.value = product.value.variants[0].variantId;
-      }
-    }
+    if (uniqueColors.value.length > 0) selectedColor.value = uniqueColors.value[0];
+    if (uniqueOption2s.value.length > 0) selectedOption2.value = uniqueOption2s.value[0];
 
     await Promise.all([fetchSimilarProducts(), fetchReviews()]);
   } catch (e) { console.error(e); }
@@ -415,7 +357,7 @@ const getCurrentUserId = () => {
 };
 
 const handleAddToCart = async (productObj, qtyToAdd) => {
-  if (!productObj) return;
+  if (!productObj || !selectedVariantData.value) return;
   const pId = productObj.productId || productObj.id;
   const userId = getCurrentUserId();
 
@@ -439,7 +381,7 @@ const handleAddToCart = async (productObj, qtyToAdd) => {
         name: displayName.value,
         price: currentSalePrice.value || currentPrice.value,
         quantity: qtyToAdd,
-        img: productObj.imageUrl || 'https://via.placeholder.com/150'
+        img: selectedVariantData.value.imageUrl || productObj.imageUrl || 'https://via.placeholder.com/150'
       });
     }
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));

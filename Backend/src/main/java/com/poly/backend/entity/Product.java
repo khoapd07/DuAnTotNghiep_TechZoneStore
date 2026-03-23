@@ -5,10 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
-
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @Data
@@ -24,17 +22,17 @@ public class Product {
     @Column(name = "product_id")
     private Integer productId;
 
-    @Column(name = "name", columnDefinition = "NVARCHAR(255)", nullable = false)
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "price", precision = 18, scale = 2, nullable = false)
+    @Column(name = "price", nullable = false)
     private BigDecimal price;
 
-    @Column(name = "sale_price", precision = 18, scale = 2)
+    @Column(name = "sale_price")
     private BigDecimal salePrice;
 
-    @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity;
+    // ĐÃ XÓA: stockQuantity
+    // ĐÃ XÓA: capacities
 
     @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
     private String description;
@@ -43,29 +41,32 @@ public class Product {
     private String imageUrl;
 
     @Column(name = "active")
-    @Builder.Default
-    private Boolean active = true;
+    private Boolean active;
 
-    @CreationTimestamp
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    // --- RELATIONSHIPS ---
-
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "category_id")
     private Category category;
 
-    private String capacities;
-
-    private String attributes;
-
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne
     @JoinColumn(name = "brand_id")
     private Brand brand;
 
+    @Column(name = "created_at")
+    private Date createdAt;
 
+    @Column(name = "attributes", columnDefinition = "NVARCHAR(MAX)")
+    private String attributes;
 
     @OneToMany(mappedBy = "product", fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductVariant> variants;
+
+    // ĐÃ THÊM: Hàm ảo để tự động tính tổng tồn kho từ các Variant
+    public Integer getTotalStock() {
+        if (variants == null || variants.isEmpty()) {
+            return 0;
+        }
+        return variants.stream()
+                .mapToInt(v -> v.getStockQuantity() != null ? v.getStockQuantity() : 0)
+                .sum();
+    }
 }

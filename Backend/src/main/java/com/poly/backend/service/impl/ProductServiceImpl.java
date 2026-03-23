@@ -3,6 +3,8 @@ package com.poly.backend.service.impl;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import com.poly.backend.dto.ProductDTO;
 import com.poly.backend.entity.ProductVariant;
@@ -79,6 +81,13 @@ public class ProductServiceImpl implements ProductService {
             List<ProductVariant> variants = new ArrayList<>();
             for (ProductVariant v : dto.getVariants()) {
                 v.setProduct(product);
+                if (v.getStockQuantity() == null) v.setStockQuantity(0);
+
+                // FIX LỖI: Tự động sinh mã SKU nếu rỗng để tránh vỡ SQL (Unique constraint)
+                if (v.getSkuCode() == null || v.getSkuCode().trim().isEmpty()) {
+                    v.setSkuCode("SKU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+                }
+
                 variants.add(v);
             }
             product.setVariants(variants);
@@ -100,17 +109,46 @@ public class ProductServiceImpl implements ProductService {
 
         mapToEntity(dto, existingProduct);
 
-        if (existingProduct.getVariants() != null) {
-            existingProduct.getVariants().clear();
-        } else {
-            existingProduct.setVariants(new ArrayList<>());
-        }
-
+        // FIX LỖI: Thuật toán cập nhật collection an toàn cho Hibernate
         if (dto.getVariants() != null) {
-            for (ProductVariant v : dto.getVariants()) {
-                v.setProduct(existingProduct);
-                existingProduct.getVariants().add(v);
+
+            // 1. Lấy danh sách ID các variant được truyền xuống (những cái được giữ lại)
+            List<Integer> newVariantIds = dto.getVariants().stream()
+                    .map(ProductVariant::getVariantId)
+                    .filter(vId -> vId != null)
+                    .collect(Collectors.toList());
+
+            // 2. Xóa các variant cũ đã bị xóa khỏi giao diện
+            existingProduct.getVariants().removeIf(v -> !newVariantIds.contains(v.getVariantId()));
+
+            // 3. Duyệt qua mảng mới để Update hoặc Insert thêm
+            for (ProductVariant newV : dto.getVariants()) {
+                if (newV.getVariantId() != null) {
+                    // Cập nhật biến thể có sẵn
+                    existingProduct.getVariants().stream()
+                            .filter(v -> v.getVariantId().equals(newV.getVariantId()))
+                            .findFirst()
+                            .ifPresent(existingV -> {
+                                existingV.setColorName(newV.getColorName());
+                                existingV.setOption2Value(newV.getOption2Value());
+                                existingV.setImageUrl(newV.getImageUrl());
+                                existingV.setPrice(newV.getPrice());
+                                existingV.setSalePrice(newV.getSalePrice());
+                                // TUYỆT ĐỐI KHÔNG CẬP NHẬT TỒN KHO ĐỂ BẢO TOÀN DỮ LIỆU
+                            });
+                } else {
+                    // Thêm biến thể mới hoàn toàn (do bấm nút Tạo Tổ Hợp)
+                    newV.setProduct(existingProduct);
+                    if (newV.getStockQuantity() == null) newV.setStockQuantity(0);
+
+                    // Tự động sinh mã SKU cho dòng mới
+                    newV.setSkuCode("SKU-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
+
+                    existingProduct.getVariants().add(newV);
+                }
             }
+        } else {
+            existingProduct.getVariants().clear();
         }
 
         Product updatedProduct = productDAO.save(existingProduct);
@@ -147,7 +185,7 @@ public class ProductServiceImpl implements ProductService {
                 .name(product.getName())
                 .price(product.getPrice())
                 .salePrice(product.getSalePrice())
-                .stockQuantity(product.getStockQuantity())
+                .stockQuantity(product.getTotalStock())
                 .description(product.getDescription())
                 .imageUrl(product.getImageUrl())
                 .active(product.getActive())
@@ -157,8 +195,7 @@ public class ProductServiceImpl implements ProductService {
                 .brandId(product.getBrand() != null ? product.getBrand().getBrandId() : null)
                 .brandName(product.getBrand() != null ? product.getBrand().getBrandName() : null)
                 .variants(product.getVariants())
-                .capacities(product.getCapacities())
-                .attributes(product.getAttributes()) // LẤY THUỘC TÍNH
+                .attributes(product.getAttributes())
                 .build();
     }
 
@@ -166,12 +203,10 @@ public class ProductServiceImpl implements ProductService {
         product.setName(dto.getName());
         product.setPrice(dto.getPrice());
         product.setSalePrice(dto.getSalePrice());
-        product.setStockQuantity(dto.getStockQuantity());
         product.setDescription(dto.getDescription());
         product.setImageUrl(dto.getImageUrl());
         product.setActive(dto.getActive() != null ? dto.getActive() : true);
-        product.setCapacities(dto.getCapacities());
-        product.setAttributes(dto.getAttributes()); // LƯU THUỘC TÍNH
+        product.setAttributes(dto.getAttributes());
 
         if (dto.getCategoryId() != null) {
             Category category = categoryDAO.findById(dto.getCategoryId())
@@ -193,7 +228,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public long getLowStockProductsCount() {
-        return productDAO.countByStockQuantityLessThan(16);
+        return productDAO.countByTotalStockLessThan(16);
     }
 
     @Override

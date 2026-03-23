@@ -19,15 +19,15 @@ public class BrandDTO {
     @Size(max = 100, message = "Tên thương hiệu không được quá 100 ký tự")
     private String brandName;
 
+    // MỚI THÊM: Các trường hứng dữ liệu thống kê
     private Long productCount;
     private Long totalStock;
 
-    // Thêm constructor này để map chính xác dữ liệu từ JPA Query trả về
-    public BrandDTO(Integer brandId, String brandName, Long productCount, Number totalStock) {
+    // CONSTRUCTOR THÔNG MINH CHO JPQL
+    public BrandDTO(Integer brandId, String brandName, Number productCount, Number totalStock) {
         this.brandId = brandId;
         this.brandName = brandName;
-        this.productCount = productCount != null ? productCount : 0L;
-        // Tự động convert Integer/int từ Database sang Long
+        this.productCount = productCount != null ? productCount.longValue() : 0L;
         this.totalStock = totalStock != null ? totalStock.longValue() : 0L;
     }
 }

@@ -19,6 +19,15 @@ public class CategoryDTO {
     @Size(max = 100, message = "Tên loại sản phẩm không được quá 100 ký tự")
     private String categoryName;
 
+    // MỚI THÊM: Các trường hứng dữ liệu thống kê
+    private Long productCount;
+    private Long totalStock;
 
-
+    // CONSTRUCTOR THÔNG MINH CHO JPQL: Dùng Number để bao xài mọi kiểu số từ DB trả về
+    public CategoryDTO(Integer categoryId, String categoryName, Number productCount, Number totalStock) {
+        this.categoryId = categoryId;
+        this.categoryName = categoryName;
+        this.productCount = productCount != null ? productCount.longValue() : 0L;
+        this.totalStock = totalStock != null ? totalStock.longValue() : 0L;
+    }
 }
