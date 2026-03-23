@@ -113,39 +113,30 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
 
 const route = useRoute();
 const router = useRouter();
 
-// Dữ liệu ban đầu (Sẽ bị ghi đè khi gọi API thành công)
+// Dữ liệu ban đầu
 const orderData = ref({
-  orderCode: route.params.id,
+  orderCode: 'Đang tải...',
   orderDate: 'Đang tải...',
   totalAmount: 0,
   status: 0, 
   estimatedDelivery: 'Đang cập nhật',
-  shippingInfo: {
-    name: 'Đang tải...',
-    phone: '...',
-    address: '...'
-  },
-  carrier: {
-    name: 'Đang chờ điều phối',
-    trackingCode: 'Chưa có'
-  }
+  shippingInfo: { name: 'Đang tải...', phone: '...', address: '...' },
+  carrier: { name: 'Đang chờ điều phối', trackingCode: 'Chưa có' }
 });
 
-// Hàm lấy chi tiết đơn hàng từ Backend
-const fetchOrderDetail = async () => {
+// Nhận orderCode làm tham số để linh hoạt khi theo dõi
+const fetchOrderDetail = async (orderCode) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/orders/code/${route.params.id}`);
+    const response = await axios.get(`http://localhost:8080/api/orders/code/${orderCode}`);
     const data = response.data;
     
-    // Bóc tách thông tin Tên, SĐT, Địa chỉ từ chuỗi Note
-    // Mẫu: "Người nhận: A - SĐT: 0123 - Đ/C: HN. Ghi chú KH: abc"
     let extName = 'Khách hàng';
     let extPhone = 'Đang cập nhật';
     let extAddress = data.note || 'Đang cập nhật';
@@ -159,42 +150,41 @@ const fetchOrderDetail = async () => {
       } catch (e) { console.error("Lỗi bóc tách note", e); }
     }
 
-    // Ghi đè dữ liệu lên giao diện
     orderData.value = {
       orderCode: data.orderCode,
       orderDate: new Date(data.orderDate).toLocaleString('vi-VN', { 
         hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' 
       }),
-      totalAmount: data.finalAmount, // Lấy số tiền thực trả cuối cùng
+      totalAmount: data.finalAmount, 
       status: parseStatusToNumber(data.statusName),
       estimatedDelivery: 'Đang cập nhật',
-      shippingInfo: {
-        name: extName,
-        phone: extPhone,
-        address: extAddress
-      },
-      carrier: {
-        name: 'Đang chờ điều phối',
-        trackingCode: 'Chưa có'
-      }
+      shippingInfo: { name: extName, phone: extPhone, address: extAddress },
+      carrier: { name: 'Đang chờ điều phối', trackingCode: 'Chưa có' }
     };
 
   } catch (error) {
     console.error("Lỗi lấy chi tiết đơn hàng:", error);
-    alert("Không tìm thấy đơn hàng hợp lệ!");
-    router.push('/');
+    alert("❌ Không tìm thấy đơn hàng hợp lệ! Vui lòng kiểm tra lại mã đơn.");
+    router.push('/'); // Đẩy về trang chủ nếu mã sai
   }
 };
 
-onMounted(() => {
-  fetchOrderDetail();
-});
+// Lắng nghe sự thay đổi của Param trên URL. 
+// Nếu Khách hàng tìm 1 mã khác trên Navbar, nó sẽ tự động chạy lại API
+watch(
+  () => route.params.id,
+  (newOrderCode) => {
+    if (newOrderCode) {
+      fetchOrderDetail(newOrderCode);
+    }
+  },
+  { immediate: true } // Chạy ngay lập tức khi Component vừa Render (Thay thế cho onMounted)
+);
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
 };
 
-// Hàm chuyển đổi Status Text từ DB thành Số để thanh Stepper chạy
 const parseStatusToNumber = (statusName) => {
   const s = String(statusName).toLowerCase();
   if (s === 'pending' || s === 'chờ xác nhận') return 0;
@@ -202,19 +192,17 @@ const parseStatusToNumber = (statusName) => {
   if (s === 'shipping' || s === 'đang giao hàng') return 2;
   if (s === 'delivered' || s === 'giao hàng thành công') return 3;
   if (s === 'cancelled' || s === 'đã hủy') return 4;
-  return 0; // Mặc định nếu không map được
+  return 0; 
 };
 
-// Tính toán thanh tiến trình (Progress bar width)
 const progressWidth = computed(() => {
-  if (orderData.value.status === 0) return '0%';   // Pending
-  if (orderData.value.status === 1) return '33%';  // Confirmed
-  if (orderData.value.status === 2) return '66%';  // Shipping
-  if (orderData.value.status === 3) return '100%'; // Delivered
-  return '0%'; // Cancelled không dùng thanh này
+  if (orderData.value.status === 0) return '0%'; 
+  if (orderData.value.status === 1) return '33%'; 
+  if (orderData.value.status === 2) return '66%'; 
+  if (orderData.value.status === 3) return '100%'; 
+  return '0%'; 
 });
 
-// Lời nhắn tự động thay đổi theo chuẩn Database
 const statusMessage = computed(() => {
   switch (orderData.value.status) {
     case 0: return 'Đơn hàng (Pending) đang chờ shop kiểm tra và xác nhận.';
@@ -239,10 +227,7 @@ const statusMessage = computed(() => {
 
 .narrow-container { max-width: 800px !important; margin: 0 auto; }
 
-/* --- STEPPER CSS --- */
-.stepper-wrapper {
-  position: relative;
-}
+.stepper-wrapper { position: relative; }
 .stepper-progress-bar {
   position: absolute;
   top: 20px;
@@ -261,9 +246,7 @@ const statusMessage = computed(() => {
   transition: width 0.4s ease;
 }
 
-.stepper-item {
-  width: 25%;
-}
+.stepper-item { width: 25%; }
 .step-icon {
   width: 44px;
   height: 44px;
@@ -276,30 +259,17 @@ const statusMessage = computed(() => {
   margin: 0 auto;
   font-size: 1.2rem;
   transition: all 0.3s ease;
-  border: 4px solid #fff; /* Tạo viền cắt ngang đường progress */
+  border: 4px solid #fff; 
 }
 
-.step-title {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #adb5bd;
-}
-.step-time {
-  font-size: 0.7rem;
-  color: #adb5bd;
-  margin-top: 2px;
-}
+.step-title { font-size: 0.8rem; font-weight: 700; color: #adb5bd; }
+.step-time { font-size: 0.7rem; color: #adb5bd; margin-top: 2px; }
 
-/* Trạng thái Active */
 .stepper-item.active .step-icon {
   background-color: #1ED760;
   color: #fff;
   box-shadow: 0 0 0 3px rgba(30, 215, 96, 0.2);
 }
-.stepper-item.active .step-title {
-  color: #000;
-}
-.stepper-item.active .step-time {
-  color: #1ED760;
-}
+.stepper-item.active .step-title { color: #000; }
+.stepper-item.active .step-time { color: #1ED760; }
 </style>

@@ -102,8 +102,8 @@
                 <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2 disabled opacity-50">Đánh giá</button>
               </template>
               
-              <template v-if="translateStatus(order.statusName) === 'Chờ xác nhận'">
-                <button @click="cancelOrder(order.orderId)" class="btn btn-outline-danger fw-bold fs-8 rounded-3 px-3 py-2">
+              <template v-if="translateStatus(order.statusName) === 'Chờ xác nhận' || translateStatus(order.statusName) === 'Chờ lấy hàng'">
+                <button @click="cancelOrder(order)" class="btn btn-outline-danger fw-bold fs-8 rounded-3 px-3 py-2">
                   <span v-if="isCancelling === order.orderId" class="spinner-border spinner-border-sm"></span>
                   Hủy đơn hàng
                 </button>
@@ -189,12 +189,14 @@ import axios from 'axios';
 
 const router = useRouter();
 const activeTab = ref('Tất cả');
-const tabs = ['Tất cả', 'Chờ xác nhận', 'Đang giao', 'Đã giao', 'Đã hủy'];
+
+// ĐÃ SỬA: Bổ sung thêm Tab 'Chờ lấy hàng' vào mảng (Nó sẽ tự link với trạng thái Đã xác nhận)
+const tabs = ['Tất cả', 'Chờ xác nhận', 'Chờ lấy hàng', 'Đang giao', 'Đã giao', 'Đã hủy'];
 const orders = ref([]);
 const loading = ref(true);
 
 const userReviewedProductIds = ref([]);
-const isCancelling = ref(null); // Lưu ID đơn đang xử lý hủy
+const isCancelling = ref(null); 
 
 const getCurrentUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
@@ -206,7 +208,6 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// Hàm hỗ trợ lấy Token (cần cho API Hủy đơn)
 const getAuthConfig = () => {
   const token = localStorage.getItem('jwt_token'); 
   return { headers: { Authorization: `Bearer ${token}` } };
@@ -243,7 +244,6 @@ onMounted(() => {
 // LOGIC HỦY ĐƠN HÀNG (DO KHÁCH HÀNG THỰC HIỆN)
 // ==========================================
 const cancelOrder = async (order) => {
-  // 1. Kiểm tra xem đơn này có phải Bank và Đã thu tiền chưa?
   if (order.paymentMethod === 'BANK' && order.paymentStatus === true) {
     const confirmRefund = confirm("Đơn hàng này đã được xác nhận thanh toán. Nếu hủy, Admin sẽ liên hệ qua Số điện thoại để hoàn tiền cho bạn (Từ 1-3 ngày làm việc). Bạn có chắc chắn muốn hủy?");
     if (!confirmRefund) return;
@@ -255,11 +255,10 @@ const cancelOrder = async (order) => {
   const userId = getCurrentUserId();
 
   try {
-    // Gọi API đưa trạng thái về Hủy (4)
     await axios.put(`http://localhost:8080/api/orders/admin/${order.orderId}/status?statusId=4&employeeId=${userId}`, null, getAuthConfig());
     
     alert("Đã hủy đơn hàng thành công!");
-    fetchOrders(); // Load lại danh sách
+    fetchOrders(); 
 
   } catch (error) {
     console.error("Lỗi hủy đơn:", error);
@@ -389,7 +388,7 @@ const submitReviews = async () => {
 const isReordering = ref(false);
 
 const reOrder = async (order) => {
-  if (isReordering.value) return; // Chặn click đúp
+  if (isReordering.value) return; 
   isReordering.value = true;
 
   try {
@@ -400,30 +399,25 @@ const reOrder = async (order) => {
       return;
     }
 
-    // 1. Gọi API lấy danh sách toàn bộ sản phẩm (để check tồn kho mới nhất)
     const productsRes = await axios.get('http://localhost:8080/api/product?size=1000');
     const allProducts = productsRes.data.content || [];
 
     let outOfStockItems = [];
     let itemsToAdd = [];
 
-    // 2. Duyệt qua từng món trong đơn hàng cũ
     for (const item of order.orderDetails) {
       const currentProductInfo = allProducts.find(p => p.productId === item.productId);
       
-      // Nếu không tìm thấy hoặc đã ngừng kinh doanh
       if (!currentProductInfo || !currentProductInfo.active) {
         outOfStockItems.push(`- ${item.productName} (Đã ngừng kinh doanh)`);
         continue;
       }
       
-      // Nếu tồn kho bằng 0
       if (currentProductInfo.stockQuantity <= 0) {
         outOfStockItems.push(`- ${item.productName} (Đã hết hàng)`);
         continue;
       }
 
-      // Lấy số lượng tối đa có thể mua (Không được vượt quá tồn kho hiện tại)
       const qtyToBuy = Math.min(item.quantity, currentProductInfo.stockQuantity);
       
       itemsToAdd.push({
@@ -432,27 +426,23 @@ const reOrder = async (order) => {
       });
     }
 
-    // 3. Nếu TẤT CẢ sản phẩm đều hết hàng
     if (itemsToAdd.length === 0) {
       alert("Rất tiếc! Tất cả sản phẩm trong đơn hàng này hiện đã hết hàng hoặc ngừng kinh doanh.");
       return;
     }
 
-    // 4. Nếu có 1 vài món hết hàng, cảnh báo cho khách biết
     if (outOfStockItems.length > 0) {
       const msg = "Một số sản phẩm không thể mua lại:\n" + outOfStockItems.join('\n') + "\n\nBạn có muốn thêm các món còn lại vào Giỏ hàng?";
-      if (!confirm(msg)) return; // Khách bấm Hủy thì dừng lại
+      if (!confirm(msg)) return; 
     }
 
-    // 5. GỌI API THÊM VÀO GIỎ HÀNG CHO TỪNG MÓN
     for (const item of itemsToAdd) {
       await axios.post(`http://localhost:8080/api/cart/${userId}/add`, item);
     }
 
-    // 6. Thành công! Chuyển hướng sang trang Cart
     alert("Đã thêm các sản phẩm vào giỏ hàng thành công!");
-    window.dispatchEvent(new Event('cart-updated')); // Cập nhật số lượng đỏ trên icon Giỏ hàng
-    router.push('/cart'); // Chuyển về giỏ hàng để khách check lại
+    window.dispatchEvent(new Event('cart-updated')); 
+    router.push('/cart'); 
 
   } catch (error) {
     console.error("Lỗi khi xử lý mua lại:", error);
@@ -462,7 +452,6 @@ const reOrder = async (order) => {
   }
 };
 </script>
-
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Space+Grotesk:wght@700&display=swap');
