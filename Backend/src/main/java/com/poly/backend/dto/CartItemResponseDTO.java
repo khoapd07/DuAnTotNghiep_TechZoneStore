@@ -14,7 +14,10 @@ import java.math.BigDecimal;
 public class CartItemResponseDTO {
     private Integer cartItemId;
     private Integer productId;
+    private Integer variantId;
     private String productName;
+    private String colorName;
+    private String option2Value;
     private String imageUrl;
     private BigDecimal price;      // Giá gốc
     private BigDecimal salePrice;  // Giá khuyến mãi (nếu có)

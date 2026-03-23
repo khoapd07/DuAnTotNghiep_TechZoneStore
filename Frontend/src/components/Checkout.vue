@@ -52,6 +52,10 @@
                 </div>
                 <div class="flex-grow-1">
                   <h6 class="fw-bold fs-7 mb-0 line-clamp-1">{{ item.productName }}</h6>
+                  <p class="text-muted fs-8 mb-1">
+                    Phân loại: {{ item.colorName || 'Mặc định' }} 
+                    <span v-if="item.option2Value"> - {{ item.option2Value }}</span>
+                  </p>
                   <small class="text-muted fs-8">Số lượng: {{ item.quantity }}</small>
                 </div>
                 <div class="fw-bold fs-7">{{ formatCurrency(item.subTotal) }}</div>
@@ -238,7 +242,10 @@ onMounted(() => {
     const parsedData = JSON.parse(checkoutDataStr);
     cartData.value.items = parsedData.items.map(item => ({
       productId: item.productId,
+      variantId: item.variantId,
       productName: item.name,
+      colorName: item.colorName,
+      option2Value: item.option2Value,
       imageUrl: item.img,
       quantity: item.quantity,
       price: item.price,

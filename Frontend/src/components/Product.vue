@@ -301,37 +301,43 @@ const addToCart = async (productId) => {
   const productToAdd = products.value.find(p => p.productId === productId);
   if (!productToAdd) return;
 
+  // LẤY BIẾN THỂ ĐẦU TIÊN
+  const defaultVariant = productToAdd.variants && productToAdd.variants.length > 0 ? productToAdd.variants[0] : null;
+  const vId = defaultVariant ? defaultVariant.variantId : null;
+  const vColor = defaultVariant ? defaultVariant.colorName : '';
+  const vOpt2 = defaultVariant ? defaultVariant.option2Value : '';
+  const vPrice = defaultVariant && defaultVariant.price > 0 ? (defaultVariant.salePrice || defaultVariant.price) : (productToAdd.salePrice || productToAdd.price);
+
   if (userId) {
     try {
-      const payload = {
+      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, {
         productId: productId,
+        variantId: vId, // Backend cần nhận trường này
         quantity: 1 
-      };
-
-      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, payload);
-
+      });
       alert("Đã thêm sản phẩm vào giỏ hàng!");
       window.dispatchEvent(new Event('cart-updated')); 
-
     } catch (error) {
       alert(error.response?.data || "Không thể thêm vào giỏ hàng");
     }
   } else {
     let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
-    const existingItemIndex = guestCart.findIndex(i => i.productId === productId);
+    const existingItemIndex = guestCart.findIndex(i => i.productId === productId && i.variantId === vId);
 
     if (existingItemIndex !== -1) {
       guestCart[existingItemIndex].quantity += 1;
     } else {
       guestCart.push({
         productId: productToAdd.productId,
+        variantId: vId,
         name: productToAdd.name,
-        price: productToAdd.salePrice || productToAdd.price,
+        colorName: vColor,
+        option2Value: vOpt2,
+        price: vPrice,
         quantity: 1,
-        img: productToAdd.imageUrl || 'https://via.placeholder.com/150'
+        img: defaultVariant?.imageUrl || productToAdd.imageUrl || 'https://via.placeholder.com/150'
       });
     }
-
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));
     alert("Đã thêm sản phẩm vào giỏ hàng!");
     window.dispatchEvent(new Event('cart-updated'));

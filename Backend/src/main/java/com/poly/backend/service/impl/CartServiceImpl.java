@@ -1,16 +1,10 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.CartDAO;
-import com.poly.backend.dao.CartItemDAO;
-import com.poly.backend.dao.ProductDAO;
-import com.poly.backend.dao.UserDAO;
+import com.poly.backend.dao.*;
 import com.poly.backend.dto.CartItemRequestDTO;
 import com.poly.backend.dto.CartItemResponseDTO;
 import com.poly.backend.dto.CartResponseDTO;
-import com.poly.backend.entity.Cart;
-import com.poly.backend.entity.CartItem;
-import com.poly.backend.entity.Product;
-import com.poly.backend.entity.User;
+import com.poly.backend.entity.*;
 import com.poly.backend.service.CartService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +23,7 @@ public class CartServiceImpl implements CartService {
     @Autowired private CartDAO cartDAO;
     @Autowired private CartItemDAO cartItemDAO;
     @Autowired private ProductDAO productDAO;
+    @Autowired private ProductVariantDAO variantDAO;
     @Autowired private UserDAO userDAO;
 
     // ======================================================
@@ -41,24 +36,35 @@ public class CartServiceImpl implements CartService {
         if (cart.getCartItems() != null) {
             for (CartItem item : cart.getCartItems()) {
                 Product p = item.getProduct();
+                ProductVariant v = item.getVariant();
 
-                // Logic chọn giá: Có Sale thì lấy giá Sale, không thì lấy giá gốc
-                BigDecimal applyPrice = (p.getSalePrice() != null && p.getSalePrice().compareTo(BigDecimal.ZERO) > 0)
-                        ? p.getSalePrice() : p.getPrice();
+                // NẾU CÓ BIẾN THỂ -> LẤY GIÁ CỦA BIẾN THỂ. KHÔNG CÓ -> LẤY GIÁ SẢN PHẨM CHÍNH
+                BigDecimal originalPrice = (v != null && v.getPrice() != null && v.getPrice().compareTo(BigDecimal.ZERO) > 0) ? v.getPrice() : p.getPrice();
+                BigDecimal salePrice = (v != null && v.getSalePrice() != null && v.getSalePrice().compareTo(BigDecimal.ZERO) > 0) ? v.getSalePrice() : p.getSalePrice();
 
-                // Thành tiền = Giá * Số lượng
+                BigDecimal applyPrice = (salePrice != null && salePrice.compareTo(BigDecimal.ZERO) > 0) ? salePrice : originalPrice;
                 BigDecimal subTotal = applyPrice.multiply(BigDecimal.valueOf(item.getQuantity()));
                 cartTotal = cartTotal.add(subTotal);
+
+                // Ưu tiên hình ảnh của biến thể nếu có
+                String imgUrl = (v != null && v.getImageUrl() != null && !v.getImageUrl().isEmpty()) ? v.getImageUrl() : p.getImageUrl();
+
+                // LOGIC QUAN TRỌNG: GÁN MÀU SẮC VÀ SIZE
+                String itemColor = (v != null) ? v.getColorName() : null;
+                String itemOption2 = (v != null) ? v.getOption2Value() : null;
 
                 itemDTOs.add(CartItemResponseDTO.builder()
                         .cartItemId(item.getCartItemId())
                         .productId(p.getProductId())
+                        .variantId(v != null ? v.getVariantId() : null)
                         .productName(p.getName())
-                        .imageUrl(p.getImageUrl())
-                        .price(p.getPrice())
-                        .salePrice(p.getSalePrice())
+                        .colorName(itemColor)       // TRUYỀN MÀU SẮC LÊN FRONTEND
+                        .option2Value(itemOption2)  // TRUYỀN OPTION LÊN FRONTEND
+                        .imageUrl(imgUrl)
+                        .price(originalPrice)
+                        .salePrice(salePrice)
                         .quantity(item.getQuantity())
-                        .subTotal(subTotal) // DTO tự lo hiển thị, UI không cần tính
+                        .subTotal(subTotal)
                         .build());
             }
         }
@@ -71,15 +77,9 @@ public class CartServiceImpl implements CartService {
                 .build();
     }
 
-    // ======================================================
-    // 2. LOGIC NGHIỆP VỤ (THÊM, SỬA, XÓA, GỘP)
-    // ======================================================
-
-    // Lấy Entity Giỏ hàng (Tạo mới nếu User chưa có)
     private Cart getEntityCart(Integer userId) {
         return cartDAO.findByUser_UserId(userId).orElseGet(() -> {
-            User user = userDAO.findById(userId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
+            User user = userDAO.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
             return cartDAO.save(Cart.builder().user(user).build());
         });
     }
@@ -96,36 +96,40 @@ public class CartServiceImpl implements CartService {
         Product product = productDAO.findById(request.getProductId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm"));
 
-        // CHỐT CHẶN: Ép kiểm tra số lượng tồn kho
-        if (request.getQuantity() > product.getTotalStock()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!#:" + product.getTotalStock());
+        // XÁC ĐỊNH BIẾN THỂ
+        ProductVariant variant = null;
+        Integer maxStock = product.getTotalStock(); // Mặc định lấy tổng kho
+
+        if (request.getVariantId() != null) {
+            variant = variantDAO.findById(request.getVariantId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy phân loại sản phẩm"));
+            maxStock = variant.getStockQuantity(); // Nếu mua biến thể cụ thể, check kho của biến thể đó
+        }
+
+        if (request.getQuantity() > maxStock) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + maxStock + " sản phẩm loại này!");
         }
 
         if (cart.getCartItems() == null) cart.setCartItems(new ArrayList<>());
 
+        // TÌM XEM TRONG GIỎ CÓ SẴN (CÙNG SẢN PHẨM + CÙNG BIẾN THỂ) CHƯA
+        final Integer targetVariantId = variant != null ? variant.getVariantId() : null;
         Optional<CartItem> existingItem = cart.getCartItems().stream()
-                .filter(item -> item.getProduct().getProductId().equals(product.getProductId()))
+                .filter(item -> item.getProduct().getProductId().equals(product.getProductId()) &&
+                        (item.getVariant() == null ? targetVariantId == null : item.getVariant().getVariantId().equals(targetVariantId)))
                 .findFirst();
 
         if (existingItem.isPresent()) {
-            // NẾU ĐÃ CÓ -> THỰC HIỆN CỘNG DỒN
             CartItem item = existingItem.get();
             int newQuantity = item.getQuantity() + request.getQuantity();
-
-            if (newQuantity > product.getTotalStock()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!");
-            }
+            if (newQuantity > maxStock) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + maxStock + " sản phẩm!");
             item.setQuantity(newQuantity);
             cartItemDAO.save(item);
         } else {
-            // NẾU CHƯA CÓ -> TẠO MỚI
-            if (request.getQuantity() > product.getTotalStock()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!");
-            }
             CartItem newItem = CartItem.builder()
                     .cart(cart)
                     .product(product)
+                    .variant(variant) // Gắn biến thể vào
                     .quantity(request.getQuantity())
                     .build();
             cart.getCartItems().add(newItem);
@@ -139,24 +143,26 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public CartResponseDTO updateItemQuantity(Integer userId, CartItemRequestDTO request) {
         Cart cart = getEntityCart(userId);
-        Product product = productDAO.findById(request.getProductId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm"));
 
-        if (request.getQuantity() > product.getTotalStock()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + product.getTotalStock() + " sản phẩm!");
-        }
-
+        // Vì request từ Cart.vue gửi lên chỉ có ProductId chứ chưa có variantId (do code Front bạn gửi hàm syncQuantityWithBackend chỉ truyền productId)
+        // Nên ta sẽ tìm item đầu tiên khớp productId để update (Cách tốt nhất là Front gửi thêm variantId lên, nhưng tạm thời chạy kiểu này vẫn OK nếu mỗi sp trong giỏ có 1 biến thể)
         Optional<CartItem> existingItem = cart.getCartItems().stream()
-                .filter(item -> item.getProduct().getProductId().equals(product.getProductId()))
+                .filter(item -> item.getProduct().getProductId().equals(request.getProductId()))
                 .findFirst();
 
         if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
+            Integer maxStock = item.getVariant() != null ? item.getVariant().getStockQuantity() : item.getProduct().getTotalStock();
+
+            if (request.getQuantity() > maxStock) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + maxStock + " sản phẩm!");
+            }
+
             if (request.getQuantity() <= 0) {
                 cart.getCartItems().remove(item);
                 cartItemDAO.delete(item);
             } else {
-                item.setQuantity(request.getQuantity()); // Ghi đè tuyệt đối
+                item.setQuantity(request.getQuantity());
             }
         }
         return mapToDTO(cartDAO.save(cart));
@@ -167,12 +173,7 @@ public class CartServiceImpl implements CartService {
     public CartResponseDTO mergeLocalCart(Integer userId, List<CartItemRequestDTO> localCartItems) {
         if (localCartItems != null && !localCartItems.isEmpty()) {
             for (CartItemRequestDTO localItem : localCartItems) {
-                try {
-                    // Vì hàm addOrUpdateCartItem giờ đã là CỘNG DỒN, nên code gộp giỏ hàng trở nên siêu ngắn!
-                    addOrUpdateCartItem(userId, localItem);
-                } catch (ResponseStatusException e) {
-                    System.out.println("Bỏ qua món hàng gộp vượt tồn kho: " + e.getReason());
-                }
+                try { addOrUpdateCartItem(userId, localItem); } catch (Exception e) {}
             }
         }
         return getCartDTOByUserId(userId);

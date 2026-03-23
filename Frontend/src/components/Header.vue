@@ -217,6 +217,9 @@ const fetchMiniCart = async () => {
       
       cartItems.value = backendItems.map(bItem => ({
         productId: bItem.productId,
+        variantId: bItem.variantId,       
+        colorName: bItem.colorName,       
+        option2Value: bItem.option2Value, 
         name: bItem.productName,
         price: bItem.salePrice || bItem.price,
         quantity: bItem.quantity,

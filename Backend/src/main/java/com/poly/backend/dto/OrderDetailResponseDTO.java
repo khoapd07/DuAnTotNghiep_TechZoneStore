@@ -13,7 +13,10 @@ import java.math.BigDecimal;
 @Builder
 public class OrderDetailResponseDTO {
     private Integer productId;
+    private Integer variantId;
     private String productName;
+    private String colorName;
+    private String option2Value;
     private String imageUrl;
     private Integer quantity;
     private BigDecimal price;      // Giá tại thời điểm mua (không phải giá hiện tại)

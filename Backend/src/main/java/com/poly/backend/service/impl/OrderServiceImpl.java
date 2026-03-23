@@ -29,6 +29,7 @@ public class OrderServiceImpl implements OrderService {
     @Autowired private OrderStatusDAO orderStatusDAO;
     @Autowired private CartDAO cartDAO;
     @Autowired private ProductDAO productDAO;
+    @Autowired private ProductVariantDAO variantDAO;
     @Autowired private VoucherDAO voucherDAO;
     @Autowired private UserDAO userDAO;
     @Autowired private EmailService emailService;
@@ -38,11 +39,8 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderResponseDTO placeOrder(Integer userId, OrderRequestDTO request) {
 
-        User customer = userDAO.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
-
-        Cart cart = cartDAO.findByUser_UserId(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy giỏ hàng"));
+        User customer = userDAO.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
+        Cart cart = cartDAO.findByUser_UserId(userId).orElse(null);
 
         Order order = new Order();
         order.setCustomer(customer);
@@ -51,8 +49,7 @@ public class OrderServiceImpl implements OrderService {
         String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         order.setOrderCode("TZ-" + timeStamp + "-" + (int)(Math.random() * 10000));
 
-        OrderStatus status = orderStatusDAO.findById(0)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái đơn hàng"));
+        OrderStatus status = orderStatusDAO.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống"));
         order.setStatus(status);
 
         BigDecimal totalMoney = BigDecimal.ZERO;
@@ -61,118 +58,84 @@ public class OrderServiceImpl implements OrderService {
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             List<CartItem> itemsToRemove = new ArrayList<>();
 
-            for (GuestCartItemDTO requestItem : request.getItems()) {
-                CartItem cartItem = cart.getCartItems().stream()
-                        .filter(i -> i.getProduct().getProductId().equals(requestItem.getProductId()))
-                        .findFirst()
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm không có trong giỏ hàng"));
+            for (GuestCartItemDTO reqItem : request.getItems()) {
+                Product product = productDAO.findById(reqItem.getProductId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm không tồn tại"));
 
-                Product product = cartItem.getProduct();
-
-                // ĐÃ SỬA: Dùng getTotalStock() để kiểm tra
-                if (product.getTotalStock() < requestItem.getQuantity()) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + product.getName() + " không đủ số lượng");
+                ProductVariant variant = null;
+                if (reqItem.getVariantId() != null) {
+                    variant = variantDAO.findById(reqItem.getVariantId()).orElse(null);
                 }
 
-                // ĐÃ SỬA: Logic trừ lùi tồn kho vào các biến thể (Vì chưa có variant_id trong CartItem)
-                int qtyToDeduct = requestItem.getQuantity();
-                for (ProductVariant variant : product.getVariants()) {
-                    if (qtyToDeduct <= 0) break;
-                    if (variant.getStockQuantity() > 0) {
-                        int deduct = Math.min(variant.getStockQuantity(), qtyToDeduct);
-                        variant.setStockQuantity(variant.getStockQuantity() - deduct);
-                        qtyToDeduct -= deduct;
-                    }
+                // TRỪ TỒN KHO CHÍNH XÁC VÀO BIẾN THỂ
+                if (variant != null) {
+                    if (variant.getStockQuantity() < reqItem.getQuantity()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + product.getName() + " (" + variant.getColorName() + ") không đủ số lượng");
+                    variant.setStockQuantity(variant.getStockQuantity() - reqItem.getQuantity());
+                    variantDAO.save(variant);
+                } else {
+                    // Nếu ko có biến thể (Sản phẩm cũ)
+                    if (product.getTotalStock() < reqItem.getQuantity()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + product.getName() + " không đủ số lượng");
+                    // (Logic bỏ qua vì DB mới bắt buộc có Variant, nhưng cứ để đây phòng hờ)
                 }
-                productDAO.save(product);
 
-                BigDecimal price = product.getSalePrice() != null ? product.getSalePrice() : product.getPrice();
-                totalMoney = totalMoney.add(price.multiply(new BigDecimal(requestItem.getQuantity())));
+                // Tính tiền
+                BigDecimal originalPrice = variant != null && variant.getPrice() != null && variant.getPrice().compareTo(BigDecimal.ZERO) > 0 ? variant.getPrice() : product.getPrice();
+                BigDecimal salePrice = variant != null && variant.getSalePrice() != null && variant.getSalePrice().compareTo(BigDecimal.ZERO) > 0 ? variant.getSalePrice() : product.getSalePrice();
+                BigDecimal applyPrice = (salePrice != null && salePrice.compareTo(BigDecimal.ZERO) > 0) ? salePrice : originalPrice;
+
+                totalMoney = totalMoney.add(applyPrice.multiply(new BigDecimal(reqItem.getQuantity())));
 
                 OrderDetail detail = new OrderDetail();
                 detail.setOrder(order);
                 detail.setProduct(product);
-                detail.setQuantity(requestItem.getQuantity());
-                detail.setPrice(price);
+                detail.setVariant(variant); // LƯU VÀO DB
+                detail.setQuantity(reqItem.getQuantity());
+                detail.setPrice(applyPrice);
                 orderDetails.add(detail);
 
-                itemsToRemove.add(cartItem);
+                // Dọn dẹp giỏ hàng
+                if (cart != null && cart.getCartItems() != null) {
+                    final Integer targetVId = variant != null ? variant.getVariantId() : null;
+                    cart.getCartItems().stream()
+                            .filter(i -> i.getProduct().getProductId().equals(reqItem.getProductId()) &&
+                                    (i.getVariant() == null ? targetVId == null : i.getVariant().getVariantId().equals(targetVId)))
+                            .findFirst()
+                            .ifPresent(itemsToRemove::add);
+                }
             }
-            cart.getCartItems().removeAll(itemsToRemove);
-            cartItemDAO.deleteAll(itemsToRemove);
+
+            if (cart != null && !itemsToRemove.isEmpty()) {
+                cart.getCartItems().removeAll(itemsToRemove);
+                cartItemDAO.deleteAll(itemsToRemove);
+            }
 
         } else {
-            if (cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giỏ hàng đang trống!");
-            }
-
-            for (CartItem cartItem : cart.getCartItems()) {
-                Product product = cartItem.getProduct();
-                if (product.getTotalStock() < cartItem.getQuantity()) {
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + product.getName() + " không đủ số lượng");
-                }
-
-                // ĐÃ SỬA: Trừ lùi tồn kho biến thể
-                int qtyToDeduct = cartItem.getQuantity();
-                for (ProductVariant variant : product.getVariants()) {
-                    if (qtyToDeduct <= 0) break;
-                    if (variant.getStockQuantity() > 0) {
-                        int deduct = Math.min(variant.getStockQuantity(), qtyToDeduct);
-                        variant.setStockQuantity(variant.getStockQuantity() - deduct);
-                        qtyToDeduct -= deduct;
-                    }
-                }
-                productDAO.save(product);
-
-                BigDecimal price = product.getSalePrice() != null ? product.getSalePrice() : product.getPrice();
-                totalMoney = totalMoney.add(price.multiply(new BigDecimal(cartItem.getQuantity())));
-
-                OrderDetail detail = new OrderDetail();
-                detail.setOrder(order);
-                detail.setProduct(product);
-                detail.setQuantity(cartItem.getQuantity());
-                detail.setPrice(price);
-                orderDetails.add(detail);
-            }
-            cart.getCartItems().clear();
-            cartItemDAO.deleteAll(cart.getCartItems());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giỏ hàng đang trống hoặc lỗi truyền dữ liệu!");
         }
 
         order.setTotalMoney(totalMoney);
         order.setOrderDetails(orderDetails);
 
+        // Voucher logic... (Giữ nguyên)
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
-            Voucher voucher = voucherDAO.findByCode(request.getVoucherCode())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
-
-            if (!voucher.getStatus() || voucher.getQuantity() <= 0 || voucher.getEndDate().isBefore(LocalDateTime.now())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá đã hết hạn hoặc hết lượt dùng");
-            }
-            if (totalMoney.compareTo(voucher.getMinOrderValue()) < 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã này");
-            }
-
+            Voucher voucher = voucherDAO.findByCode(request.getVoucherCode()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
+            if (!voucher.getStatus() || voucher.getQuantity() <= 0 || voucher.getEndDate().isBefore(LocalDateTime.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá hết hạn");
+            if (totalMoney.compareTo(voucher.getMinOrderValue()) < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chưa đạt giá trị tối thiểu");
             discountAmount = voucher.getDiscountAmount();
             order.setVoucher(voucher);
-
             voucher.setQuantity(voucher.getQuantity() - 1);
             voucherDAO.save(voucher);
         }
 
         order.setDiscountAmount(discountAmount);
-
         BigDecimal finalAmount = totalMoney.subtract(discountAmount);
         order.setFinalAmount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
-
         order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
         order.setPaymentStatus(false);
 
         Order savedOrder = orderDAO.save(order);
-
-        String sendToEmail = (request.getEmail() != null && !request.getEmail().isEmpty())
-                ? request.getEmail() : customer.getEmail();
-        emailService.sendOrderConfirmation(sendToEmail, savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
+        emailService.sendOrderConfirmation(request.getEmail() != null ? request.getEmail() : customer.getEmail(), savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
 
         return mapToDTO(savedOrder);
     }
@@ -185,16 +148,23 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private OrderResponseDTO mapToDTO(Order order) {
-        List<OrderDetailResponseDTO> detailDTOs = order.getOrderDetails().stream().map(detail ->
-                OrderDetailResponseDTO.builder()
-                        .productId(detail.getProduct().getProductId())
-                        .productName(detail.getProduct().getName())
-                        .imageUrl(detail.getProduct().getImageUrl())
-                        .quantity(detail.getQuantity())
-                        .price(detail.getPrice())
-                        .subTotal(detail.getPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
-                        .build()
-        ).collect(Collectors.toList());
+        List<OrderDetailResponseDTO> detailDTOs = order.getOrderDetails().stream().map(detail -> {
+            Product p = detail.getProduct();
+            ProductVariant v = detail.getVariant();
+            String imgUrl = (v != null && v.getImageUrl() != null && !v.getImageUrl().isEmpty()) ? v.getImageUrl() : p.getImageUrl();
+
+            return OrderDetailResponseDTO.builder()
+                    .productId(p.getProductId())
+                    .variantId(v != null ? v.getVariantId() : null)
+                    .productName(p.getName())
+                    .colorName(v != null ? v.getColorName() : null)
+                    .option2Value(v != null ? v.getOption2Value() : null)
+                    .imageUrl(imgUrl)
+                    .quantity(detail.getQuantity())
+                    .price(detail.getPrice())
+                    .subTotal(detail.getPrice().multiply(BigDecimal.valueOf(detail.getQuantity())))
+                    .build();
+        }).collect(Collectors.toList());
 
         String cName = (order.getCustomer() != null) ? order.getCustomer().getFullName() : "Khách vãng lai";
         String sName = (order.getShipper() != null) ? order.getShipper().getFullName() : null;
@@ -222,7 +192,6 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDTO placeGuestOrder(GuestOrderRequestDTO request) {
-
         if (request.getItems() == null || request.getItems().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Giỏ hàng đang trống!");
         }
@@ -230,48 +199,38 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.setCustomer(null);
         order.setNote(request.getNote());
-
         String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         order.setOrderCode("TZ-G-" + timeStamp + "-" + (int)(Math.random() * 10000));
-
-        OrderStatus status = orderStatusDAO.findById(0)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái đơn hàng"));
+        OrderStatus status = orderStatusDAO.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái"));
         order.setStatus(status);
 
         BigDecimal totalMoney = BigDecimal.ZERO;
         List<OrderDetail> orderDetails = new ArrayList<>();
 
-        for (GuestCartItemDTO item : request.getItems()) {
-            Product currentProduct = productDAO.findById(item.getProductId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm ID: " + item.getProductId()));
-
-            // ĐÃ SỬA: Kiểm tra tồn kho tổng
-            if (currentProduct.getTotalStock() < item.getQuantity()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Sản phẩm '" + currentProduct.getName() + "' chỉ còn " + currentProduct.getTotalStock() + " chiếc!");
+        for (GuestCartItemDTO reqItem : request.getItems()) {
+            Product product = productDAO.findById(reqItem.getProductId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy SP"));
+            ProductVariant variant = null;
+            if (reqItem.getVariantId() != null) {
+                variant = variantDAO.findById(reqItem.getVariantId()).orElse(null);
             }
 
-            // ĐÃ SỬA: Trừ lùi tồn kho biến thể
-            int qtyToDeduct = item.getQuantity();
-            for (ProductVariant variant : currentProduct.getVariants()) {
-                if (qtyToDeduct <= 0) break;
-                if (variant.getStockQuantity() > 0) {
-                    int deduct = Math.min(variant.getStockQuantity(), qtyToDeduct);
-                    variant.setStockQuantity(variant.getStockQuantity() - deduct);
-                    qtyToDeduct -= deduct;
-                }
+            if (variant != null) {
+                if (variant.getStockQuantity() < reqItem.getQuantity()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm " + product.getName() + " không đủ số lượng");
+                variant.setStockQuantity(variant.getStockQuantity() - reqItem.getQuantity());
+                variantDAO.save(variant);
             }
-            productDAO.save(currentProduct);
 
-            BigDecimal applyPrice = (currentProduct.getSalePrice() != null && currentProduct.getSalePrice().compareTo(BigDecimal.ZERO) > 0)
-                    ? currentProduct.getSalePrice() : currentProduct.getPrice();
+            BigDecimal originalPrice = variant != null && variant.getPrice() != null && variant.getPrice().compareTo(BigDecimal.ZERO) > 0 ? variant.getPrice() : product.getPrice();
+            BigDecimal salePrice = variant != null && variant.getSalePrice() != null && variant.getSalePrice().compareTo(BigDecimal.ZERO) > 0 ? variant.getSalePrice() : product.getSalePrice();
+            BigDecimal applyPrice = (salePrice != null && salePrice.compareTo(BigDecimal.ZERO) > 0) ? salePrice : originalPrice;
 
-            totalMoney = totalMoney.add(applyPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
+            totalMoney = totalMoney.add(applyPrice.multiply(BigDecimal.valueOf(reqItem.getQuantity())));
 
             orderDetails.add(OrderDetail.builder()
                     .order(order)
-                    .product(currentProduct)
-                    .quantity(item.getQuantity())
+                    .product(product)
+                    .variant(variant) // LƯU VÀO DB
+                    .quantity(reqItem.getQuantity())
                     .price(applyPrice)
                     .build());
         }
@@ -281,33 +240,22 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
-            Voucher voucher = voucherDAO.findByCode(request.getVoucherCode())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
-
-            if (!voucher.getStatus() || voucher.getQuantity() <= 0 || voucher.getEndDate().isBefore(LocalDateTime.now())) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá đã hết hạn hoặc hết lượt dùng");
-            }
-            if (totalMoney.compareTo(voucher.getMinOrderValue()) < 0) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Đơn hàng chưa đạt giá trị tối thiểu để dùng mã này");
-            }
-
+            Voucher voucher = voucherDAO.findByCode(request.getVoucherCode()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
+            if (!voucher.getStatus() || voucher.getQuantity() <= 0 || voucher.getEndDate().isBefore(LocalDateTime.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá đã hết hạn");
+            if (totalMoney.compareTo(voucher.getMinOrderValue()) < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chưa đạt giá trị tối thiểu");
             discountAmount = voucher.getDiscountAmount();
             order.setVoucher(voucher);
-
             voucher.setQuantity(voucher.getQuantity() - 1);
             voucherDAO.save(voucher);
         }
 
         order.setDiscountAmount(discountAmount);
-
         BigDecimal finalAmount = totalMoney.subtract(discountAmount);
         order.setFinalAmount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
-
         order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
         order.setPaymentStatus(false);
 
         Order savedOrder = orderDAO.save(order);
-
         if (request.getGuestEmail() != null && !request.getGuestEmail().isEmpty()) {
             emailService.sendOrderConfirmation(request.getGuestEmail(), savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
         }
@@ -363,39 +311,25 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId, Integer employeeId, Integer shipperId) {
-        Order order = orderDAO.findById(orderId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
+        Order order = orderDAO.findById(orderId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
+        OrderStatus status = orderStatusDAO.findById(newStatusId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trạng thái không hợp lệ"));
 
-        OrderStatus status = orderStatusDAO.findById(newStatusId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trạng thái không hợp lệ"));
+        if (newStatusId == 1 && employeeId != null) order.setEmployee(userDAO.findById(employeeId).orElse(null));
+        if (newStatusId == 2 && shipperId != null) order.setShipper(userDAO.findById(shipperId).orElse(null));
 
-        if (newStatusId == 1 && employeeId != null) {
-            User employee = userDAO.findById(employeeId).orElse(null);
-            order.setEmployee(employee);
-        }
-
-        if (newStatusId == 2 && shipperId != null) {
-            User shipper = userDAO.findById(shipperId).orElse(null);
-            order.setShipper(shipper);
-        }
-
-        // ĐÃ SỬA: Hoàn trả tồn kho nếu hủy đơn hàng
+        // NẾU HỦY ĐƠN: HOÀN TRẢ TỒN KHO VÀO ĐÚNG BIẾN THỂ ĐÓ
         if (order.getStatus().getStatusId() != 4 && newStatusId == 4) {
             for (OrderDetail detail : order.getOrderDetails()) {
-                Product p = detail.getProduct();
-                // Trả tạm tồn kho vào biến thể đầu tiên
-                if (p.getVariants() != null && !p.getVariants().isEmpty()) {
-                    ProductVariant v = p.getVariants().get(0);
+                if (detail.getVariant() != null) {
+                    ProductVariant v = detail.getVariant();
                     v.setStockQuantity(v.getStockQuantity() + detail.getQuantity());
+                    variantDAO.save(v);
                 }
-                productDAO.save(p);
             }
         }
 
         order.setStatus(status);
-        Order savedOrder = orderDAO.save(order);
-
-        return mapToDTO(savedOrder);
+        return mapToDTO(orderDAO.save(order));
     }
 
     @Override

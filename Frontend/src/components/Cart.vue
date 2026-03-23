@@ -37,7 +37,10 @@
 
                 <div class="flex-grow-1">
                   <h6 class="fw-bold mb-1 fs-6">{{ item.name }}</h6>
-                  <p class="text-muted fs-8 mb-2">{{ item.desc }}</p>
+                  <p class="text-muted fs-8 mb-2">
+                    Phân loại: {{ item.colorName || 'Mặc định' }} 
+                    <span v-if="item.option2Value"> - {{ item.option2Value }}</span>
+                  </p>
                   
                   <div class="d-flex align-items-center gap-3">
                     <div class="quantity-selector d-flex align-items-center bg-light border rounded-2">
@@ -175,6 +178,9 @@ const fetchCart = async () => {
       const existingItem = cartItems.value.find(i => i.productId === bItem.productId);
       return {
         productId: bItem.productId,
+        variantId: bItem.variantId,       
+        colorName: bItem.colorName,       
+        option2Value: bItem.option2Value,
         name: bItem.productName,
         desc: 'Sản phẩm chính hãng TechZone',
         price: bItem.salePrice || bItem.price,

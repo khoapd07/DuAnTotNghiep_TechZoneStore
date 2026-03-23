@@ -62,6 +62,10 @@
               
               <div class="flex-grow-1">
                 <h6 class="fw-bold text-dark mb-1 line-clamp-2">{{ item.productName }}</h6>
+                <p class="text-muted fs-8 mb-1" style="font-style: italic;">
+                  Phân loại: {{ item.colorName || 'Mặc định' }} 
+                  <span v-if="item.option2Value"> - {{ item.option2Value }}</span>
+                </p>
                 <p class="text-muted fs-8 mb-2">Giá niêm yết: {{ formatCurrency(item.price) }}</p>
                 <div class="d-flex align-items-center justify-content-between mt-auto">
                   <span class="text-muted fs-7">x{{ item.quantity }}</span>
@@ -136,7 +140,7 @@
                 <img :src="item.imageUrl || 'https://via.placeholder.com/80'" class="rounded border object-fit-contain p-1" style="width: 60px; height: 60px;" alt="">
                 <div>
                   <h6 class="fw-bold fs-7 mb-1">{{ item.productName }}</h6>
-                  <span class="text-muted fs-8">Phân loại: Mặc định</span>
+                  <span class="text-muted fs-8">Phân loại: {{ item.colorName || 'Mặc định' }} <span v-if="item.option2Value"> - {{ item.option2Value }}</span></span>
                 </div>
               </div>
 
@@ -405,6 +409,7 @@ const reOrder = async (order) => {
     let outOfStockItems = [];
     let itemsToAdd = [];
 
+    // 2. Duyệt qua từng món trong đơn hàng cũ
     for (const item of order.orderDetails) {
       const currentProductInfo = allProducts.find(p => p.productId === item.productId);
       
@@ -412,16 +417,26 @@ const reOrder = async (order) => {
         outOfStockItems.push(`- ${item.productName} (Đã ngừng kinh doanh)`);
         continue;
       }
+
+      // TÌM BIẾN THỂ CỤ THỂ TRONG KHO (NẾU CÓ)
+      let targetVariant = null;
+      if (item.variantId && currentProductInfo.variants) {
+        targetVariant = currentProductInfo.variants.find(v => v.variantId === item.variantId);
+      }
       
-      if (currentProductInfo.stockQuantity <= 0) {
-        outOfStockItems.push(`- ${item.productName} (Đã hết hàng)`);
+      // KIỂM TRA TỒN KHO CỦA ĐÚNG BIẾN THỂ ĐÓ
+      const maxStock = targetVariant ? targetVariant.stockQuantity : currentProductInfo.stockQuantity;
+
+      if (maxStock <= 0 || !targetVariant) {
+        outOfStockItems.push(`- ${item.productName} ${item.colorName ? '('+item.colorName+')' : ''} (Hết hàng/Ngừng bán)`);
         continue;
       }
 
-      const qtyToBuy = Math.min(item.quantity, currentProductInfo.stockQuantity);
+      const qtyToBuy = Math.min(item.quantity, maxStock);
       
       itemsToAdd.push({
         productId: currentProductInfo.productId,
+        variantId: item.variantId, // BẮT BUỘC TRUYỀN LÊN ĐỂ ADD ĐÚNG LOẠI
         quantity: qtyToBuy
       });
     }

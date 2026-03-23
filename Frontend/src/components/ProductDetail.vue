@@ -356,32 +356,67 @@ const getCurrentUserId = () => {
   return null;
 };
 
-const handleAddToCart = async (productObj, qtyToAdd) => {
-  if (!productObj || !selectedVariantData.value) return;
+// ==========================================
+// CẬP NHẬT: THÊM VÀO GIỎ HÀNG THEO BIẾN THỂ
+// ==========================================
+const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false) => {
+  if (!productObj) return;
   const pId = productObj.productId || productObj.id;
   const userId = getCurrentUserId();
+  
+  // NẾU LÀ SẢN PHẨM CHÍNH: Lấy biến thể khách đang chọn trên màn hình
+  // NẾU LÀ SẢN PHẨM TƯƠNG TỰ: Lấy biến thể đầu tiên làm mặc định
+  let vId = null;
+  let vColor = '';
+  let vOpt2 = '';
+  let vPrice = productObj.salePrice || productObj.price;
+  let vImg = productObj.imageUrl || 'https://via.placeholder.com/150';
+
+  if (!isSimilarProduct && selectedVariantData.value) {
+    vId = selectedVariantData.value.variantId;
+    vColor = selectedVariantData.value.colorName;
+    vOpt2 = selectedVariantData.value.option2Value;
+    vPrice = currentSalePrice.value || currentPrice.value;
+    vImg = selectedVariantData.value.imageUrl || vImg;
+  } else if (isSimilarProduct && productObj.variants && productObj.variants.length > 0) {
+    const firstVariant = productObj.variants[0];
+    vId = firstVariant.variantId;
+    vColor = firstVariant.colorName;
+    vOpt2 = firstVariant.option2Value;
+    vPrice = firstVariant.salePrice || firstVariant.price;
+    vImg = firstVariant.imageUrl || vImg;
+  }
 
   if (userId) {
     try {
-      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, { productId: pId, quantity: qtyToAdd });
+      // TRUYỀN THÊM variantId LÊN BACKEND (Backend cần cập nhật DTO để nhận)
+      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, { 
+          productId: pId, 
+          variantId: vId, 
+          quantity: qtyToAdd 
+      });
       alert("Đã thêm sản phẩm vào giỏ hàng!");
       window.dispatchEvent(new Event('cart-updated')); 
     } catch (error) {
       alert(error.response?.data || "Không thể thêm vào giỏ hàng");
     }
   } else {
+    // XỬ LÝ CHO KHÁCH VÃNG LAI: Kiểm tra trùng cả Product VÀ Variant
     let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
-    const existingItemIndex = guestCart.findIndex(i => i.productId === pId);
+    const existingItemIndex = guestCart.findIndex(i => i.productId === pId && i.variantId === vId);
 
     if (existingItemIndex !== -1) {
       guestCart[existingItemIndex].quantity += qtyToAdd;
     } else {
       guestCart.push({
         productId: pId,
-        name: displayName.value,
-        price: currentSalePrice.value || currentPrice.value,
+        variantId: vId,
+        name: productObj.name,
+        colorName: vColor,      // Ghi nhớ màu
+        option2Value: vOpt2,    // Ghi nhớ size/tùy chọn
+        price: vPrice,
         quantity: qtyToAdd,
-        img: selectedVariantData.value.imageUrl || productObj.imageUrl || 'https://via.placeholder.com/150'
+        img: vImg
       });
     }
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));
@@ -390,17 +425,26 @@ const handleAddToCart = async (productObj, qtyToAdd) => {
   }
 };
 
-const addToCartMain = () => handleAddToCart(product.value, quantity.value);
-const buyNowMain = async () => {
-  await addToCartMain();
-  router.push('/cart');
-};
+// Cập nhật lại 2 hàm gọi
+const addToCartMain = () => handleAddToCart(product.value, quantity.value, false);
+const buyNowMain = async () => { await addToCartMain(); router.push('/cart'); };
 
-const addToCartSimilar = (item) => handleAddToCart(item, 1);
-const buyNowSimilar = async (item) => {
-  await addToCartSimilar(item);
-  router.push('/cart');
-};
+const addToCartSimilar = (item) => handleAddToCart(item, 1, true);
+const buyNowSimilar = async (item) => { await addToCartSimilar(item); router.push('/cart'); };
+
+// const addToCartMain = () => handleAddToCart(product.value, quantity.value);
+// const buyNowMain = async () => {
+//   await addToCartMain();
+//   router.push('/cart');
+// };
+
+// const addToCartSimilar = (item) => handleAddToCart(item, 1);
+// const buyNowSimilar = async (item) => {
+//   await addToCartSimilar(item);
+//   router.push('/cart');
+// };
+
+//////////////////////////////////////
 
 watch(() => route.params.id, (newId) => { if (newId) fetchProductDetail(newId); });
 onMounted(() => fetchProductDetail(route.params.id));

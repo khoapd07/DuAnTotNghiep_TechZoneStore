@@ -5,6 +5,9 @@ import java.math.BigDecimal;
 @Data
 public class GuestCartItemDTO {
     private Integer productId;
+
+    private Integer variantId;
+
     private Integer quantity;
     private BigDecimal price; // Giá lúc thêm vào giỏ
 }
