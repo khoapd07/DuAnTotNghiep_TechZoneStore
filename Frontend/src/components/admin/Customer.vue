@@ -58,7 +58,7 @@
         <div class="p-3 border-bottom d-flex gap-2 bg-white rounded-top-4">
           <div class="input-group bg-light border rounded-3 overflow-hidden flex-grow-1">
             <span class="input-group-text bg-transparent border-0 text-muted px-3"><i class="bi bi-search"></i></span>
-            <input v-model="searchQuery" type="text" class="form-control border-0 bg-transparent shadow-none fs-7 px-1" placeholder="Tìm kiếm theo tên, email...">
+            <input v-model="searchQuery" type="text" class="form-control border-0 bg-transparent shadow-none fs-7 px-1" placeholder="Tìm kiếm theo tên, username, email...">
           </div>
           <select v-model="statusFilter" class="form-select form-select-sm border bg-white fw-bold text-dark shadow-none fs-7" style="width: 150px;">
             <option value="ALL">Tất cả trạng thái</option>
@@ -87,7 +87,7 @@
               <tr v-else v-for="user in filteredCustomers" :key="user.userId" class="border-bottom-dashed">
                 <td class="px-4 py-3">
                   <span class="fw-bold fs-7 text-dark" :class="{'text-decoration-line-through text-muted': !user.status}">
-                    {{ user.fullName || 'Chưa cập nhật' }}
+                    {{ user.fullName || user.username }}
                   </span>
                 </td>
                 <td class="py-3">
@@ -148,7 +148,7 @@
 
               <div class="mb-3">
                 <label class="form-label fs-8 fw-bold text-muted">Họ và tên</label>
-                <input v-model="form.fullName" type="text" class="form-control shadow-none fs-7" required>
+                <input v-model="form.fullName" type="text" class="form-control shadow-none fs-7">
               </div>
               <div class="row">
                 <div class="col-6 mb-3">
@@ -328,8 +328,11 @@ const saveCustomer = async () => {
 const filteredCustomers = computed(() => {
   return customers.value.filter(user => {
     const query = searchQuery.value.toLowerCase();
+    
+    // ĐÃ SỬA TẠI ĐÂY: Thêm điều kiện tìm kiếm bằng user.username để search mượt hơn
     const matchSearch = !query || 
                         (user.fullName && user.fullName.toLowerCase().includes(query)) ||
+                        (user.username && user.username.toLowerCase().includes(query)) ||
                         (user.email && user.email.toLowerCase().includes(query)) ||
                         (user.phoneNumber && user.phoneNumber.includes(query));
     

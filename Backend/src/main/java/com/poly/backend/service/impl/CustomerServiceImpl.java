@@ -111,6 +111,7 @@ public class CustomerServiceImpl implements CustomerService {
     private CustomerDTO mapToDTO(Customer customer) {
         return CustomerDTO.builder()
                 .userId(customer.getUserId())
+                .username(customer.getUsername())
                 .fullName(customer.getFullName())
                 .email(customer.getEmail())
                 .phoneNumber(customer.getPhoneNumber())
