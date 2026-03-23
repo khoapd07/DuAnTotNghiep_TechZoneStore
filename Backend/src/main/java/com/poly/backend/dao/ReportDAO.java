@@ -76,4 +76,16 @@ public interface ReportDAO extends JpaRepository<Order, Integer> {
             "FROM Orders WHERE status_id = 3 AND order_date >= :startDate AND order_date <= :endDate " +
             "GROUP BY MONTH(order_date) ORDER BY month", nativeQuery = true)
     List<Map<String, Object>> getOrdersPerMonth(@Param("startDate") String startDate, @Param("endDate") String endDate);
+
+    // Đã cập nhật: Bổ sung tính Lợi nhuận (totalProfit) bằng Subquery để không bị x2, x3 dữ liệu
+    @Query(value = "SELECT " +
+            "(SELECT COUNT(order_id) FROM Orders WHERE status_id = 3 AND order_date >= :startDate AND order_date <= :endDate) as totalOrders, " +
+            "(SELECT ISNULL(SUM(final_amount), 0) FROM Orders WHERE status_id = 3 AND order_date >= :startDate AND order_date <= :endDate) as totalRevenue, " +
+            "(SELECT ISNULL(SUM((od.price - p.import_price) * od.quantity), 0) " +
+            " FROM OrderDetails od " +
+            " JOIN Orders o ON od.order_id = o.order_id " +
+            " JOIN Products p ON od.product_id = p.product_id " +
+            " WHERE o.status_id = 3 AND o.order_date >= :startDate AND o.order_date <= :endDate) as totalProfit",
+            nativeQuery = true)
+    Map<String, Object> getGeneralStatsWithProfit(@Param("startDate") String startDate, @Param("endDate") String endDate);
 }

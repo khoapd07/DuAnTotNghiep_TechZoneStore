@@ -16,4 +16,6 @@ public interface ReportService {
     List<Map<String, Object>> getAllCustomersThisMonth(String startDate, String endDate);
     List<Map<String, Object>> getAllShippers(String startDate, String endDate);
     List<Map<String, Object>> getSuccessfulOrdersThisMonth(String startDate, String endDate);
+
+
 }

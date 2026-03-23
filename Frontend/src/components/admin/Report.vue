@@ -60,8 +60,8 @@
                   <i class="bi bi-wallet2 fs-5"></i>
                 </div>
               </div>
-              <p class="text-muted fs-8 fw-bold mb-1">Lợi Nhuận (Chưa active)</p>
-              <h4 class="fw-black text-dark m-0">0₫</h4>
+              <p class="text-muted fs-8 fw-bold mb-1">Tổng Lợi Nhuận</p>
+              <h4 class="fw-black text-dark m-0">{{ formatCurrency(generalStats.totalProfit) }}</h4>
             </div>
           </div>
         </div>
@@ -393,7 +393,9 @@ const currentDay = String(now.getDate()).padStart(2, '0');
 const startDateInput = ref(`${currentYear}-${currentMonth}-01`);
 const endDateInput = ref(`${currentYear}-${currentMonth}-${currentDay}`);
 
-const generalStats = ref({ totalRevenue: 0, totalOrders: 0 });
+// Đã cập nhật biến tổng lợi nhuận
+const generalStats = ref({ totalRevenue: 0, totalOrders: 0, totalProfit: 0 });
+
 const topProducts = ref([]);
 const topCustomers = ref([]);
 const topShippers = ref([]);
@@ -457,10 +459,13 @@ const fetchTab1Data = async () => {
       axios.get('http://localhost:8080/api/reports/top-shippers', { params })
     ]);
 
+    // Đã cập nhật hứng dữ liệu totalProfit từ API trả về
     generalStats.value = {
       totalRevenue: statsRes.data.totalRevenue || statsRes.data.totalrevenue || 0,
-      totalOrders: statsRes.data.totalOrders || statsRes.data.totalorders || 0
+      totalOrders: statsRes.data.totalOrders || statsRes.data.totalorders || 0,
+      totalProfit: statsRes.data.totalProfit || statsRes.data.totalprofit || 0
     };
+    
     topProducts.value = prodRes.data.map(mapProduct);
     topCustomers.value = custRes.data.map(mapCustomer);
     topShippers.value = shipRes.data.map(mapShipper);
@@ -510,7 +515,6 @@ const goToTab6 = async () => {
   } catch (error) { console.error("Lỗi Tab 6:", error); }
 };
 
-// Hàm xuất file Excel
 // Hàm xuất file Excel
 const exportToExcel = (data, fileName) => {
   if (!data || data.length === 0) {

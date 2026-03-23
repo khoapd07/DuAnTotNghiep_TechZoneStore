@@ -37,6 +37,16 @@
           </li>
 
           <li class="nav-item">
+            <router-link to="/admin/suppliers" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
+              <i class="bi bi-truck"></i> <span class="fw-bold fs-7">Nhà cung cấp</span>
+            </router-link>
+          </li>
+          <li class="nav-item">
+            <router-link to="/admin/import-receipts" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
+              <i class="bi bi-box-arrow-in-down"></i> <span class="fw-bold fs-7">Phiếu nhập kho</span>
+            </router-link>
+          </li>
+          <li class="nav-item">
             <router-link to="/admin/orders" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
               <i class="bi bi-receipt"></i> <span class="fw-bold fs-7">Đơn hàng</span>
             </router-link>
@@ -108,6 +118,12 @@
 
   </div>
 </template>
+
+<script>
+export default {
+  name: 'AdminLayout'
+}
+</script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');

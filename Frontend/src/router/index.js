@@ -33,10 +33,15 @@ import VoucherCRUD from '../components/admin/VoucherCRUD.vue'
 import BlogCRUD from '../components/admin/BlogCRUD.vue'
 import SlideShowHome from '../components/admin/SlideShowHome.vue'
 import AdminChat from '../components/admin/AdminChat.vue'
+import ImportReceiptDetail from '../components/admin/ImportReceiptDetail.vue'
+import Suppliers from '../components/admin/Suppliers.vue'
+import ImportReceiptList from '../components/admin/ImportReceiptList.vue'
 
 
 //import cho shipper
 import Shipping from '../components/shipping/Shipping.vue'
+// import { patch } from '@n8n/chat/dist/api/generic.js'
+
 
 const routes = [
   // --- ROUTES CHO KHÁCH HÀNG ---
@@ -128,6 +133,21 @@ const routes = [
         path: 'chat',
         name: 'AdminChat',
         component: AdminChat
+      },
+    {
+        path: 'import-receipts',
+        name: 'ImportReceiptList',
+        component: ImportReceiptList 
+      },
+      {
+        path: 'ImportReceiptDetail/:id', 
+        name: 'ImportReceiptDetail',
+        component: ImportReceiptDetail 
+      },
+      { 
+        path: 'suppliers',
+        name: 'Suppliers',
+        component: Suppliers
       }
     ]
   },
