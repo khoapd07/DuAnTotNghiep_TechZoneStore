@@ -378,11 +378,12 @@ const submitOrderToBackend = async () => {
     if (userId) {
       const payload = {
         note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
-        voucherCode: voucherCode.value.trim(), // Truyền mã voucher lên để Backend lưu
+        voucherCode: voucherCode.value.trim(), 
         email: shippingInfo.value.email,
         paymentMethod: paymentMethod.value,
         items: cartData.value.items.map(item => ({
           productId: item.productId,
+          variantId: item.variantId, // ĐÃ SỬA: Bổ sung variantId
           quantity: item.quantity,
           price: item.price
         }))
@@ -392,25 +393,33 @@ const submitOrderToBackend = async () => {
     else {
       const payload = {
         note: `Khách vãng lai: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
-        voucherCode: voucherCode.value.trim(), // Truyền mã voucher lên
+        voucherCode: voucherCode.value.trim(), 
         guestFullName: shippingInfo.value.fullName,
         guestPhone: shippingInfo.value.phone,
         guestEmail: shippingInfo.value.email,
         guestAddress: shippingInfo.value.address,
         items: cartData.value.items.map(item => ({
           productId: item.productId,
+          variantId: item.variantId, // ĐÃ SỬA: Bổ sung variantId
           quantity: item.quantity,
           price: item.price
         })),
         paymentMethod: paymentMethod.value
       };
       response = await axios.post(`${API_BASE}/orders/guest/place`, payload);
-      localStorage.removeItem('guest_cart');
+      
+      // ĐÃ SỬA LOGIC GUEST: Chỉ xóa những món đã mua, giữ lại món chưa mua trong giỏ
+      let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
+      const boughtItems = cartData.value.items;
+      guestCart = guestCart.filter(cartItem => {
+         return !boughtItems.some(bought => bought.productId === cartItem.productId && bought.variantId === cartItem.variantId);
+      });
+      localStorage.setItem('guest_cart', JSON.stringify(guestCart));
     }
 
     successOrderCode.value = response.data.orderCode;
-    sessionStorage.removeItem('checkout_data');
-    window.dispatchEvent(new Event('cart-updated'));
+    sessionStorage.removeItem('checkout_data'); // Xóa data tạm của trang Checkout
+    window.dispatchEvent(new Event('cart-updated')); // Cập nhật lại số lượng trên icon giỏ hàng
 
     // ĐÓNG MODAL (Nếu đang mở bằng BANK)
     if (qrModalInstance) {
