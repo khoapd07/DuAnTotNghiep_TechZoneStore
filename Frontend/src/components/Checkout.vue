@@ -503,7 +503,7 @@ const startQrTimer = () => {
 };
 
 // =========================================================
-// HÀM 3: XỬ LÝ KHI TIỀN ĐÃ VÀO TÀI KHOẢN
+// HÀM 3: XỬ LÝ KHI TIỀN ĐÃ VÀO TÀI KHOẢN (PAYOS TRẢ VỀ TRUE)
 // =========================================================
 const handlePaymentSuccess = async () => {
   // Hiện loading xịn xò chờ gọi API tạo đơn
@@ -515,7 +515,7 @@ const handlePaymentSuccess = async () => {
     didOpen: () => { Swal.showLoading(); }
   });
 
-  // Gọi hàm tạo đơn và truyền true = Đã thanh toán
+  // GỌI HÀM TẠO ĐƠN - TRUYỀN VÀO TRUE ĐỂ ĐÁNH DẤU ĐÃ THU TIỀN
   const realOrderCode = await executeCreateOrder(true); 
 
   if (realOrderCode) {
@@ -535,6 +535,8 @@ const handlePaymentSuccess = async () => {
         router.push(`/order/${realOrderCode}`);
       }
     }).then((res) => { if(res.isConfirmed) router.push(`/order/${realOrderCode}`); });
+  } else {
+      Swal.fire('Lỗi', 'Không thể tạo đơn hàng. Vui lòng liên hệ Hotline!', 'error');
   }
 };
 

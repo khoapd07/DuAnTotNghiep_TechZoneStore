@@ -135,8 +135,8 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal finalAmount = totalMoney.subtract(discountAmount);
         order.setFinalAmount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
         order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
-        order.setPaymentStatus(false);
-
+//        order.setPaymentStatus(false);
+        order.setPaymentStatus(request.getIsPaid() != null ? request.getIsPaid() : false);
         Order savedOrder = orderDAO.save(order);
         emailService.sendOrderConfirmation(request.getEmail() != null ? request.getEmail() : customer.getEmail(), savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
 
@@ -259,8 +259,10 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal finalAmount = totalMoney.subtract(discountAmount);
         order.setFinalAmount(finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount);
         order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
-        order.setPaymentStatus(false);
-
+//        order.setPaymentStatus(false);
+        // Nhận trạng thái "Đã thanh toán" từ Frontend truyền lên
+        order.setPaymentStatus(request.getIsPaid() != null ? request.getIsPaid() : false);
+        
         Order savedOrder = orderDAO.save(order);
         if (request.getGuestEmail() != null && !request.getGuestEmail().isEmpty()) {
             emailService.sendOrderConfirmation(request.getGuestEmail(), savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
