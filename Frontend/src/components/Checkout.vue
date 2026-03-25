@@ -10,7 +10,7 @@
         <div class="step-item text-muted">3. Hoàn tất</div> 
       </div>
 
-      <div class="row g-4">
+      <div class="row g-4" v-if="!showQrScreen">
         <div class="col-lg-7">
           <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
             <h4 class="fw-black text-dark mb-4 text-uppercase">Thông tin nhận hàng</h4>
@@ -29,7 +29,7 @@
                   <input v-model="shippingInfo.email" type="email" class="form-control custom-input" placeholder="example@gmail.com">
                 </div>
                 <div class="col-12">
-                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Địa chỉ chi tiết</label>
+                  <label class="form-label fs-8 fw-bold text-muted text-uppercase">Địa chi chi tiết</label>
                   <input v-model="shippingInfo.address" type="text" class="form-control custom-input" placeholder="Số nhà, tên đường, Phường/Xã..." required>
                 </div>
                 <div class="col-12">
@@ -65,11 +65,9 @@
             <label class="form-label fs-8 fw-bold text-muted text-uppercase">Mã giảm giá</label>
             <div class="input-group mb-4">
               <input v-model="voucherCode" type="text" class="form-control custom-input fs-7" placeholder="Nhập mã của bạn" :disabled="discountAmount > 0">
-              
               <button v-if="discountAmount === 0" @click="applyVoucher" class="btn btn-dark fw-bold px-3 fs-7 border-0" type="button" :disabled="isCheckingVoucher">
                 <span v-if="isCheckingVoucher" class="spinner-border spinner-border-sm me-1"></span> ÁP DỤNG
               </button>
-              
               <button v-else @click="removeVoucher" class="btn btn-danger fw-bold px-3 fs-7 border-0" type="button">HỦY MÃ</button>
             </div>
 
@@ -129,57 +127,112 @@
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="modal fade" id="qrPaymentModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-4">
-          <div class="modal-header border-bottom-0 pb-0">
-            <h5 class="modal-title fw-black fs-4 text-center w-100">Thanh toán đơn hàng</h5>
-          </div>
-          <div class="modal-body text-center pt-2 pb-4">
-            <p class="text-muted fs-7 mb-3">Mở ứng dụng Ngân hàng của bạn và quét mã QR dưới đây để thanh toán.</p>
-            
-            <div class="bg-light p-3 rounded-4 d-inline-block mb-3 border">
-              <img v-if="generatedQrUrl" :src="generatedQrUrl" alt="QR Code Thanh Toán" style="width: 250px; height: 250px; object-fit: contain;">
-              <div v-else class="spinner-border text-neon m-5" role="status"></div>
-            </div>
-
-            <div class="bg-light-gray p-3 rounded-3 text-start mx-auto border" style="max-width: 320px;">
-              <div class="d-flex justify-content-between mb-2 fs-7">
-                <span class="text-muted">Người đặt:</span>
-                <span class="fw-bold text-dark">{{ shippingInfo.fullName }}</span>
-              </div>
-              <div class="d-flex justify-content-between mb-2 fs-7">
-                <span class="text-muted">Số tiền:</span>
-                <span class="fw-black text-danger fs-5">{{ formatCurrency(finalAmount) }}</span>
-              </div>
-              <div class="d-flex justify-content-between fs-7">
-                <span class="text-muted">Nội dung CK:</span>
-                <span class="fw-bold text-primary">TZ {{ shippingInfo.phone }}</span>
-              </div>
-            </div>
-            
-            <p class="fs-8 text-danger fw-bold mt-3 mb-0">
-              <i class="bi bi-exclamation-triangle"></i> Lưu ý: Bạn chưa hoàn tất đặt hàng. Nhấn nút bên dưới sau khi chuyển khoản.
-            </p>
-          </div>
-          <div class="modal-footer border-top-0 pt-0 d-flex gap-2 justify-content-center pb-4">
-            <button type="button" class="btn btn-outline-dark fw-bold px-4" @click="handlePayLater">Đóng / Chọn lại</button>
-            <button type="button" class="btn btn-neon fw-bold px-4 text-dark" @click="handlePaymentDone" :disabled="loading">
-              <span v-if="loading" class="spinner-border spinner-border-sm me-1"></span> TÔI ĐÃ CHUYỂN KHOẢN
+      <div v-else class="checkout-qr-wrapper py-4 fade-in">
+        <div class="card bg-dark-panel border-0 rounded-4 shadow-lg overflow-hidden text-white mx-auto" style="max-width: 750px;">
+          
+          <div class="p-3 border-bottom border-secondary border-opacity-25 bg-dark-panel d-flex justify-content-between align-items-center">
+            <button @click="cancelQrPayment" class="btn btn-link text-white text-decoration-none d-flex align-items-center gap-2 fw-bold custom-hover p-0">
+              <span class="material-symbols-outlined fs-5">arrow_back</span>
+              Hủy và quay lại
             </button>
+            <span class="badge bg-dark border border-secondary text-neon px-3 py-2 rounded-pill d-flex align-items-center gap-2">
+              <span class="material-symbols-outlined fs-6">verified_user</span> An toàn
+            </span>
+          </div>
+
+          <div class="row g-0">
+            <div class="col-lg-5 p-4 border-end border-secondary border-opacity-25">
+              <h5 class="fw-bold mb-4 text-white text-uppercase">Thông tin thanh toán</h5>
+
+              <div class="d-flex flex-column gap-3">
+                <div>
+                  <p class="text-neon small fw-bold mb-1 text-uppercase">Mã đơn hàng</p>
+                  <div class="fw-bold fs-6 text-white">{{ successOrderCode }}</div>
+                </div>
+
+                <div>
+                  <p class="text-neon small fw-bold mb-1 text-uppercase">Số tiền cần chuyển</p>
+                  <h3 class="text-white fw-black mb-0">{{ formatCurrency(finalAmount) }}</h3>
+                </div>
+
+                <div class="p-3 mt-1 rounded-3 bg-dark-lighter border border-secondary border-opacity-25">
+                  <div class="mb-3">
+                    <p class="text-neon small fw-bold mb-1 text-uppercase">Chủ tài khoản</p>
+                    <div class="fw-bold text-white">{{ bankAccountName }}</div>
+                  </div>
+                  <div class="mb-3">
+                    <p class="text-neon small fw-bold mb-1 text-uppercase">Số tài khoản</p>
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                      <span class="fw-bold fs-5 text-white">{{ bankAccountNumber }}</span>
+                      <button @click="copyText(bankAccountNumber)" class="btn btn-sm btn-outline-secondary border-0 p-1 text-neon custom-hover">
+                        <span class="material-symbols-outlined fs-6">content_copy</span>
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <p class="text-neon small fw-bold mb-1 text-uppercase">Nội dung chuyển khoản</p>
+                    <div class="d-flex align-items-center justify-content-between gap-2">
+                      <span class="fw-bold fs-6 text-white">{{ payosTransferContent }}</span>
+                      <button @click="copyText(payosTransferContent)" class="btn btn-sm btn-outline-secondary border-0 p-1 text-neon custom-hover">
+                        <span class="material-symbols-outlined fs-6">content_copy</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-7 p-4 bg-dark-lighter d-flex flex-column align-items-center justify-content-center text-center">
+              
+              <div class="mb-3 d-flex flex-column align-items-center">
+                <h6 class="text-neon fw-bold d-flex align-items-center gap-2 mb-2">
+                  <span class="material-symbols-outlined">timer</span>
+                  Đơn hàng hết hạn sau
+                </h6>
+                <div class="d-flex gap-2 fw-black fs-3 text-neon">
+                  <div class="bg-dark px-3 py-1 rounded border border-secondary">{{ minutes }}</div>
+                  <span>:</span>
+                  <div class="bg-dark px-3 py-1 rounded border border-secondary">{{ seconds }}</div>
+                </div>
+              </div>
+
+              <div class="position-relative bg-white p-2 rounded-4 shadow-sm mb-4" style="width: 280px; height: 280px;">
+                <img :src="generatedQrUrl" alt="VietQR" class="w-100 h-100 object-fit-contain rounded-3">
+                <div class="scan-line"></div>
+              </div>
+
+              <div class="d-flex gap-2 justify-content-center mb-3">
+                <span class="badge bg-neon text-dark px-3 py-2 rounded-pill d-flex align-items-center gap-1 fw-bold">
+                  <span class="material-symbols-outlined fs-6">bolt</span> VietQR
+                </span>
+                <span class="badge bg-dark border border-secondary text-light px-3 py-2 rounded-pill d-flex align-items-center gap-1">
+                  Napas 247
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <div class="position-fixed top-0 end-0 p-3" style="z-index: 1100">
+        <div v-if="showToast" class="toast show bg-neon text-dark fw-bold border-0 shadow">
+          <div class="toast-body d-flex align-items-center gap-2">
+            <span class="material-symbols-outlined">check_circle</span>
+            Đã sao chép: <b>{{ copiedText }}</b>
+          </div>
+        </div>
+      </div>
+      
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const API_BASE = 'http://localhost:8080/api';
@@ -189,21 +242,37 @@ const loading = ref(false);
 const voucherCode = ref('');
 const orderNote = ref('');
 
-// THÊM CÁC BIẾN QUẢN LÝ VOUCHER
 const discountAmount = ref(0);
 const isCheckingVoucher = ref(false);
 
 const paymentMethod = ref('COD'); 
-const generatedQrUrl = ref('');
+// Biến này giờ sẽ dùng chung: Lúc đầu chứa mã tạm của PayOS, lúc sau chứa mã thật của DB
 const successOrderCode = ref('');
-let qrModalInstance = null; 
-
-// CẤU HÌNH NGÂN HÀNG
-const BANK_ID = 'TPB'; 
-const BANK_ACCOUNT_NO = '31413122007'; 
-const BANK_ACCOUNT_NAME = 'PHAM DANG KHOA'; 
-
 const shippingInfo = ref({ fullName: '', phone: '', email: '', address: '' });
+
+const showQrScreen = ref(false);
+const timeRemaining = ref(5 * 60); 
+let timerInterval = null;
+let checkPaymentInterval = null;
+
+const minutes = computed(() => Math.floor(timeRemaining.value / 60).toString().padStart(2, '0'));
+const seconds = computed(() => (timeRemaining.value % 60).toString().padStart(2, '0'));
+
+const generatedQrUrl = ref('');
+const bankAccountName = ref('');
+const bankAccountNumber = ref('');
+const payosTransferContent = ref('');
+
+const showToast = ref(false);
+const copiedText = ref('');
+const copyText = async (text) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    copiedText.value = text;
+    showToast.value = true;
+    setTimeout(() => { showToast.value = false; }, 3000);
+  } catch (err) { }
+};
 
 const getCurrentUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
@@ -218,10 +287,13 @@ const getAuthConfig = () => {
   return { headers: { Authorization: `Bearer ${token}` } };
 };
 
+const formatCurrency = (value) => {
+  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
+};
+
 const fetchUserProfile = async () => {
   const userId = getCurrentUserId();
   if (!userId) return;
-
   try {
     const response = await axios.get(`${API_BASE}/profile/${userId}`, getAuthConfig());
     const user = response.data;
@@ -230,13 +302,12 @@ const fetchUserProfile = async () => {
     shippingInfo.value.email = user.email || '';
     shippingInfo.value.address = user.address || '';
   } catch (error) {
-    console.error('Lỗi khi tải thông tin user:', error);
+    console.error('Lỗi tải user:', error);
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   fetchUserProfile();
-
   const checkoutDataStr = sessionStorage.getItem('checkout_data');
   if (checkoutDataStr) {
     const parsedData = JSON.parse(checkoutDataStr);
@@ -259,43 +330,27 @@ onMounted(() => {
 });
 
 const subtotal = computed(() => cartData.value.cartTotal || 0);
-
-// TÍNH TỔNG TIỀN CUỐI CÙNG SAU KHI TRỪ VOUCHER
 const finalAmount = computed(() => {
   const final = subtotal.value - discountAmount.value;
   return final < 0 ? 0 : final;
 });
 
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
-};
-
-// ====================================================
-// LOGIC ÁP DỤNG & KIỂM TRA MÃ GIẢM GIÁ
-// ====================================================
 const applyVoucher = async () => {
+  // ... Logic voucher giữ nguyên ...
   if (!voucherCode.value || voucherCode.value.trim() === '') {
     alert("Vui lòng nhập mã giảm giá!");
     return;
   }
-  
   isCheckingVoucher.value = true;
   try {
     const response = await axios.get(`${API_BASE}/vouchers/check`, {
-      params: {
-        code: voucherCode.value.trim(),
-        orderValue: subtotal.value
-      }
+      params: { code: voucherCode.value.trim(), orderValue: subtotal.value }
     });
-    
-    // API trả về trực tiếp số tiền giảm
     discountAmount.value = response.data;
     alert("Áp dụng mã giảm giá thành công!");
   } catch (error) {
-    console.error("Lỗi áp dụng voucher:", error);
     discountAmount.value = 0;
-    const errorMsg = error.response?.data || "Mã giảm giá không tồn tại hoặc đã hết hạn.";
-    alert("❌ Lỗi: " + errorMsg);
+    alert("❌ Lỗi: " + (error.response?.data || "Mã không hợp lệ."));
   } finally {
     isCheckingVoucher.value = false;
   }
@@ -306,155 +361,204 @@ const removeVoucher = () => {
   discountAmount.value = 0;
 };
 
-// ====================================================
-// 1. KHI KHÁCH BẤM "XÁC NHẬN ĐẶT HÀNG" TRÊN FORM
-// ====================================================
-const handlePlaceOrder = () => {
+// =========================================================
+// HÀM 1: CHIA LUỒNG KHI BẤM NÚT "XÁC NHẬN ĐẶT HÀNG"
+// =========================================================
+const handlePlaceOrder = async () => {
   if (!shippingInfo.value.fullName || !shippingInfo.value.phone || !shippingInfo.value.address) {
-    alert("Vui lòng điền đầy đủ thông tin nhận hàng bắt buộc!");
+    alert("Vui lòng điền đầy đủ thông tin nhận hàng!");
     return;
   }
 
   if (paymentMethod.value === 'BANK') {
-    // CHUYỂN KHOẢN: Chỉ hiện Modal QR, CHƯA GỌI API lưu Data
-    showQrModal();
+    // LUỒNG 1: BẬT MÃ QR TRƯỚC, CHƯA TẠO ĐƠN
+    loading.value = true;
+    try {
+      // Dùng thời gian hiện tại làm mã giao dịch tạm cho PayOS (để không trùng)
+      const tempTxnCode = Math.floor(Date.now() / 1000); 
+      successOrderCode.value = tempTxnCode.toString();
+
+      const payRes = await axios.post(`${API_BASE}/payment/create`, {
+        orderCode: tempTxnCode, 
+        productName: "Thanh toán đơn hàng",
+        description: "TZ " + tempTxnCode,
+        returnUrl: "http://localhost:5173", cancelUrl: "http://localhost:5173",
+        price: Math.round(finalAmount.value)
+      });
+
+      if (payRes.data.error === 0) {
+        const payosData = payRes.data.data;
+        bankAccountName.value = payosData.accountName;
+        bankAccountNumber.value = payosData.accountNumber;
+        payosTransferContent.value = payosData.description; 
+        generatedQrUrl.value = `https://img.vietqr.io/image/${payosData.bin}-${payosData.accountNumber}-compact2.png?amount=${payosData.amount}&addInfo=${encodeURIComponent(payosData.description)}&accountName=${encodeURIComponent(payosData.accountName)}`;
+        
+        showQrScreen.value = true;
+        startQrTimer();
+      } else {
+        alert("Lỗi tạo PayOS: " + payRes.data.message);
+      }
+    } catch (e) {
+      console.log("PayOS init error", e);
+      alert("Lỗi kết nối cổng thanh toán.");
+    } finally {
+      loading.value = false;
+    }
   } else {
-    // COD: Gọi API lưu thẳng xuống DB
-    submitOrderToBackend();
+    // LUỒNG 2: COD THÌ TẠO ĐƠN LUÔN VÀ KHÔNG GHI NHẬN ĐÃ THANH TOÁN
+    await executeCreateOrder(false); 
   }
 };
 
-// ====================================================
-// 2. HÀM HIỂN THỊ MÃ QR TẠM (Chưa lưu DB)
-// ====================================================
-const showQrModal = () => {
-  const amount = finalAmount.value; // DÙNG SỐ TIỀN ĐÃ TRỪ VOUCHER
-  const addInfo = encodeURIComponent(`TZ ${shippingInfo.value.phone}`); 
-  
-  generatedQrUrl.value = `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT_NO}-compact2.png?amount=${amount}&addInfo=${addInfo}&accountName=${encodeURIComponent(BANK_ACCOUNT_NAME)}`;
-  
-  const modalElement = document.getElementById('qrPaymentModal');
-  if (window.bootstrap) {
-    qrModalInstance = new window.bootstrap.Modal(modalElement);
-    qrModalInstance.show();
-  } else {
-    import('bootstrap').then(bootstrap => {
-      qrModalInstance = new bootstrap.Modal(modalElement);
-      qrModalInstance.show();
-    }).catch(err => {
-      console.error(err);
-    });
-  }
-};
-
-// ====================================================
-// 3. KHÁCH BẤM ĐÓNG MODAL / ĐỔI PHƯƠNG THỨC 
-// ====================================================
-const handlePayLater = () => {
-  if (qrModalInstance) {
-    qrModalInstance.hide();
-  }
-  cleanupModalBackdrop();
-};
-
-// ====================================================
-// 4. KHÁCH BẤM "TÔI ĐÃ CHUYỂN KHOẢN" TRÊN MODAL
-// ====================================================
-const handlePaymentDone = async () => {
-  // LÚC NÀY MỚI GỌI API ĐỂ LƯU VÀO DB
-  await submitOrderToBackend();
-};
-
-// ====================================================
-// 5. HÀM GỌI API BACKEND CHÍNH THỨC
-// ====================================================
-const submitOrderToBackend = async () => {
-  const userId = getCurrentUserId();
+// =========================================================
+// HÀM 2: HÀM GỌI API TẠO ĐƠN (Được gọi cho COD, hoặc sau khi BANK thành công)
+// =========================================================
+const executeCreateOrder = async (isAlreadyPaid) => {
   loading.value = true;
-  
+  const userId = getCurrentUserId();
   try {
+    const basePayload = {
+      note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
+      voucherCode: voucherCode.value.trim(), 
+      paymentMethod: paymentMethod.value,
+      isPaid: isAlreadyPaid, // DŨNG LƯU Ý: Chuyền biến này cho Java Spring Boot
+      items: cartData.value.items.map(item => ({
+        productId: item.productId,
+        variantId: item.variantId, 
+        quantity: item.quantity,
+        price: item.price
+      }))
+    };
+
     let response;
-    
     if (userId) {
-      const payload = {
-        note: `Người nhận: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
-        voucherCode: voucherCode.value.trim(), 
-        email: shippingInfo.value.email,
-        paymentMethod: paymentMethod.value,
-        items: cartData.value.items.map(item => ({
-          productId: item.productId,
-          variantId: item.variantId, // ĐÃ SỬA: Bổ sung variantId
-          quantity: item.quantity,
-          price: item.price
-        }))
-      };
-      response = await axios.post(`${API_BASE}/orders/${userId}/place`, payload, getAuthConfig());
-    } 
-    else {
-      const payload = {
-        note: `Khách vãng lai: ${shippingInfo.value.fullName} - SĐT: ${shippingInfo.value.phone} - Đ/C: ${shippingInfo.value.address}. Ghi chú: ${orderNote.value}`,
-        voucherCode: voucherCode.value.trim(), 
+      response = await axios.post(`${API_BASE}/orders/${userId}/place`, { ...basePayload, email: shippingInfo.value.email }, getAuthConfig());
+    } else {
+      response = await axios.post(`${API_BASE}/orders/guest/place`, {
+        ...basePayload,
         guestFullName: shippingInfo.value.fullName,
         guestPhone: shippingInfo.value.phone,
         guestEmail: shippingInfo.value.email,
         guestAddress: shippingInfo.value.address,
-        items: cartData.value.items.map(item => ({
-          productId: item.productId,
-          variantId: item.variantId, // ĐÃ SỬA: Bổ sung variantId
-          quantity: item.quantity,
-          price: item.price
-        })),
-        paymentMethod: paymentMethod.value
-      };
-      response = await axios.post(`${API_BASE}/orders/guest/place`, payload);
-      
-      // ĐÃ SỬA LOGIC GUEST: Chỉ xóa những món đã mua, giữ lại món chưa mua trong giỏ
+      });
+      // Dọn giỏ hàng guest
       let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
       const boughtItems = cartData.value.items;
-      guestCart = guestCart.filter(cartItem => {
-         return !boughtItems.some(bought => bought.productId === cartItem.productId && bought.variantId === cartItem.variantId);
-      });
+      guestCart = guestCart.filter(cartItem => !boughtItems.some(bought => bought.productId === cartItem.productId && bought.variantId === cartItem.variantId));
       localStorage.setItem('guest_cart', JSON.stringify(guestCart));
     }
 
-    successOrderCode.value = response.data.orderCode;
-    sessionStorage.removeItem('checkout_data'); // Xóa data tạm của trang Checkout
-    window.dispatchEvent(new Event('cart-updated')); // Cập nhật lại số lượng trên icon giỏ hàng
+    // Lấy mã đơn hàng THẬT từ DB trả về
+    const realOrderCodeFromDB = response.data.orderCode;
+    
+    sessionStorage.removeItem('checkout_data'); 
+    window.dispatchEvent(new Event('cart-updated')); 
 
-    // ĐÓNG MODAL (Nếu đang mở bằng BANK)
-    if (qrModalInstance) {
-      qrModalInstance.hide();
-      cleanupModalBackdrop();
+    // Nếu là COD, show alert và chuyển trang luôn
+    if (!isAlreadyPaid) {
+      alert(`🎉 Đặt hàng thành công! Mã đơn của bạn là: ${realOrderCodeFromDB}`);
+      router.push(`/order/${realOrderCodeFromDB}`);
     }
 
-    // THÔNG BÁO THEO YÊU CẦU
-    if (paymentMethod.value === 'BANK') {
-      alert("Đơn hàng của bạn đã được lưu, vui lòng chờ hệ thống xác nhận.");
-    } else {
-      alert(`🎉 Đặt hàng thành công! Mã đơn của bạn là: ${successOrderCode.value}`);
-    }
-    
-    router.push(`/order/${successOrderCode.value}`);
-    
+    return realOrderCodeFromDB; // Trả về mã thật cho luồng BANK dùng
+
   } catch (error) {
-    console.error("Lỗi khi đặt hàng:", error);
-    const errorMsg = error.response?.data || "Có lỗi xảy ra khi đặt hàng. Vui lòng thử lại.";
-    alert("❌ Lỗi: " + errorMsg);
+    alert("❌ Lỗi tạo đơn: " + (error.response?.data || "Vui lòng thử lại."));
+    return null;
   } finally {
     loading.value = false;
   }
 };
 
-const cleanupModalBackdrop = () => {
-  const backdrop = document.querySelector('.modal-backdrop');
-  if (backdrop) backdrop.remove();
-  document.body.classList.remove('modal-open');
-  document.body.style.overflow = '';
-  document.body.style.paddingRight = '';
+
+const startQrTimer = () => {
+  timeRemaining.value = 5 * 60; 
+  timerInterval = setInterval(() => {
+    if (timeRemaining.value > 0) {
+      timeRemaining.value--;
+    } else {
+      clearInterval(timerInterval);
+      clearInterval(checkPaymentInterval);
+      Swal.fire({
+        title: 'Đã hết thời gian!',
+        text: 'Mã QR thanh toán này đã hết hạn.',
+        icon: 'error',
+        background: '#1a1a1a', color: '#ffffff', confirmButtonColor: '#dc3545',
+        confirmButtonText: 'ĐÓNG'
+      }).then(() => cancelQrPayment());
+    }
+  }, 1000);
+
+  checkPaymentInterval = setInterval(async () => {
+    try {
+      // Check trạng thái dựa trên cái mã tạm
+      const res = await axios.get(`${API_BASE}/payment/check-status/${successOrderCode.value}`);
+      if (res.data.data === true) { 
+        clearInterval(checkPaymentInterval);
+        clearInterval(timerInterval);
+        await handlePaymentSuccess();
+      }
+    } catch (error) {}
+  }, 2000);
 };
+
+// =========================================================
+// HÀM 3: XỬ LÝ KHI TIỀN ĐÃ VÀO TÀI KHOẢN
+// =========================================================
+const handlePaymentSuccess = async () => {
+  // Hiện loading xịn xò chờ gọi API tạo đơn
+  Swal.fire({
+    title: 'Đang ghi nhận đơn hàng...',
+    text: 'Hệ thống đã nhận được tiền, vui lòng chờ giây lát!',
+    allowOutsideClick: false,
+    background: '#1a1a1a', color: '#ffffff',
+    didOpen: () => { Swal.showLoading(); }
+  });
+
+  // Gọi hàm tạo đơn và truyền true = Đã thanh toán
+  const realOrderCode = await executeCreateOrder(true); 
+
+  if (realOrderCode) {
+    let timerIntervalSwal;
+    Swal.fire({
+      title: 'Thanh toán thành công!',
+      html: 'Đơn hàng đã được tạo.<br>Tự động chuyển trang trong <b></b> giây.',
+      icon: 'success',
+      background: '#1a1a1a', color: '#ffffff', confirmButtonColor: '#00FF33',
+      allowOutsideClick: false, timer: 3000, timerProgressBar: true,
+      didOpen: () => {
+        const b = Swal.getHtmlContainer().querySelector('b');
+        timerIntervalSwal = setInterval(() => { b.textContent = Math.ceil(Swal.getTimerLeft() / 1000); }, 100);
+      },
+      willClose: () => {
+        clearInterval(timerIntervalSwal);
+        router.push(`/order/${realOrderCode}`);
+      }
+    }).then((res) => { if(res.isConfirmed) router.push(`/order/${realOrderCode}`); });
+  }
+};
+
+// =========================================================
+// HÀM 4: HỦY THANH TOÁN QR
+// =========================================================
+const cancelQrPayment = async () => {
+  if (timerInterval) clearInterval(timerInterval);
+  if (checkPaymentInterval) clearInterval(checkPaymentInterval);
+  
+  // DŨNG LƯU Ý: Vì mình CHƯA tạo đơn, nên không cần gọi API xóa đơn rác nữa! 
+  // Cũng không cần logic trả hàng lại về giỏ, vì hàng vốn vẫn nằm trong giỏ chưa bị mất.
+  // Chỉ cần tắt màn hình QR đi là xong.
+  showQrScreen.value = false; 
+};
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval);
+  if (checkPaymentInterval) clearInterval(checkPaymentInterval);
+});
 </script>
 
 <style scoped>
+/* TOÀN BỘ CSS CỦA BẠN GIỮ NGUYÊN */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
@@ -491,5 +595,36 @@ const cleanupModalBackdrop = () => {
 .custom-radio-payment .form-check-input:checked {
   background-color: #00FF33;
   border-color: #00FF33;
+}
+
+/* DŨNG LƯU Ý SỐ 16: STYLE RIÊNG CHO MÀN HÌNH QR ĐEN & TIA LASER */
+.bg-dark-panel { background-color: #1a1a1a !important; }
+.bg-dark-lighter { background-color: #242424 !important; }
+.bg-neon { background-color: #00FF33 !important; }
+
+.custom-hover:hover {
+  color: #00FF33 !important;
+  opacity: 0.8;
+}
+
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.scan-line {
+  position: absolute;
+  top: 10%; left: 10%;
+  width: 80%; height: 2px;
+  background-color: rgba(0, 255, 51, 0.8);
+  box-shadow: 0 0 12px rgba(0, 255, 51, 0.6);
+  animation: scan 2s infinite linear;
+}
+@keyframes scan {
+  0% { top: 10%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { top: 90%; opacity: 0; }
 }
 </style>

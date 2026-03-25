@@ -38,6 +38,7 @@ import Suppliers from '../components/admin/Suppliers.vue'
 import ImportReceiptList from '../components/admin/ImportReceiptList.vue'
 
 
+
 //import cho shipper
 import Shipping from '../components/shipping/Shipping.vue'
 // import { patch } from '@n8n/chat/dist/api/generic.js'
@@ -64,6 +65,8 @@ const routes = [
   { path: '/Historyproduct', name: 'Historyproduct', component: Historyproduct},
   { path: '/OrderVote', name: 'OrderVote', component: OrderVote},
   { path: '/support', name: 'Support', component: Support },
+
+
 
 
 

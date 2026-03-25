@@ -46,8 +46,11 @@ public class OrderServiceImpl implements OrderService {
         order.setCustomer(customer);
         order.setNote(request.getNote());
 
-        String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        order.setOrderCode("TZ-" + timeStamp + "-" + (int)(Math.random() * 10000));
+        // Lấy thời gian (Năm/Tháng/Ngày/Giờ/Phút/Giây) -> VD: 20260324143045
+        String dateStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        // Ép cứng KHÔNG CÓ DẤU GẠCH NGANG (VD: TZ20260324143045)
+        order.setOrderCode("TZ" + dateStamp + String.format("%04d", (int)(Math.random() * 10000)));
 
         OrderStatus status = orderStatusDAO.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống"));
         order.setStatus(status);
@@ -199,8 +202,11 @@ public class OrderServiceImpl implements OrderService {
         Order order = new Order();
         order.setCustomer(null);
         order.setNote(request.getNote());
-        String timeStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        order.setOrderCode("TZ-G-" + timeStamp + "-" + (int)(Math.random() * 10000));
+        // Lấy thời gian (Năm/Tháng/Ngày
+        String dateStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+        // Ép cứng KHÔNG CÓ DẤU GẠCH NGANG (VD: TZ20260324143045)
+        order.setOrderCode("TZ" + dateStamp + String.format("%04d", (int)(Math.random() * 10000)));
         OrderStatus status = orderStatusDAO.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái"));
         order.setStatus(status);
 

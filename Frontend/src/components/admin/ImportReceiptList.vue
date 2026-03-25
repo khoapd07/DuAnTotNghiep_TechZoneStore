@@ -1,50 +1,26 @@
 <template>
   <div class="bg-light min-vh-100">
-    <header class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top z-3 px-4 py-3">
-      <div class="container-fluid p-0">
-        <a class="navbar-brand d-flex align-items-center gap-2" href="#">
-          <div class="bg-success rounded p-1 d-flex align-items-center justify-content-center"
-            style="width: 32px; height: 32px;">
-            <i class="bi bi-lightning-charge-fill text-white"></i>
-          </div>
-          <span class="fw-bolder fs-5" style="font-family: 'Space Grotesk', sans-serif;">TechZone Admin</span>
-        </a>
-
-        <div class="d-none d-md-flex align-items-center gap-4">
-          <nav class="nav">
-            <a class="nav-link fw-bold text-success border-bottom border-success border-2 pb-1 px-2 mx-2" href="#">Nhập Kho</a>
-            <a class="nav-link fw-semibold text-secondary px-2 mx-2 hover-text-dark" href="#">Kho Hàng</a>
-            <a class="nav-link fw-semibold text-secondary px-2 mx-2 hover-text-dark" href="#">Báo Cáo</a>
-          </nav>
-
-          <div class="d-flex align-items-center gap-3 ms-4 border-start ps-4">
-            <i class="bi bi-bell fs-5 text-secondary cursor-pointer hover-text-dark"></i>
-            <div class="d-flex align-items-center gap-2 cursor-pointer">
-              <span class="fw-bold small">Admin</span>
-              <img src="https://ui-avatars.com/api/?name=Admin&background=f4f4f5&color=333" alt="User"
-                class="rounded-circle" width="32" height="32" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main class="container-fluid py-5" style="max-width: 1400px;">
-
-      <header class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3 mb-5">
+    <main class="container-fluid py-4" style="max-width: 1400px;">
+      
+      <div class="d-flex justify-content-between align-items-center mb-4 mt-2">
         <div>
-          <h2 class="display-6 fw-bold text-dark mb-1" style="font-family: 'Space Grotesk', sans-serif;">Danh Sách Phiếu Nhập Kho</h2>
-          <p class="text-muted mb-0 fw-medium">Quản lý và theo dõi các giao dịch nhập hàng vào hệ thống.</p>
+          <div class="text-muted fw-semibold small mb-1">
+            Admin <span class="mx-1">/</span> <span class="text-dark fw-bold">Nhập kho</span>
+          </div>
+          <h2 class="fw-bolder text-dark mb-0" style="font-size: 1.8rem; letter-spacing: -0.5px;">Quản Lý Phiếu Nhập</h2>
         </div>
-        <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-light border bg-white fw-bold d-flex align-items-center gap-2 shadow-sm rounded-3 px-4 py-2">
+        <div class="d-flex gap-2">
+          <button class="btn btn-white border fw-bold text-dark shadow-sm px-3 py-2">
             <i class="bi bi-box-arrow-up"></i> Xuất File
           </button>
-          <button @click="openAddModal" class="btn btn-success fw-bold d-flex align-items-center gap-2 shadow-sm rounded-3 px-4 py-2">
+          
+          <button @click="openAddModal" 
+                  class="btn fw-bold text-white shadow-sm px-4 py-2 d-flex align-items-center gap-2" 
+                  style="background-color: #00DF3A; border-color: #00DF3A;">
             <i class="bi bi-plus-lg"></i> Tạo Phiếu Mới
           </button>
         </div>
-      </header>
+      </div>
 
       <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
         <div class="input-group shadow-sm" style="max-width: 450px;">
@@ -76,7 +52,8 @@
                 <td colspan="8" class="text-center py-4 text-muted">Không tìm thấy phiếu nhập nào.</td>
               </tr>
 
-              <tr v-for="(receipt, index) in filteredReceipts" :key="index" class="bg-white hover-bg-light transition-colors">
+              <tr v-for="(receipt, index) in filteredReceipts" :key="index"
+                class="bg-white hover-bg-light transition-colors">
                 <td class="px-4 py-3 text-muted small">{{ receipt.id }}</td>
                 <td class="px-4 py-3 fw-bold text-dark">{{ receipt.code }}</td>
                 <td class="px-4 py-3 text-muted small">{{ receipt.date }}</td>
@@ -114,32 +91,31 @@
       </div>
     </main>
 
-    <div class="modal fade" id="receiptModal" tabindex="-1" aria-hidden="true">
+    <div v-if="showModal" class="modal-backdrop fade show"></div>
+    <div v-if="showModal" class="modal d-block" tabindex="-1">
       <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content rounded-4 border-0 shadow">
-          <div class="modal-header border-bottom-0 pb-0">
-            <h5 class="modal-title fw-bold display-6 fs-4" style="font-family: 'Space Grotesk', sans-serif;">
-              Tạo Phiếu Nhập Kho Mới
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+          
+          <div class="modal-header border-bottom p-3">
+            <h5 class="fw-black m-0 fs-5 text-dark">TẠO PHIẾU NHẬP KHO MỚI</h5>
+            <button type="button" class="btn-close shadow-none" @click="closeModal"></button>
           </div>
 
-          <div class="modal-body p-4 p-md-5 pt-3">
+          <div class="modal-body p-4 p-md-5 pt-3 bg-white">
             <form @submit.prevent="saveReceipt">
+              
               <h6 class="fw-bold text-success mb-3"><i class="bi bi-info-circle"></i> Thông Tin Chung</h6>
               <div class="row bg-light p-3 rounded-3 mb-4 border">
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-semibold small text-muted">Nhà cung cấp <span class="text-danger">*</span></label>
-                  <select class="form-select" v-model="newReceipt.supplierId" required>
+                  <select class="form-select shadow-none" v-model="newReceipt.supplierId" required>
                     <option value="" disabled>-- Chọn Nhà Cung Cấp --</option>
-                    <option v-for="sup in suppliers" :key="sup.id" :value="sup.id">
-                      {{ sup.name }}
-                    </option>
+                    <option v-for="sup in suppliers" :key="sup.id" :value="sup.id">{{ sup.name }}</option>
                   </select>
                 </div>
                 <div class="col-md-6 mb-3">
                   <label class="form-label fw-semibold small text-muted">Ghi chú phiếu nhập</label>
-                  <input type="text" class="form-control" v-model="newReceipt.note" placeholder="Nhập ghi chú hoặc mã chứng từ...">
+                  <input type="text" class="form-control shadow-none" v-model="newReceipt.note" placeholder="Nhập ghi chú hoặc mã chứng từ...">
                 </div>
               </div>
 
@@ -165,34 +141,33 @@
                     <tr v-if="newReceipt.items.length === 0">
                       <td colspan="5" class="text-center py-4 text-muted fst-italic">Chưa có sản phẩm nào. Vui lòng bấm "Thêm Mặt Hàng".</td>
                     </tr>
-                    <tr v-for="(item, index) in newReceipt.items" :key="index" class="border-bottom">
-                      <td>
-                        <select class="form-select form-select-sm mb-2" v-model="item.productId" @change="item.variantId = ''" required>
+                    <tr v-for="(item, index) in newReceipt.items" :key="index" class="border-bottom-dashed">
+                      <td class="py-3">
+                        <select class="form-select form-select-sm mb-2 shadow-none" v-model="item.productId" @change="item.variantId = ''" required>
                           <option value="" disabled>-- Chọn Sản Phẩm --</option>
                           <option v-for="prod in products" :key="prod.id || prod.productId" :value="prod.id || prod.productId">
-                            {{ prod.name || prod.productName || 'Sản phẩm ' + (prod.id || prod.productId) }}
+                            {{ prod.name || prod.productName || 'SP ' + (prod.id || prod.productId) }}
                           </option>
                         </select>
-                        
-                        <select class="form-select form-select-sm border-info" v-model="item.variantId" v-if="getVariantsForProduct(item.productId).length > 0" required>
+                        <select class="form-select form-select-sm border-info shadow-none" v-model="item.variantId" v-if="getVariantsForProduct(item.productId).length > 0" required>
                           <option value="" disabled>-- Chọn Phân Loại (Bắt buộc) --</option>
                           <option v-for="v in getVariantsForProduct(item.productId)" :key="v.variantId || v.id" :value="v.variantId || v.id">
                             {{ formatVariantName(v) }}
                           </option>
                         </select>
                       </td>
-                      <td>
-                        <input type="number" class="form-control form-control-sm text-center" v-model.number="item.quantity" min="1" required>
+                      <td class="py-3">
+                        <input type="number" class="form-control form-control-sm text-center shadow-none" v-model.number="item.quantity" min="1" required>
                       </td>
-                      <td>
-                        <input type="number" class="form-control form-control-sm text-end" v-model.number="item.price" min="0" required>
+                      <td class="py-3">
+                        <input type="number" class="form-control form-control-sm text-end shadow-none" v-model.number="item.price" min="0" required>
                       </td>
-                      <td class="text-end fw-bold text-dark">
+                      <td class="text-end fw-bold text-dark py-3">
                         {{ formatCurrency(item.quantity * item.price) }}
                       </td>
-                      <td class="text-end">
-                        <button type="button" @click="removeItem(index)" class="btn btn-sm btn-light text-danger rounded-circle">
-                          <i class="bi bi-x-lg"></i>
+                      <td class="text-end py-3">
+                        <button type="button" @click="removeItem(index)" class="btn btn-sm btn-link text-danger shadow-none p-0">
+                          <i class="bi bi-trash fs-6"></i>
                         </button>
                       </td>
                     </tr>
@@ -201,201 +176,219 @@
               </div>
 
               <div class="d-flex justify-content-end align-items-center gap-4 bg-light p-3 rounded-3 border">
-                <span class="text-muted fw-bold text-uppercase" style="letter-spacing: 1px;">Tổng Tiền Phiếu Nhập:</span>
+                <span class="text-muted fw-bold text-uppercase" style="letter-spacing: 1px;">Tổng Tiền:</span>
                 <h3 class="fw-black text-danger mb-0">{{ formatCurrency(totalAmount) }}</h3>
               </div>
 
-              <div class="d-flex justify-content-end gap-2 mt-4">
-                <button type="button" class="btn btn-light fw-bold px-4" data-bs-dismiss="modal">Hủy</button>
-                <button type="submit" class="btn btn-success fw-bold px-5 shadow-sm" :disabled="newReceipt.items.length === 0">
-                  <i class="bi bi-check2-circle"></i> Hoàn Tất Nhập Kho
+              <div class="modal-footer border-top px-0 pb-0 pt-4 mt-4">
+                <button type="button" class="btn btn-light fs-7 fw-bold px-4" @click="closeModal">Hủy</button>
+                <button type="submit" class="btn fs-7 fw-bold px-4 text-dark shadow-sm" style="background-color: #00DF3A; border-color: #00DF3A;" :disabled="newReceipt.items.length === 0">
+                  Hoàn Tất Nhập Kho
                 </button>
               </div>
+
             </form>
           </div>
         </div>
       </div>
     </div>
+    
   </div>
 </template>
 
-<script>
+<script setup>
+// ==========================================
+// 1. IMPORT CÁC THƯ VIỆN CẦN THIẾT
+// ==========================================
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import axios from 'axios';
-import * as bootstrap from 'bootstrap';
 
-export default {
-  name: "ImportReceiptList",
-  data() {
-    return {
-      searchQuery: "",
-      receipts: [],
-      modalInstance: null,
-      suppliers: [],
-      products: [],
-      newReceipt: {
-        supplierId: '',
-        note: '',
-        items: []
-      }
-    };
-  },
-  computed: {
-    filteredReceipts() {
-      if (!this.searchQuery) return this.receipts;
-      const lowerQuery = this.searchQuery.toLowerCase();
-      return this.receipts.filter(
-        (receipt) =>
-          (receipt.code && receipt.code.toLowerCase().includes(lowerQuery)) ||
-          (receipt.creatorName && receipt.creatorName.toLowerCase().includes(lowerQuery)) ||
-          (receipt.supplier && receipt.supplier.toLowerCase().includes(lowerQuery))
-      );
-    },
-    totalAmount() {
-      return this.newReceipt.items.reduce((total, item) => {
-        return total + (item.quantity * item.price);
-      }, 0);
-    }
-  },
-  methods: {
-    formatCurrency(value) {
-      if (!value) return "0 ₫";
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND"
-      }).format(value);
-    },
+// ==========================================
+// 2. KHAI BÁO BIẾN TRẠNG THÁI (STATE)
+// ==========================================
+const router = useRouter(); // Dùng để chuyển trang
+const searchQuery = ref(""); // Lưu từ khóa tìm kiếm
+const receipts = ref([]); // Danh sách phiếu nhập tải từ API
+const suppliers = ref([]); // Danh sách nhà cung cấp
+const products = ref([]); // Danh sách sản phẩm để chọn
+const showModal = ref(false); // Trạng thái Ẩn/Hiện Modal
 
-    // Hàm mới: Nối chuỗi để hiển thị đầy đủ Option 1 và Option 2 (Ví dụ: Đen - 256GB)
-    formatVariantName(v) {
-      // Ưu tiên lấy các trường phổ biến mà backend thường trả về cho Option 1
-      let opt1 = v.option1_value || v.option1Value || v.colorName || v.name || "";
-      // Ưu tiên lấy Option 2
-      let opt2 = v.option2_value || v.option2Value || v.sizeName || "";
+// Object chứa dữ liệu của Phiếu nhập mới đang được tạo
+const newReceipt = ref({
+  supplierId: '',
+  note: '',
+  items: []
+});
 
-      if (opt1 && opt2) {
-        return `${opt1} - ${opt2}`;
-      }
-      return opt1 || opt2 || `Phân loại ${v.variantId || v.id}`;
-    },
+// Lấy Token xác thực (nếu cần thiết cho bảo mật)
+const getAuthHeader = () => {
+  const token = localStorage.getItem('jwt_token');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
-    async fetchReceipts() {
-      try {
-        const response = await axios.get('/api/admin/import-receipts');
-        this.receipts = response.data;
-      } catch (error) {
-        console.error("Lỗi khi tải phiếu nhập:", error);
-      }
-    },
+// ==========================================
+// 3. CÁC HÀM TÍNH TOÁN TỰ ĐỘNG (COMPUTED)
+// ==========================================
 
-    async fetchSuppliers() {
-      try {
-        const response = await axios.get('/api/admin/suppliers');
-        this.suppliers = response.data.filter(s => s.status === true);
-      } catch (error) {
-        console.error("Lỗi tải NCC:", error);
-      }
-    },
+// Tự động lọc danh sách phiếu dựa trên ô tìm kiếm
+const filteredReceipts = computed(() => {
+  if (!searchQuery.value) return receipts.value;
+  const lowerQuery = searchQuery.value.toLowerCase();
+  return receipts.value.filter(receipt =>
+    (receipt.code && receipt.code.toLowerCase().includes(lowerQuery)) ||
+    (receipt.creatorName && receipt.creatorName.toLowerCase().includes(lowerQuery)) ||
+    (receipt.supplier && receipt.supplier.toLowerCase().includes(lowerQuery))
+  );
+});
 
-    async fetchProducts() {
-      try {
-        const response = await axios.get('/api/product');
-        if (response.data && response.data.content) {
-          this.products = response.data.content;
-        } else {
-          this.products = response.data;
-        }
-      } catch (error) {
-        console.error("Lỗi tải Sản phẩm:", error);
-      }
-    },
+// Tự động tính tổng tiền của cái Phiếu đang tạo (Số lượng * Đơn giá)
+const totalAmount = computed(() => {
+  return newReceipt.value.items.reduce((total, item) => total + (item.quantity * item.price), 0);
+});
 
-    getVariantsForProduct(productId) {
-      if (!productId) return [];
-      const product = this.products.find(p => p.productId === productId || p.id === productId);
-      return product && product.variants ? product.variants : [];
-    },
+// ==========================================
+// 4. CÁC HÀM FORMAT HIỂN THỊ (UI HELPERS)
+// ==========================================
 
-    openAddModal() {
-      this.newReceipt = { supplierId: '', note: '', items: [] };
-      this.addItem();
-      this.modalInstance.show();
-    },
+// Định dạng tiền tệ VNĐ
+const formatCurrency = (value) => {
+  if (!value) return "0 ₫";
+  return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
+};
 
-    addItem() {
-      this.newReceipt.items.push({ productId: '', variantId: '', quantity: 1, price: 0 });
-    },
+// Ghép tên phân loại (Ví dụ: "Màu Đen - 256GB") để hiển thị đẹp trong dropdown
+const formatVariantName = (v) => {
+  let opt1 = v.option1_value || v.option1Value || v.colorName || v.name || "";
+  let opt2 = v.option2_value || v.option2Value || v.sizeName || "";
+  if (opt1 && opt2) return `${opt1} - ${opt2}`;
+  return opt1 || opt2 || `Phân loại ${v.variantId || v.id}`;
+};
 
-    removeItem(index) {
-      this.newReceipt.items.splice(index, 1);
-    },
+// Lấy danh sách Biến thể (Variants) của 1 Sản phẩm khi người dùng chọn thẻ Select đầu tiên
+const getVariantsForProduct = (productId) => {
+  if (!productId) return [];
+  const product = products.value.find(p => p.productId === productId || p.id === productId);
+  return product && product.variants ? product.variants : [];
+};
 
-    async saveReceipt() {
-      if (this.newReceipt.items.length === 0) {
-        alert("Vui lòng thêm ít nhất 1 mặt hàng vào phiếu!");
-        return;
-      }
+// ==========================================
+// 5. LOGIC ĐÓNG/MỞ MODAL & FORM THÊM XÓA
+// ==========================================
 
-      // Đã sửa lại Payload: Gọi thẳng 'productId', 'variantId', 'supplierId' để khớp chuẩn Entity
-      const payload = {
-        supplier: { supplierId: this.newReceipt.supplierId }, 
-        note: this.newReceipt.note,
-        totalAmount: this.totalAmount, 
-        
-        // Chú ý: Cột này trong Java thường đặt là importReceiptDetails hoặc details
-        details: this.newReceipt.items.map(item => {
-          const detail = {
-            product: { productId: item.productId }, // Đã fix lỗi Hibernate TransientPropertyValueException
-            quantity: item.quantity,
-            importPrice: item.price, 
-            lineTotal: item.quantity * item.price
-          };
-          
-          if (item.variantId) {
-            detail.variant = { variantId: item.variantId }; // Đã fix mapping cho Variant
-          }
-          return detail;
-        })
+// Mở form thêm phiếu mới và clear sạch dữ liệu cũ
+const openAddModal = () => {
+  newReceipt.value = { supplierId: '', note: '', items: [] };
+  addItem(); // Thêm sẵn 1 dòng trống
+  showModal.value = true;
+};
+
+// Đóng form
+const closeModal = () => {
+  showModal.value = false;
+};
+
+// Thêm 1 dòng mặt hàng trống vào bảng chi tiết
+const addItem = () => {
+  newReceipt.value.items.push({ productId: '', variantId: '', quantity: 1, price: 0 });
+};
+
+// Xóa 1 dòng mặt hàng khỏi bảng
+const removeItem = (index) => {
+  newReceipt.value.items.splice(index, 1);
+};
+
+// ==========================================
+// 6. CÁC HÀM GỌI API (BACKEND)
+// ==========================================
+
+const fetchReceipts = async () => {
+  try {
+    const response = await axios.get('/api/admin/import-receipts', { headers: getAuthHeader() });
+    receipts.value = response.data;
+  } catch (error) { console.error("Lỗi khi tải phiếu nhập:", error); }
+};
+
+const fetchSuppliers = async () => {
+  try {
+    const response = await axios.get('/api/admin/suppliers', { headers: getAuthHeader() });
+    suppliers.value = response.data.filter(s => s.status === true);
+  } catch (error) { console.error("Lỗi tải NCC:", error); }
+};
+
+const fetchProducts = async () => {
+  try {
+    const response = await axios.get('/api/product?size=9999', { headers: getAuthHeader() });
+    products.value = (response.data && response.data.content) ? response.data.content : response.data;
+  } catch (error) { console.error("Lỗi tải Sản phẩm:", error); }
+};
+
+// Gửi dữ liệu phiếu nhập xuống Backend để lưu Database
+const saveReceipt = async () => {
+  if (newReceipt.value.items.length === 0) {
+    alert("Vui lòng thêm ít nhất 1 mặt hàng vào phiếu!");
+    return;
+  }
+
+  // Đóng gói Payload theo cấu trúc Entity Java
+  const payload = {
+    supplier: { supplierId: newReceipt.value.supplierId },
+    note: newReceipt.value.note,
+    totalAmount: totalAmount.value,
+    details: newReceipt.value.items.map(item => {
+      const detail = {
+        product: { productId: item.productId },
+        quantity: item.quantity,
+        importPrice: item.price,
+        lineTotal: item.quantity * item.price
       };
+      // Gắn thêm variantId nếu có
+      if (item.variantId) detail.variant = { variantId: item.variantId };
+      return detail;
+    })
+  };
 
-      try {
-        await axios.post('/api/admin/import-receipts', payload);
-        alert("Tạo phiếu nhập kho thành công!");
-        this.modalInstance.hide();
-        this.fetchReceipts(); // Load lại danh sách
-      } catch (error) {
-        console.error("Lỗi khi tạo phiếu:", error);
-        
-        if (error.response && error.response.data) {
-           alert("Lỗi từ server: " + error.response.data);
-        } else {
-           alert("Có lỗi xảy ra khi tạo phiếu. Vui lòng kiểm tra lại kết nối mạng hoặc console log!");
-        }
-      }
-    },
-
-    viewDetail(id) {
-      this.$router.push({ name: 'ImportReceiptDetail', params: { id: id } });
-    }
-  },
-  mounted() {
-    this.fetchReceipts();
-    this.fetchSuppliers();
-    this.fetchProducts();
-
-    this.modalInstance = new bootstrap.Modal(document.getElementById('receiptModal'), {
-      keyboard: false,
-      backdrop: 'static'
-    });
+  try {
+    await axios.put(`http://localhost:8080/api/admin/import-receipts/${id}`, dataCapNhat, { 
+    headers: getAuthHeader() });
+    alert("Tạo phiếu nhập kho thành công!");
+    closeModal(); // Đóng Modal mượt mà
+    fetchReceipts(); // Load lại bảng danh sách
+  } catch (error) {
+    console.error("Lỗi khi tạo phiếu:", error);
+    const errorMsg = error.response?.data?.message || error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
+    alert(typeof errorMsg === 'string' ? errorMsg : "Lỗi không xác định từ máy chủ.");
   }
 };
+
+// Chuyển hướng sang trang Chi tiết phiếu nhập
+const viewDetail = (id) => {
+  router.push({ name: 'ImportReceiptDetail', params: { id: id } });
+};
+
+// ==========================================
+// 7. LIFECYCLE (CHẠY KHI MỞ TRANG)
+// ==========================================
+onMounted(() => {
+  fetchReceipts();
+  fetchSuppliers();
+  fetchProducts();
+});
 </script>
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
 .cursor-pointer { cursor: pointer; }
 .hover-text-dark:hover { color: #212529 !important; }
 .transition-colors { transition: background-color 0.2s, color 0.2s; }
 .hover-bg-light:hover { background-color: #f8f9fa !important; }
 .fw-black { font-weight: 900; }
-.form-control:focus, .form-select:focus { border-color: #198754; box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25); }
+.border-bottom-dashed { border-bottom: 1px dashed #dee2e6; }
+
+/* Focus Styling */
+.form-control:focus, .form-select:focus {
+  border-color: #00DF3A;
+  box-shadow: 0 0 0 0.2rem rgba(0, 223, 58, 0.25);
+}
 </style>
