@@ -76,116 +76,63 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from "vue"
-import { useRoute } from "vue-router"
+import { ref, onMounted, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import axios from "axios" // Thêm thư viện axios
 
 const route = useRoute()
+const router = useRouter()
 const blog = ref(null)
+const relatedPosts = ref([])
 
-const blogs = [
-  {
-    id: 1,
-    title: "Đánh giá chi tiết NVIDIA RTX 4090: Sức mạnh hủy diệt cho Game thủ",
-    author: "Admin TechZone",
-    date: "24 Tháng 5, 2024",
-    read: "8 phút đọc",
-    image: "https://images.unsplxash.com/photo-1695056721201-081467bd18de?q=80&w=2000",
-    quote: "RTX 4090 là GPU mạnh nhất mà Nvidia từng sản xuất, mở ra kỷ nguyên chơi game 4K không giới hạn.",
-    content: `RTX 4090 được xây dựng trên kiến trúc Ada Lovelace với 16.384 nhân CUDA và 24GB VRAM GDDR6X.
-
-    1. Hiệu năng gaming vượt trội:
-    Trong các bài thử nghiệm thực tế, RTX 4090 cho thấy sức mạnh gấp đôi so với thế hệ tiền nhiệm RTX 3090 ở một số tựa game nặng. Bạn có thể dễ dàng đạt 100+ FPS ở độ phân giải 4K với mọi thiết lập cao nhất.
-
-    2. Công nghệ DLSS 3.0:
-    Đây là "vũ khí bí mật" của NVIDIA. Bằng cách sử dụng AI để tạo ra các khung hình hoàn toàn mới, DLSS 3 giúp tăng hiệu năng lên tới 4 lần trong khi vẫn giữ được chất lượng hình ảnh sắc nét.`
-  },
-  {
-    id: 2,
-    title: "Sự kiện ra mắt CPU thế hệ mới của Intel",
-    author: "Admin TechZone",
-    date: "20 Tháng 5, 2024",
-    read: "6 phút đọc",
-    image: "https://images.unsplash.com/photo-1591799264318-7e6ef8ddb7ea?q=80&w=2000",
-    quote: "Intel tiếp tục đẩy mạnh cuộc đua CPU hiệu năng cao với kiến trúc Hybrid cải tiến.",
-    content: `Dòng CPU mới mang lại hiệu năng đa nhân vượt trội, tối ưu hóa cho cả làm việc đồ họa nặng và chơi game.
-
-    Với việc tăng số lượng nhân E-core, Intel giúp người dùng có trải nghiệm đa nhiệm mượt mà hơn. Bạn có thể vừa livestream vừa chơi game AAA mà không gặp tình trạng giật lag.`
-  },
-  {
-    id: 3,
-    title: "Trên tay bàn phím cơ Custom cực hot: Tuyệt phẩm cho góc Set-up",
-    author: "Admin TechZone",
-    date: "18 Tháng 5, 2024",
-    read: "7 phút đọc",
-    image: "https://images.unsplash.com/photo-1618384887929-16ec33fab9ef?q=80&w=2000",
-    quote: "Bàn phím cơ Custom không chỉ là công cụ gõ, nó là một tác phẩm nghệ thuật trên bàn làm việc.",
-    content: `Phong trào chơi bàn phím cơ Custom chưa bao giờ hạ nhiệt. Hôm nay TechZone sẽ trên tay mẫu bàn phím nhôm nguyên khối với cấu hình "End-game".
-
-    1. Thiết kế và Cảm quan:
-    Cầm trên tay chiếc phím nặng gần 2kg, bạn sẽ cảm nhận được sự chắc chắn tuyệt đối. Lớp sơn mịn màng cùng các đường vát CNC tinh tế giúp góc làm việc của bạn sang trọng hơn hẳn.
-
-    2. Cấu hình bên trong:
-    Switch Linear đã được lube sẵn, mang lại cảm giác gõ mượt như lướt trên bơ. Bộ Stab được cân chỉnh kỹ lưỡng giúp âm thanh gõ cực kỳ nịnh tai.`
-  },
-  {
-    id: 4,
-    title: "Cách tối ưu hóa Windows để chơi game mượt mà nhất 2024",
-    author: "Admin TechZone",
-    date: "15 Tháng 5, 2024",
-    read: "10 phút đọc",
-    image: "https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2000",
-    quote: "Tối ưu hóa phần mềm là cách rẻ nhất để tăng FPS mà không cần tốn tiền nâng cấp linh kiện.",
-    content: `Nhiều bạn sở hữu cấu hình mạnh nhưng chơi game vẫn bị drop FPS. Thủ phạm thường nằm ở việc Windows chưa được tối ưu đúng cách.
-
-    - Bật Game Mode: Windows sẽ ưu tiên tài nguyên CPU/GPU cho game.
-    - Chỉnh Power Plan sang Ultimate Performance.
-    - Tắt các ứng dụng chạy ngầm không cần thiết để giải phóng RAM.`
-  },
-  {
-    id: 5,
-    title: "Đánh giá tai nghe Gaming không dây: Độ trễ gần như bằng không",
-    author: "Admin TechZone",
-    date: "12 Tháng 5, 2024",
-    read: "6 phút đọc",
-    image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?q=80&w=2000",
-    quote: "Sự tự do của tai nghe không dây là trải nghiệm mà bạn không bao giờ muốn từ bỏ.",
-    content: `Thời đại của dây nhợ lằng nhằng đã qua. Các mẫu tai nghe Wireless đời mới sử dụng kết nối 2.4GHz mang lại độ trễ cực thấp.
-
-    Bạn hoàn toàn có thể nghe tiếng chân trong các tựa game bắn súng chuẩn xác như dùng dây. Thời lượng pin lên tới 30 giờ cũng giúp bạn chơi game cả tuần mới cần sạc một lần.`
-  },
-  {
-    id: 6,
-    title: "Thị trường linh kiện PC quý 2: Giá GPU tiếp tục giảm sâu",
-    author: "Admin TechZone",
-    date: "10 Tháng 5, 2024",
-    read: "5 phút đọc",
-    image: "https://images.unsplash.com/photo-1591488320449-011701bb6704?q=80&w=2000",
-    quote: "Đây là thời điểm vàng để game thủ build cho mình một dàn máy mơ ước với chi phí hợp lý.",
-    content: `Sau giai đoạn bão giá, thị trường linh kiện PC đang bước vào thời kỳ cực tốt cho người dùng.
-
-    Sự ra mắt của dòng Super đã đẩy giá các dòng card cũ xuống mức cực thấp. Ngoài ra, giá SSD và RAM cũng đang ở mức rất dễ tiếp cận. Nếu bạn đang có ý định nâng cấp máy, hãy thực hiện ngay trong tháng này!`
-  }
-]
-
-// Hàm tải chi tiết bài viết
-const loadBlogDetail = () => {
+// Hàm tải chi tiết bài viết từ Backend API
+const loadBlogDetail = async () => {
   const blogId = Number(route.params.id)
-  blog.value = blogs.find(b => b.id === blogId)
-  window.scrollTo(0, 0) // Tự động cuộn lên đầu khi vào bài mới
+  try {
+    // Gọi API chi tiết blog mà bạn đã định nghĩa ở Backend
+    const res = await axios.get(`http://localhost:8080/api/blogs/${blogId}`)
+    blog.value = res.data
+    window.scrollTo(0, 0)
+    
+    // Sau khi tải xong chi tiết, gọi API để load Sidebar (bài viết liên quan)
+    loadRelatedPosts(blogId)
+  } catch (error) {
+    console.error("Lỗi khi lấy chi tiết blog:", error)
+    // Nếu không tìm thấy, có thể redirect về trang danh sách blog
+    // router.push("/blog")
+  }
 }
 
-// Lấy danh sách 3 bài viết khác để hiển thị ở sidebar
-const relatedPosts = computed(() => {
-  return blogs
-    .filter(b => b.id !== blog.value?.id)
-    .sort(() => 0.5 - Math.random()) // Trộn ngẫu nhiên
-    .slice(0, 3)
-})
+// Lấy danh sách bài viết khác để hiển thị ở sidebar
+const loadRelatedPosts = async (currentBlogId) => {
+  try {
+    const res = await axios.get("http://localhost:8080/api/blogs")
+    
+    const activePosts = (Array.isArray(res.data) ? res.data : []).filter(
+      // Chú ý: dùng đúng tên biến ID (thường là blogId theo như bên Blog.vue)
+      (item) => item.active === true && item.blogId !== currentBlogId 
+    )
+
+    // Trộn ngẫu nhiên và cắt lấy 3 bài
+    relatedPosts.value = activePosts
+      .sort(() => 0.5 - Math.random())
+      .slice(0, 3)
+  } catch (error) {
+    console.error("Lỗi khi tải bài viết liên quan:", error)
+  }
+}
+
+// Hàm format ngày tháng nếu database trả về timestamp (như bên Blog.vue)
+const formatDate = (date) => {
+  if (!date) return "";
+  return new Date(date).toLocaleDateString("vi-VN");
+};
 
 onMounted(() => {
   loadBlogDetail()
 })
 
+// Lắng nghe khi URL thay đổi (click vào bài liên quan ở sidebar) để load lại
 watch(() => route.params.id, () => {
   loadBlogDetail()
 })

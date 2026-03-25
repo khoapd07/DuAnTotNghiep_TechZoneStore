@@ -12,7 +12,7 @@ import Cart from '../components/Cart.vue'
 import OrderDetail from '../components/OrderDetail.vue';
 import Checkout from '../components/Checkout.vue'
 import Blog from '../components/Blog.vue'
-import Blogdetail from '../components/Blogdetail.vue'
+import BlogDetail from '../components/BlogDetail.vue'
 import ForgotPassword from '../components/ForgotPassword.vue'
 import Historyproduct from '../components/Historyproduct.vue'
 import OrderVote from '../components/OrderVote.vue'
@@ -60,7 +60,8 @@ const routes = [
   { path: '/checkout', name: 'Checkout', component: Checkout },
   { path: '/order/:id', name: 'OrderDetail', component: OrderDetail },
   { path: '/blog', name: 'Blog', component: Blog },
-  { path: '/Blogdetail', name: 'Blogdetail', component: Blogdetail },
+  { path: '/blog/:id', name: 'BlogDetail', component: BlogDetail },
+  // { path: '/Blogdetail', name: 'Blogdetail', component: Blogdetail },
   { path: '/ForgotPassword', name: 'ForgotPassword', component: ForgotPassword },
   { path: '/Historyproduct', name: 'Historyproduct', component: Historyproduct},
   { path: '/OrderVote', name: 'OrderVote', component: OrderVote},
