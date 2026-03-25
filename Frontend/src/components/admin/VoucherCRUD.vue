@@ -42,6 +42,7 @@
                 <td class="py-3 px-4 text-muted">{{ index + 1 }}</td>
                 <td class="py-3">
                   <span class="badge bg-light text-dark border fs-7 px-2 py-1 text-uppercase">{{ voucher.code }}</span>
+                  <span v-if="voucher.isHomepage" class="badge bg-warning ms-2" title="Đang hiển thị trên trang chủ"><i class="bi bi-house-door-fill"></i></span>
                 </td>
                 <td class="py-3 text-wrap" style="max-width: 150px;">
                   <span class="fw-bold fs-8 text-dark">{{ voucher.name }}</span>
@@ -118,15 +119,28 @@
                 <input type="datetime-local" 
                         v-model="form.endDate" 
                         :min="form.startDate" class="form-control fs-7">
-                </div>
+              </div>
+              
               <div class="col-md-12 mt-3">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mô tả sự kiện (Sẽ hiển thị trên Trang chủ)</label>
+                <textarea v-model="form.description" class="form-control fs-7" rows="3" placeholder="Nhập mô tả cho người dùng xem khi nhận mã..."></textarea>
+              </div>
+
+              <div class="col-md-12 mt-3 d-flex gap-4">
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" role="switch" id="statusSwitch" v-model="form.status">
                   <label class="form-check-label fs-7 fw-bold" for="statusSwitch">
                     Kích hoạt (Hoạt động)
                   </label>
                 </div>
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" role="switch" id="homepageSwitch" v-model="form.isHomepage">
+                  <label class="form-check-label fs-7 fw-bold text-primary" for="homepageSwitch">
+                    Hiển thị lên Trang chủ
+                  </label>
+                </div>
               </div>
+
             </div>
           </div>
           <div class="modal-footer border-top p-3">
@@ -151,7 +165,7 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 
-// Form data tương ứng với Model Voucher
+// Thêm mô tả và trạng thái homepage vào form
 const form = reactive({ 
   code: '', 
   name: '', 
@@ -160,6 +174,8 @@ const form = reactive({
   quantity: 1, 
   startDate: '', 
   endDate: '',
+  description: '',
+  isHomepage: false,
   status: true 
 });
 
@@ -168,7 +184,6 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// Gọi API lấy list voucher
 const fetchVouchers = async () => {
   try {
     const res = await axios.get('http://localhost:8080/api/vouchers', { headers: getAuthHeader() });
@@ -178,7 +193,6 @@ const fetchVouchers = async () => {
   }
 };
 
-// Tìm kiếm voucher theo mã hoặc tên
 const filteredVouchers = computed(() => {
   if (!searchQuery.value) return voucherList.value;
   const lowerQuery = searchQuery.value.toLowerCase();
@@ -188,13 +202,11 @@ const filteredVouchers = computed(() => {
   );
 });
 
-// Format Tiền Tệ VNĐ
 const formatCurrency = (value) => {
   if (!value && value !== 0) return '';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
 
-// Format Ngày Tháng (VD: 01/06/24)
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -204,7 +216,6 @@ const formatDate = (dateString) => {
   return `${day}/${month}/${year}`;
 };
 
-// Logic tính trạng thái (Đang hoạt động / Hết hạn / Hết số lượng)
 const getStatusText = (voucher) => {
   const now = new Date();
   const endDate = new Date(voucher.endDate);
@@ -215,32 +226,27 @@ const getStatusText = (voucher) => {
   return 'Đang hoạt động';
 };
 
-// Logic màu sắc badge tương ứng hình mẫu
 const getStatusBadgeClass = (voucher) => {
   const statusText = getStatusText(voucher);
   if (statusText === 'Đang hoạt động') {
     return 'bg-success-subtle text-success border border-success-subtle';
   } else {
-    return 'bg-danger-subtle text-danger border border-danger-subtle'; // Cho Hết hạn / Ngừng HĐ
+    return 'bg-danger-subtle text-danger border border-danger-subtle'; 
   }
 };
 
-// Format date để set vào input datetime-local
 const toDatetimeLocal = (dateString) => {
   if (!dateString) return '';
   return new Date(dateString).toISOString().slice(0, 16);
 };
 
-// Hàm lấy thời gian hiện tại chuẩn định dạng cho input datetime-local (YYYY-MM-DDTHH:mm)
 const getCurrentDateTimeLocal = () => {
   const now = new Date();
-  // Chỉnh múi giờ về giờ địa phương để không bị lệch giờ UTC
   const offset = now.getTimezoneOffset() * 60000; 
   const localTime = new Date(now.getTime() - offset);
   return localTime.toISOString().slice(0, 16);
 };
 
-// Mở modal thêm mới
 const openAddModal = () => {
   isEditing.value = false;
   currentId.value = null;
@@ -250,14 +256,15 @@ const openAddModal = () => {
     discountAmount: 0, 
     minOrderValue: 0, 
     quantity: 100, 
-    startDate: getCurrentDateTimeLocal(), // <-- Tự động lấy giờ hiện tại khi bấm nút
+    startDate: getCurrentDateTimeLocal(), 
     endDate: '', 
+    description: '',
+    isHomepage: false,
     status: true
   });
   showModal.value = true;
 };
 
-// Mở modal chỉnh sửa
 const openEditModal = (voucher) => {
   isEditing.value = true;
   currentId.value = voucher.voucherId;
@@ -269,14 +276,14 @@ const openEditModal = (voucher) => {
     quantity: voucher.quantity,
     startDate: toDatetimeLocal(voucher.startDate),
     endDate: toDatetimeLocal(voucher.endDate),
+    description: voucher.description || '',
+    isHomepage: voucher.isHomepage || false,
     status: voucher.status
   });
   showModal.value = true;
 };
 
-// Lưu Data
 const saveVoucher = async () => {
-  // --- THÊM ĐOẠN VALIDATE NÀY VÀO ĐẦU HÀM ---
   if (!form.startDate || !form.endDate) {
     alert("Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc!");
     return;
@@ -287,9 +294,8 @@ const saveVoucher = async () => {
   
   if (end <= start) {
     alert("Lỗi: Ngày kết thúc phải lớn hơn ngày bắt đầu!");
-    return; // Dừng luôn, không cho chạy xuống API lưu
+    return; 
   }
-  // ------------------------------------------
 
   try {
     const headers = getAuthHeader();
@@ -308,7 +314,6 @@ const saveVoucher = async () => {
   }
 };
 
-// Xóa Data
 const deleteVoucher = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa voucher này không?")) {
     try {

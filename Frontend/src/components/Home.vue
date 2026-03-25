@@ -155,14 +155,14 @@
       </div>
     </section>
 
-    <section class="container narrow-container mb-5">
+    <section class="container narrow-container mb-5" v-if="flashSaleVoucher">
       <div class="bg-neon rounded-4 px-4 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center shadow-sm">
         <div class="text-dark mb-2 mb-md-0">
           <h2 class="fw-black text-uppercase mb-1 fs-5">
-            {{ flashSaleVoucher?.name || 'FLASH SALE CUỐI TUẦN!' }}
+            {{ flashSaleVoucher.name }}
           </h2>
           <p class="m-0 fw-medium small" style="font-size: 13px;">
-            Ưu đãi giảm ngay <span class="fw-bold text-danger">{{ formatCurrency(flashSaleVoucher?.discountAmount || 1000000) }}</span> cho đơn hàng linh kiện.
+            Ưu đãi giảm ngay <span class="fw-bold text-danger">{{ formatCurrency(flashSaleVoucher.discountAmount) }}</span> cho đơn hàng linh kiện.
           </p>
         </div>
         <div class="d-flex align-items-center gap-2 mt-3 mt-md-0">
@@ -239,12 +239,12 @@
         <p class="mb-4 text-dark fs-5">
           Mã giảm giá của bạn là:<br>
           <span class="bg-dark text-neon fs-2 fw-black px-4 py-2 rounded-3 d-inline-block mt-2 tracking-wide border border-neon">
-            {{ flashSaleVoucher?.code || 'FLASHSALE' }}
+            {{ flashSaleVoucher?.code }}
           </span>
         </p>
 
-        <p class="text-muted small lh-base mb-4 px-md-2">
-          Ưu đãi cực hời vào cuối tuần khi nhập mã Flash Sale vào mỗi ngày <strong>T7, CN hàng tuần</strong>. Sự kiện sẽ kéo dài từ ngày <strong>13/03/2026</strong> đến ngày <strong>14/04/2026</strong>.
+        <p class="text-muted small lh-base mb-4 px-md-2" style="white-space: pre-line;">
+          {{ flashSaleVoucher?.description || 'Nhanh tay sử dụng mã giảm giá này cho đơn hàng của bạn nhé!' }}
         </p>
 
         <button @click="closeModal" class="btn btn-dark w-100 fw-bold py-2 fs-6 border-neon text-neon">
@@ -268,7 +268,6 @@ const saleContainer = ref(null);
 const currentTime = ref('');
 let timeInterval = null;
 
-// Biến điều khiển Modal
 const showFlashSaleModal = ref(false);
 
 const updateCurrentTime = () => {
@@ -314,9 +313,7 @@ const calculateDiscount = (price, salePrice) => {
   return roundedDiscount;
 };
 
-// ĐÃ XÓA CHECK IF (!flashSaleVoucher.value) GÂY RA ALERT
 const claimFlashSale = () => {
-  // Bật modal hiển thị mã lên mọi lúc
   showFlashSaleModal.value = true;
 };
 
@@ -330,7 +327,8 @@ const fetchData = async () => {
       axios.get('http://localhost:8080/api/product/featured'),
       axios.get('http://localhost:8080/api/product/latest'),
       axios.get('http://localhost:8080/api/product/discounted'),
-      axios.get('http://localhost:8080/api/vouchers/code/FLASHSALE').catch(() => null)
+      // MỚI THÊM: Đổi API lấy voucher được ghim lên homepage
+      axios.get('http://localhost:8080/api/vouchers/homepage').catch(() => null)
     ]);
     
     featuredProducts.value = featuredRes.data;

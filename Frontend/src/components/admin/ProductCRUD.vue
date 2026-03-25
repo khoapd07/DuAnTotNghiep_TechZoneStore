@@ -145,8 +145,12 @@
               <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM Gốc (Hiển thị)</label><input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống..."></div>
               
               <div class="col-12 mt-3">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Link hình ảnh đại diện</label>
-                <input type="text" v-model="form.imageUrl" class="form-control fs-7" placeholder="Nhập link hình ảnh bìa">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Hình ảnh đại diện</label>
+                <div class="d-flex gap-2 align-items-center">
+                  <input type="file" @change="uploadMainImage" class="form-control fs-7" accept="image/*">
+                  
+                  <img v-if="form.imageUrl" :src="form.imageUrl" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
+                </div>
               </div>
 
               <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mô tả ngắn</label><textarea v-model="form.description" class="form-control fs-7" rows="2"></textarea></div>
@@ -204,7 +208,14 @@
                       <tr v-for="(v, index) in form.variants" :key="'matrix-'+index">
                         <td><input type="text" v-model="v.colorName" class="form-control form-control-sm fs-8 fw-bold" placeholder="VD: Đen"></td>
                         <td><input type="text" v-model="v.option2Value" class="form-control form-control-sm fs-8" placeholder="VD: 64GB"></td>
-                        <td><input type="text" v-model="v.imageUrl" class="form-control form-control-sm fs-8" placeholder="Link ảnh..."></td>
+                        
+                        <td>
+                          <div class="d-flex gap-1 align-items-center">
+                            <input type="file" @change="uploadVariantImage($event, index)" class="form-control form-control-sm mb-1" style="font-size: 0.65rem;" accept="image/*">
+                            <img v-if="v.imageUrl" :src="v.imageUrl" class="rounded border" style="width: 30px; height: 30px; object-fit: cover;">
+                          </div>
+                        </td>
+                        
                         <td><input type="number" v-model="v.price" class="form-control form-control-sm fs-8 text-end" placeholder="0"></td>
                         <td><input type="number" v-model="v.salePrice" class="form-control form-control-sm fs-8 text-end" placeholder="KM"></td>
                         <td><input type="number" :value="v.stockQuantity" class="form-control form-control-sm fs-8 text-center text-danger fw-bold bg-white" disabled></td>
@@ -274,6 +285,44 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
+// ====================================================================
+// TRỌNG TÂM: ĐÃ THÊM: LOGIC UPLOAD ẢNH (BẮN LÊN API VÀ LẤY LINK VỀ)
+// ====================================================================
+const uploadImageFile = async (file) => {
+  if (!file) return null;
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const headers = getAuthHeader();
+    headers['Content-Type'] = 'multipart/form-data'; // Bắt buộc cho upload file
+    
+    const response = await axios.post('http://localhost:8080/api/upload', formData, { headers });
+    return response.data; // Backend trả về: http://localhost:8080/uploads/xyz.jpg
+  } catch (error) {
+    console.error("Lỗi upload ảnh:", error);
+    alert("Upload ảnh thất bại! Vui lòng thử lại.");
+    return null;
+  }
+};
+
+const uploadMainImage = async (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    const url = await uploadImageFile(file);
+    if (url) form.imageUrl = url; // Điền link localhost vào Database
+  }
+};
+
+const uploadVariantImage = async (event, index) => {
+  const file = event.target.files[0];
+  if (file) {
+    const url = await uploadImageFile(file);
+    if (url) form.variants[index].imageUrl = url; // Điền link localhost vào Database SKU
+  }
+};
+// ====================================================================
+
 const fetchProducts = async () => {
   try {
     const response = await axios.get('http://localhost:8080/api/product?size=1000', { headers: getAuthHeader() });
@@ -326,6 +375,10 @@ const generateMatrix = () => {
   let colors = setupColors.value.split(',').map(s => s.trim()).filter(Boolean);
   let opts = setupOption2s.value.split(',').map(s => s.trim()).filter(Boolean);
   
+  if (colors.length === 1 && colors[0] === 'Mới') {
+    return;
+  }
+
   if (colors.length === 0) colors = ['Tiêu chuẩn'];
   if (opts.length === 0) opts = ['']; 
 
@@ -426,7 +479,7 @@ const saveProduct = async () => {
       imageUrl: form.imageUrl,
       description: form.description,
       variants: finalVariants,
-      attributes: null // Đã xóa attributes tĩnh, gửi null để Backend dọn dẹp
+      attributes: null 
     };
 
     if (isEditing.value) {

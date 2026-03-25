@@ -45,6 +45,8 @@ public class SecurityConfig {
 //                        .requestMatchers("/api/cart").authenticated()
                                 .requestMatchers("/api/chat/**").permitAll()
 
+                                .requestMatchers("/uploads/**").permitAll()
+
                         // 2. KHÓA CHẶT API ADMIN: Bắt buộc user phải có Authority là "Admin" (tên role trong DB của bạn)
                         .requestMatchers("/api/admin/**").hasAuthority("Admin")
 

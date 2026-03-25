@@ -64,7 +64,7 @@ public class ProductController {
         return ResponseEntity.ok(productDTO);
     }
 
-    // ĐÃ THÊM TRY-CATCH ĐỂ BẮT LỖI VALIDATE
+
     @PostMapping
     public ResponseEntity<?> createProduct(@Valid @RequestBody ProductDTO productDTO) {
         try {
@@ -87,7 +87,6 @@ public class ProductController {
         return ResponseEntity.ok(productService.getTop8NewestProducts());
     }
 
-    // ĐÃ THÊM TRY-CATCH ĐỂ BẮT LỖI VALIDATE
     @PutMapping("/{id}")
     public ResponseEntity<?> updateProduct(@PathVariable Integer id, @Valid @RequestBody ProductDTO productDTO) {
         try {

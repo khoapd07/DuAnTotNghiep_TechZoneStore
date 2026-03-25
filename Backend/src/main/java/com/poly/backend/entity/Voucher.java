@@ -49,4 +49,13 @@ public class Voucher {
     @Builder.Default
     private Boolean status = true;
 
+    // MỚI THÊM: Cột mô tả sự kiện
+    @Column(name = "description", columnDefinition = "NVARCHAR(MAX)")
+    private String description;
+
+    // MỚI THÊM: Đánh dấu voucher xuất hiện ở trang chủ
+    @Column(name = "is_homepage")
+    @Builder.Default
+    private Boolean isHomepage = false;
+
 }

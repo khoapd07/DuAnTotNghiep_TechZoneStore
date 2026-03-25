@@ -17,15 +17,13 @@ import java.util.List;
 public class VoucherController {
 
     private final VoucherDAO voucherDAO;
-    private final VoucherService voucherService; // Thêm Service vào để xử lý CRUD
+    private final VoucherService voucherService;
 
-    // Bổ sung API Lấy danh sách Voucher
     @GetMapping
     public ResponseEntity<List<Voucher>> getAllVouchers() {
         return ResponseEntity.ok(voucherService.findAll());
     }
 
-    // Bổ sung API Lấy chi tiết 1 Voucher
     @GetMapping("/{id}")
     public ResponseEntity<Voucher> getVoucherById(@PathVariable Integer id) {
         Voucher voucher = voucherService.findById(id);
@@ -35,17 +33,40 @@ public class VoucherController {
         return ResponseEntity.notFound().build();
     }
 
-    // Bổ sung API Thêm mới Voucher
+    // MỚI THÊM: API Lấy Voucher đang hiển thị ở trang chủ
+    @GetMapping("/homepage")
+    public ResponseEntity<Voucher> getHomepageVoucher() {
+        Voucher homepageVoucher = voucherService.findAll().stream()
+                .filter(v -> Boolean.TRUE.equals(v.getIsHomepage()) && Boolean.TRUE.equals(v.getStatus()))
+                .findFirst()
+                .orElse(null);
+
+        if (homepageVoucher != null) {
+            return ResponseEntity.ok(homepageVoucher);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
     @PostMapping
     public ResponseEntity<Voucher> createVoucher(@RequestBody Voucher voucher) {
-        // Tự động set code viết hoa (nếu cần)
         if (voucher.getCode() != null) {
             voucher.setCode(voucher.getCode().toUpperCase().trim());
         }
+
+        // Nếu set làm trang chủ, phải hủy các voucher trang chủ cũ
+        if (Boolean.TRUE.equals(voucher.getIsHomepage())) {
+            List<Voucher> allVouchers = voucherService.findAll();
+            for (Voucher v : allVouchers) {
+                if (Boolean.TRUE.equals(v.getIsHomepage())) {
+                    v.setIsHomepage(false);
+                    voucherService.save(v);
+                }
+            }
+        }
+
         return ResponseEntity.ok(voucherService.save(voucher));
     }
 
-    // Bổ sung API Cập nhật Voucher
     @PutMapping("/{id}")
     public ResponseEntity<Voucher> updateVoucher(@PathVariable Integer id, @RequestBody Voucher voucherDetails) {
         Voucher existingVoucher = voucherService.findById(id);
@@ -58,13 +79,25 @@ public class VoucherController {
             existingVoucher.setStartDate(voucherDetails.getStartDate());
             existingVoucher.setEndDate(voucherDetails.getEndDate());
             existingVoucher.setStatus(voucherDetails.getStatus());
+            existingVoucher.setDescription(voucherDetails.getDescription());
+            existingVoucher.setIsHomepage(voucherDetails.getIsHomepage());
+
+            // Nếu set làm trang chủ, phải hủy các voucher trang chủ cũ
+            if (Boolean.TRUE.equals(voucherDetails.getIsHomepage())) {
+                List<Voucher> allVouchers = voucherService.findAll();
+                for (Voucher v : allVouchers) {
+                    if (!v.getVoucherId().equals(id) && Boolean.TRUE.equals(v.getIsHomepage())) {
+                        v.setIsHomepage(false);
+                        voucherService.save(v);
+                    }
+                }
+            }
 
             return ResponseEntity.ok(voucherService.save(existingVoucher));
         }
         return ResponseEntity.notFound().build();
     }
 
-    // Bổ sung API Xóa Voucher
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteVoucher(@PathVariable Integer id) {
         Voucher existingVoucher = voucherService.findById(id);
@@ -75,7 +108,6 @@ public class VoucherController {
         return ResponseEntity.notFound().build();
     }
 
-    // ------- GIỮ NGUYÊN CODE CŨ CỦA BẠN BÊN DƯỚI -------
     @GetMapping("/check")
     public ResponseEntity<?> checkVoucher(
             @RequestParam(value = "code", required = false) String code,
@@ -109,13 +141,7 @@ public class VoucherController {
                             return ResponseEntity.badRequest().body("Đơn hàng chưa đạt giá trị tối thiểu " + v.getMinOrderValue());
                         }
 
-                        // MỚI THÊM: LOGIC CHẶN NGÀY CHO MÃ FLASHSALE
-                        if (v.getCode().equalsIgnoreCase("FLASHSALE")) {
-                            java.time.DayOfWeek dayOfWeek = now.getDayOfWeek();
-                            if (dayOfWeek != java.time.DayOfWeek.SATURDAY && dayOfWeek != java.time.DayOfWeek.SUNDAY) {
-                                return ResponseEntity.badRequest().body("Rất tiếc! Mã FLASHSALE chỉ được áp dụng vào Thứ 7 và Chủ Nhật.");
-                            }
-                        }
+                        // ĐÃ XÓA LOGIC CHẶN NGÀY FLASHSALE THEO YÊU CẦU CỦA BẠN
 
                         return ResponseEntity.ok(v.getDiscountAmount());
                     })
@@ -125,5 +151,4 @@ public class VoucherController {
             return ResponseEntity.badRequest().body("Giá trị đơn hàng không hợp lệ (phải là số).");
         }
     }
-
 }
