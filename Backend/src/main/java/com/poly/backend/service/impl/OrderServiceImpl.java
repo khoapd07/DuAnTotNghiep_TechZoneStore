@@ -262,7 +262,7 @@ public class OrderServiceImpl implements OrderService {
 //        order.setPaymentStatus(false);
         // Nhận trạng thái "Đã thanh toán" từ Frontend truyền lên
         order.setPaymentStatus(request.getIsPaid() != null ? request.getIsPaid() : false);
-        
+
         Order savedOrder = orderDAO.save(order);
         if (request.getGuestEmail() != null && !request.getGuestEmail().isEmpty()) {
             emailService.sendOrderConfirmation(request.getGuestEmail(), savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
