@@ -153,19 +153,16 @@
                 Phương thức: {{ selectedOrder.paymentMethod === 'BANK' ? 'Chuyển khoản (VietQR)' : 'Thanh toán COD' }}
               </p>
             </div>
-            <div class="form-check form-switch cursor-pointer">
-              <input class="form-check-input" type="checkbox" role="switch" id="paymentStatusSwitch" 
-                     :checked="selectedOrder.paymentStatus"
-                     :disabled="selectedOrder.paymentMethod !== 'BANK'"
-                     @change="togglePaymentStatus(selectedOrder)">
-              <label class="form-check-label fw-bold fs-8" for="paymentStatusSwitch"
-                     :class="selectedOrder.paymentStatus ? 'text-success' : 'text-danger'">
+
+            <div class="text-end">
+              <p class="fs-8 fw-bold m-0 mb-1 text-muted">TRẠNG THÁI THANH TOÁN:</p>
+              <span class="badge px-3 py-2 fs-8 fw-bold border"
+                    :class="selectedOrder.paymentStatus ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'">
+                <i class="bi" :class="selectedOrder.paymentStatus ? 'bi-check-circle-fill' : 'bi-clock-fill'"></i>
                 {{ selectedOrder.paymentStatus ? 'Đã thu tiền' : 'Chưa thu tiền' }}
-              </label>
-              <small v-if="selectedOrder.paymentMethod !== 'BANK'" class="d-block text-muted fs-9 fst-italic mt-1">
-                (Tự động cập nhật khi Shipper giao)
-              </small>
+              </span>
             </div>
+            
           </div>
           <label class="fs-8 fw-bold text-dark mb-2">TRẠNG THÁI XỬ LÝ</label>
           <div class="d-flex gap-2">
@@ -443,16 +440,18 @@ const availableStatuses = computed(() => {
   });
 });
 
-const togglePaymentStatus = async (order) => {
-  const newStatus = !order.paymentStatus;
-  try {
-    await axios.put(`${API_URL}/admin/${order.orderId}/payment?status=${newStatus}`);
-    order.paymentStatus = newStatus;
-  } catch (error) {
-    alert("Lỗi cập nhật thanh toán: " + (error.response?.data || error.message));
-    order.paymentStatus = !newStatus; 
-  }
-};
+
+// chuyển trạng thái thu tiền (cũ)
+// const togglePaymentStatus = async (order) => {
+//   const newStatus = !order.paymentStatus;
+//   try {
+//     await axios.put(`${API_URL}/admin/${order.orderId}/payment?status=${newStatus}`);
+//     order.paymentStatus = newStatus;
+//   } catch (error) {
+//     alert("Lỗi cập nhật thanh toán: " + (error.response?.data || error.message));
+//     order.paymentStatus = !newStatus; 
+//   }
+// };
 </script>
 
 <style scoped>

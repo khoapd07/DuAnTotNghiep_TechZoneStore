@@ -6,5 +6,4 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CartItemDAO extends JpaRepository<CartItem, Integer> {
-    // Không cần viết thêm query gì vì JpaRepository đã hỗ trợ đủ các hàm save(), delete() cơ bản rồi
 }

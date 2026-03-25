@@ -14,6 +14,8 @@ public class GuestOrderRequestDTO {
     private String guestAddress;
     private String paymentMethod;
 
+    private Boolean isPaid;
+
     // Bắt buộc phải có list này vì khách vãng lai ko có giỏ hàng trong Database
     private List<GuestCartItemDTO> items;
 }

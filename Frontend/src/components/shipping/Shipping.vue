@@ -115,7 +115,7 @@
                   <span class="fs-8 fw-bold text-dark text-uppercase">Cần thu (COD):</span>
                   
                   <span v-if="order.paymentStatus" class="fs-5 fw-black text-success">
-                    0đ <small class="fs-9 fw-bold border border-success rounded px-1 ms-1 pb-1">ĐÃ CK</small>
+                    0đ <small class="fs-9 fw-bold border border-success rounded px-1 ms-1 pb-1">ĐÃ THU</small>
                   </span>
                   
                   <span v-else class="fs-5 fw-black text-danger">
@@ -186,7 +186,6 @@ const tabs = [
 ];
 
 onMounted(() => {
-  // Lấy tên shipper từ localStorage (nếu có đăng nhập)
   const userInfoStr = localStorage.getItem('user_info');
   if(userInfoStr) {
     const userObj = JSON.parse(userInfoStr);
@@ -210,7 +209,9 @@ const fetchShipperTasks = async () => {
   }
 };
 
-// Cập nhật trạng thái
+// =========================================================
+// HÀM CẬP NHẬT TRẠNG THÁI (ĐÃ BỔ SUNG TỰ ĐỘNG THU TIỀN)
+// =========================================================
 const updateStatus = async (orderId, newStatusId) => {
   try {
     let url = `${API_URL}/admin/${orderId}/status?statusId=${newStatusId}`;
@@ -220,10 +221,18 @@ const updateStatus = async (orderId, newStatusId) => {
       url += `&shipperId=${shipperId.value}`;
     }
 
+    // 1. Cập nhật trạng thái giao hàng
     await axios.put(url);
-    fetchShipperTasks(); // Tải lại danh sách
+
+    // 2. NẾU GIAO THÀNH CÔNG (3) -> TỰ ĐỘNG CHUYỂN TRẠNG THÁI THANH TOÁN SANG "ĐÃ THU TIỀN"
+    if (newStatusId === 3) {
+      await axios.put(`${API_URL}/admin/${orderId}/payment?status=true`);
+    }
+
+    // Tải lại danh sách sau khi cập nhật xong
+    fetchShipperTasks(); 
   } catch (error) {
-    alert("Lỗi cập nhật: " + error.response?.data);
+    alert("Lỗi cập nhật: " + (error.response?.data || error.message));
   }
 };
 
@@ -231,7 +240,6 @@ const updateStatus = async (orderId, newStatusId) => {
 const handleFailDelivery = (orderId) => {
   const reason = prompt("Vui lòng nhập lý do giao thất bại (Bom hàng, sai địa chỉ...):");
   if (reason) {
-    // Tương lai có thể lưu 'reason' vào API, hiện tại chỉ đổi status
     updateStatus(orderId, 4); 
   }
 };
@@ -319,7 +327,6 @@ const getStatusBadge = (sName) => {
 </script>
 
 <style scoped>
-/* Toàn bộ CSS giữ nguyên từ thiết kế tĩnh bạn vừa xem */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }

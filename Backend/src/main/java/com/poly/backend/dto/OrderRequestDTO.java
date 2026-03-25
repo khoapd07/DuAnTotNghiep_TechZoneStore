@@ -12,5 +12,7 @@ public class OrderRequestDTO {
     private String email;
     private String paymentMethod;
 
+    private Boolean isPaid;
+
     private List<GuestCartItemDTO> items;
 }
