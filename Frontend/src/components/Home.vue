@@ -275,10 +275,8 @@ const updateCurrentTime = () => {
   const day = String(now.getDate()).padStart(2, '0');
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const year = now.getFullYear();
-  const hours = String(now.getHours()).padStart(2, '0');
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
-  currentTime.value = `${day}/${month}/${year} - ${hours}:${minutes}:${seconds}`;
+  // Giữ ngày tháng động nhưng set cứng giờ phút giây
+  currentTime.value = `${day}/${month}/${year} - 23:59:59`;
 };
 
 const scrollToTop = () => {
@@ -327,7 +325,7 @@ const fetchData = async () => {
       axios.get('http://localhost:8080/api/product/featured'),
       axios.get('http://localhost:8080/api/product/latest'),
       axios.get('http://localhost:8080/api/product/discounted'),
-      // MỚI THÊM: Đổi API lấy voucher được ghim lên homepage
+      // Đổi API lấy voucher được ghim lên homepage
       axios.get('http://localhost:8080/api/vouchers/homepage').catch(() => null)
     ]);
     
@@ -345,6 +343,7 @@ const fetchData = async () => {
 onMounted(() => {
   fetchData();
   updateCurrentTime(); 
+  // Dù set cứng giờ nhưng vẫn để interval theo code ban đầu theo yêu cầu không sửa gì khác
   timeInterval = setInterval(updateCurrentTime, 1000); 
 });
 
