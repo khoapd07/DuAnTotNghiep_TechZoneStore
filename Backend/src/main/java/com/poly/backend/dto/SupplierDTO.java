@@ -10,5 +10,6 @@ public class SupplierDTO {
     private String phone;
     private String email;
     private String address;
+    private String taxCode;
     private Boolean status;
 }

@@ -349,8 +349,10 @@ const saveReceipt = async () => {
   };
 
   try {
-    await axios.put(`http://localhost:8080/api/admin/import-receipts/${id}`, dataCapNhat, { 
-    headers: getAuthHeader() });
+    await axios.post(`http://localhost:8080/api/admin/import-receipts`, payload, { 
+      headers: getAuthHeader() 
+    });
+    
     alert("Tạo phiếu nhập kho thành công!");
     closeModal(); // Đóng Modal mượt mà
     fetchReceipts(); // Load lại bảng danh sách

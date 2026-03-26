@@ -24,6 +24,9 @@ public class Supplier {
     private String email;
     private String address;
 
+    @Column(name = "tax_code")
+    private String taxCode;
+
     @Column(columnDefinition = "BIT DEFAULT 1")
     private Boolean status;
 }

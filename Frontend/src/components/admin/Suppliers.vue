@@ -45,6 +45,7 @@
                   <th class="pb-3 text-uppercase border-bottom">Người liên hệ</th>
                   <th class="pb-3 text-uppercase border-bottom">Số điện thoại</th>
                   <th class="pb-3 text-uppercase border-bottom">Email</th>
+                  <th class="pb-3 text-uppercase border-bottom">Mã số thuế</th>
                   <th class="pb-3 text-uppercase border-bottom">Địa chỉ</th>
                   <th class="pb-3 text-uppercase border-bottom">Trạng thái</th>
                   <th class="pb-3 border-bottom text-end">Thao tác</th>
@@ -52,7 +53,7 @@
               </thead>
               <tbody class="border-top-0">
                 <tr v-if="filteredSuppliers.length === 0">
-                  <td colspan="8" class="text-center py-4 text-muted">Không tìm thấy dữ liệu.</td>
+                  <td colspan="9" class="text-center py-4 text-muted">Không tìm thấy dữ liệu.</td>
                 </tr>
 
                 <tr v-for="(supplier, index) in filteredSuppliers" :key="index" class="position-relative group-hover-show">
@@ -61,6 +62,7 @@
                   <td class="py-3 text-dark" style="font-size: 14px;">{{ supplier.contact || supplier.contactName }}</td>
                   <td class="py-3 text-muted" style="font-size: 14px;">{{ supplier.phone || supplier.phoneNumber }}</td>
                   <td class="py-3 text-muted" style="font-size: 14px;">{{ supplier.email }}</td>
+                  <td class="py-3 text-dark fw-semibold" style="font-size: 14px;">{{ supplier.taxCode || '---' }}</td>
                   <td class="py-3 text-muted" style="font-size: 14px;">{{ supplier.address }}</td>
                   <td class="py-3">
                     <span 
@@ -91,7 +93,7 @@
 
     <transition name="modal-fade">
       <div v-if="showModal" class="modal-custom-overlay">
-        <div class="modal-dialog modal-dialog-centered" style="width: 100%; max-width: 600px; margin: auto;">
+        <div class="modal-dialog modal-dialog-centered" style="width: 100%; max-width: 650px; margin: auto;">
           <div class="modal-content rounded-4 border-0 shadow-lg bg-white">
             
             <div class="modal-header border-bottom p-4">
@@ -107,6 +109,7 @@
                   <label class="form-label fw-semibold small text-muted">Tên nhà cung cấp <span class="text-danger">*</span></label>
                   <input type="text" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.name" required placeholder="Nhập tên đối tác...">
                 </div>
+                
                 <div class="row">
                   <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold small text-muted">Người liên hệ</label>
@@ -117,10 +120,18 @@
                     <input type="text" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.phone" placeholder="09xx...">
                   </div>
                 </div>
-                <div class="mb-3">
-                  <label class="form-label fw-semibold small text-muted">Email</label>
-                  <input type="email" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.email" placeholder="email@example.com">
+
+                <div class="row">
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold small text-muted">Email</label>
+                    <input type="email" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.email" placeholder="email@example.com">
+                  </div>
+                  <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold small text-muted">Mã số thuế</label>
+                    <input type="text" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.taxCode" placeholder="Nhập mã số thuế...">
+                  </div>
                 </div>
+
                 <div class="mb-3">
                   <label class="form-label fw-semibold small text-muted">Địa chỉ</label>
                   <textarea class="form-control bg-light shadow-none border-0 py-2" v-model="formData.address" rows="2" placeholder="Nhập địa chỉ chi tiết..."></textarea>
@@ -149,15 +160,9 @@
 </template>
 
 <script setup>
-// ==========================================
-// 1. IMPORT
-// ==========================================
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios';
 
-// ==========================================
-// 2. KHAI BÁO BIẾN TRẠNG THÁI (STATE)
-// ==========================================
 const searchQuery = ref("");
 const suppliers = ref([]);
 const showModal = ref(false);
@@ -169,33 +174,28 @@ const formData = ref({
   contact: '',
   phone: '',
   email: '',
+  taxCode: '', // Khai báo thêm mã số thuế
   address: '',
   status: true
 });
 
 const apiUrl = '/api/admin/suppliers';
 
-// Lấy Token xác thực cho mọi Request
 const getAuthHeader = () => {
   const token = localStorage.getItem('jwt_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// ==========================================
-// 3. TÍNH TOÁN & LỌC DỮ LIỆU
-// ==========================================
 const filteredSuppliers = computed(() => {
   if (!searchQuery.value) return suppliers.value;
   const lowerQuery = searchQuery.value.toLowerCase();
   return suppliers.value.filter(sup => 
     ((sup.name || sup.supplierName) && (sup.name || sup.supplierName).toLowerCase().includes(lowerQuery)) || 
-    ((sup.id || sup.supplierId) && (sup.id || sup.supplierId).toString().includes(lowerQuery))
+    ((sup.id || sup.supplierId) && (sup.id || sup.supplierId).toString().includes(lowerQuery)) ||
+    (sup.taxCode && sup.taxCode.includes(lowerQuery)) // Cho phép search luôn bằng mã số thuế
   );
 });
 
-// ==========================================
-// 4. LOGIC MODAL & API
-// ==========================================
 const fetchSuppliers = async () => {
   try {
     const response = await axios.get(apiUrl, { headers: getAuthHeader() });
@@ -207,19 +207,19 @@ const fetchSuppliers = async () => {
 
 const openAddModal = () => {
   isEdit.value = false;
-  formData.value = { id: null, name: '', contact: '', phone: '', email: '', address: '', status: true };
+  formData.value = { id: null, name: '', contact: '', phone: '', email: '', taxCode: '', address: '', status: true };
   showModal.value = true;
 };
 
 const openEditModal = (supplier) => {
   isEdit.value = true;
-  // Ánh xạ lại tên biến cho khớp giữa dữ liệu trả về và form hiển thị
   formData.value = { 
     id: supplier.id || supplier.supplierId,
     name: supplier.name || supplier.supplierName,
     contact: supplier.contact || supplier.contactName,
     phone: supplier.phone || supplier.phoneNumber,
     email: supplier.email,
+    taxCode: supplier.taxCode, // Map mã số thuế
     address: supplier.address,
     status: supplier.status
   };
@@ -232,12 +232,12 @@ const closeModal = () => {
 
 const saveSupplier = async () => {
   try {
-    // Map data lại chuẩn với DTO/Entity của Backend Java
     const payload = {
       supplierName: formData.value.name,
       contactName: formData.value.contact,
       phoneNumber: formData.value.phone,
       email: formData.value.email,
+      taxCode: formData.value.taxCode, // Gửi mã số thuế xuống backend
       address: formData.value.address,
       status: formData.value.status
     };

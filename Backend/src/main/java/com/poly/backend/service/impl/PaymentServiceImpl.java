@@ -79,21 +79,20 @@ public class PaymentServiceImpl implements PaymentService {
     public WebhookData processWebhook(Object body) throws Exception {
         WebhookData data = payOS.webhooks().verify(body);
 
-        // Lấy description từ Webhook (Vd: "TT 1774426564")
-        String descriptionFromPayOS = data.getDescription();
-        System.out.println("✅ Ting Ting! PayOS báo nhận được tiền. Webhook Description: " + descriptionFromPayOS);
+        System.out.println("✅ Ting Ting! PayOS báo nhận được tiền.");
 
-        // 🔥 LƯU MÃ VÀO BỘ NHỚ TẠM (Bỏ chữ "TT " đi để chỉ còn số "1774426564")
-        if (descriptionFromPayOS != null && descriptionFromPayOS.startsWith("TT ")) {
-            String tempCode = descriptionFromPayOS.replace("TT ", "").trim();
+        // Lấy trực tiếp orderCode dạng số nguyên từ PayOS trả về
+        Long payosOrderCode = data.getOrderCode();
+
+        if (payosOrderCode != null) {
+            // Chuyển lại thành String để map với frontend
+            String tempCode = String.valueOf(payosOrderCode);
 
             // Đánh dấu mã này là ĐÃ THANH TOÁN THÀNH CÔNG
             paidTransactions.put(tempCode, true);
 
             System.out.println("🔥 Đã lưu mã " + tempCode + " vào bộ nhớ. Frontend đang lấy data về để tạo đơn!");
         }
-
-        // (Mình xóa cái đoạn tìm DB ở đây đi, vì lúc này đơn THẬT chưa được tạo, tìm sẽ báo lỗi đỏ console như bạn thấy)
 
         return data;
     }

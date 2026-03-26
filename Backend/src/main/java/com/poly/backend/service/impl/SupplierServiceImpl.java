@@ -27,6 +27,7 @@ public class SupplierServiceImpl implements SupplierService {
         dto.setPhone(entity.getPhoneNumber());
         dto.setEmail(entity.getEmail());
         dto.setAddress(entity.getAddress());
+        dto.setTaxCode(entity.getTaxCode());
         dto.setStatus(entity.getStatus());
         return dto;
     }
@@ -39,7 +40,7 @@ public class SupplierServiceImpl implements SupplierService {
     }
 
     // ======================================================
-    // 2. CÁC HÀM CRUD GỐC ĐÃ ĐƯỢC BỔ SUNG LẠI ĐỂ FIX LỖI
+    // 2. CÁC HÀM CRUD GỐC
     // ======================================================
 
     @Override
@@ -65,6 +66,7 @@ public class SupplierServiceImpl implements SupplierService {
             existingSupplier.setPhoneNumber(supplierDetails.getPhoneNumber());
             existingSupplier.setEmail(supplierDetails.getEmail());
             existingSupplier.setAddress(supplierDetails.getAddress());
+            existingSupplier.setTaxCode(supplierDetails.getTaxCode());
             existingSupplier.setStatus(supplierDetails.getStatus());
 
             return supplierDAO.save(existingSupplier);
