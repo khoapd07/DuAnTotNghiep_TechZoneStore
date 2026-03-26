@@ -4,68 +4,37 @@
     <section class="container mt-4 mb-5">
       <div id="heroSlideshow" class="carousel slide carousel-fade rounded-4 overflow-hidden shadow-lg" data-bs-ride="carousel">
         <div class="carousel-indicators">
-          <button type="button" data-bs-target="#heroSlideshow" data-bs-slide-to="0" class="active" aria-current="true"></button>
-          <button type="button" data-bs-target="#heroSlideshow" data-bs-slide-to="1"></button>
-          <button type="button" data-bs-target="#heroSlideshow" data-bs-slide-to="2"></button>
+          <button v-for="(slide, index) in slideShows" :key="'ind-' + index" 
+                  type="button" data-bs-target="#heroSlideshow" :data-bs-slide-to="index" 
+                  :class="{ active: index === 0 }" :aria-current="index === 0 ? 'true' : 'false'"></button>
         </div>
 
         <div class="carousel-inner hero-carousel-inner">
-          <div class="carousel-item active h-100" data-bs-interval="5000">
-            <img src="https://images.unsplash.com/photo-1593640408182-31c70c8268f5?q=80&w=2042&auto=format&fit=crop" class="d-block w-100 h-100 object-fit-cover absolute-img" alt="Esports Gaming 1">
+          <div v-for="(slide, index) in slideShows" :key="'slide-' + slide.slideId" 
+               class="carousel-item h-100" :class="{ active: index === 0 }" data-bs-interval="5000">
+            <img :src="slide.imageUrl" class="d-block w-100 h-100 object-fit-cover absolute-img" :alt="slide.titleHighlight">
             <div class="hero-overlay position-absolute top-0 start-0 w-100 h-100"></div>
             <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-start px-md-5">
-              <div class="mb-3">
-                <span class="badge bg-neon text-dark fw-bold px-3 py-2 rounded-pill">NEW ERA OF GAMING</span>
+              
+              <div class="mb-3" v-if="slide.badgeText">
+                <span class="badge fw-bold px-3 py-2 rounded-pill text-dark" 
+                      :style="{ backgroundColor: slide.badgeClass || '#00FF33' }">
+                  {{ slide.badgeText }}
+                </span>
               </div>
+              
               <h1 class="display-4 fw-black text-uppercase mb-3">
-                NÂNG TẦM TRẢI NGHIỆM <span class="text-neon">ESPORTS</span>
+                {{ slide.title }} 
+                <span :style="{ color: slide.highlightClass || '#00FF33' }">
+                  {{ slide.titleHighlight }}
+                </span>
               </h1>
+              
               <p class="fs-5 text-light opacity-75 mb-4 col-md-8">
-                Khám phá bộ sưu tập gear gaming thế hệ mới với hiệu năng đột phá và thiết kế tối tân.
+                {{ slide.description }}
               </p>
-              <div class="d-flex gap-3">
-                <button class="btn btn-neon fw-bold px-4 py-2">MUA NGAY</button>
-                <button class="btn btn-outline-light fw-bold px-4 py-2">XEM CATALOGUE</button>
+              
               </div>
-            </div>
-          </div>
-
-          <div class="carousel-item h-100" data-bs-interval="5000">
-            <img src="https://images.unsplash.com/photo-1600861194942-f883de0dfe96?q=80&w=2069&auto=format&fit=crop" class="d-block w-100 h-100 object-fit-cover absolute-img" alt="Esports Gaming 2">
-            <div class="hero-overlay position-absolute top-0 start-0 w-100 h-100"></div>
-            <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-start px-md-5">
-              <div class="mb-3">
-                <span class="badge bg-danger text-white fw-bold px-3 py-2 rounded-pill">HOT DEALS 2026</span>
-              </div>
-              <h1 class="display-4 fw-black text-uppercase mb-3">
-                BUILD PC CHUẨN <span class="text-danger">GAMER</span>
-              </h1>
-              <p class="fs-5 text-light opacity-75 mb-4 col-md-8">
-                Linh kiện chính hãng, bảo hành tận nơi. Lắp ráp nhanh chóng bởi đội ngũ chuyên gia TechZone.
-              </p>
-              <div class="d-flex gap-3">
-                <button class="btn btn-danger fw-bold px-4 py-2">BUILD NGAY</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="carousel-item h-100" data-bs-interval="5000">
-            <img src="https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=2070&auto=format&fit=crop" class="d-block w-100 h-100 object-fit-cover absolute-img" alt="Esports Gaming 3">
-            <div class="hero-overlay position-absolute top-0 start-0 w-100 h-100"></div>
-            <div class="carousel-caption d-flex flex-column justify-content-center h-100 text-start px-md-5">
-              <div class="mb-3">
-                <span class="badge bg-primary text-white fw-bold px-3 py-2 rounded-pill">GAMING GEAR</span>
-              </div>
-              <h1 class="display-4 fw-black text-uppercase mb-3">
-                PHỤ KIỆN TỐI THƯỢNG <span class="text-primary">PRO</span>
-              </h1>
-              <p class="fs-5 text-light opacity-75 mb-4 col-md-8">
-                Bàn phím cơ, chuột không dây siêu nhẹ, tai nghe chống ồn. Đưa kỹ năng của bạn lên tầm cao mới.
-              </p>
-              <div class="d-flex gap-3">
-                <button class="btn btn-primary fw-bold px-4 py-2">SĂN SALE</button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -92,7 +61,7 @@
           <div>
             <h6 class="fw-bold mb-1">Hỗ trợ 24/7</h6>
             <small class="text-muted">Đội ngũ kỹ thuật chuyên nghiệp</small>
-          </div>
+</div>
         </div>
       </div>
     </section>
@@ -140,7 +109,7 @@
               <small class="text-muted mb-3 line-clamp-1">{{ product.categoryName || 'Sản phẩm mới' }}</small>
               
               <h5 class="fw-bold mb-3 text-neon">
-                {{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
+{{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
               </h5>
 
               <div class="d-flex gap-2 mt-auto">
@@ -193,7 +162,7 @@
               <span class="badge bg-danger position-absolute top-0 end-0 m-3 z-1">
                 -{{ calculateDiscount(product.price, product.salePrice) }}%
               </span>
-              <div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
+<div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
                  <img :src="product.imageUrl || 'https://via.placeholder.com/300'" class="img-fluid" style="height: 120px; object-fit: contain;">
               </div>
               <div class="card-body p-2 d-flex flex-column text-center">
@@ -244,7 +213,7 @@
         </p>
 
         <p class="text-muted small lh-base mb-4 px-md-2" style="white-space: pre-line;">
-          {{ flashSaleVoucher?.description || 'Nhanh tay sử dụng mã giảm giá này cho đơn hàng của bạn nhé!' }}
+{{ flashSaleVoucher?.description || 'Nhanh tay sử dụng mã giảm giá này cho đơn hàng của bạn nhé!' }}
         </p>
 
         <button @click="closeModal" class="btn btn-dark w-100 fw-bold py-2 fs-6 border-neon text-neon">
@@ -260,6 +229,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import axios from 'axios';
 
+const slideShows = ref([]);
 const featuredProducts = ref([]);
 const latestProducts = ref([]);
 const discountedProducts = ref([]);
@@ -275,7 +245,6 @@ const updateCurrentTime = () => {
   const day = String(now.getDate()).padStart(2, '0');
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const year = now.getFullYear();
-  // Giữ ngày tháng động nhưng set cứng giờ phút giây
   currentTime.value = `${day}/${month}/${year} - 23:59:59`;
 };
 
@@ -321,14 +290,18 @@ const closeModal = () => {
 
 const fetchData = async () => {
   try {
-    const [featuredRes, latestRes, discountedRes, flashSaleRes] = await Promise.all([
+    const [slidesRes, featuredRes, latestRes, discountedRes, flashSaleRes] = await Promise.all([
+      axios.get('http://localhost:8080/api/slideshows/active'), 
       axios.get('http://localhost:8080/api/product/featured'),
       axios.get('http://localhost:8080/api/product/latest'),
       axios.get('http://localhost:8080/api/product/discounted'),
-      // Đổi API lấy voucher được ghim lên homepage
       axios.get('http://localhost:8080/api/vouchers/homepage').catch(() => null)
     ]);
     
+    if (slidesRes && slidesRes.data && slidesRes.data.length > 0) {
+        slideShows.value = slidesRes.data;
+    }
+
     featuredProducts.value = featuredRes.data;
     latestProducts.value = latestRes.data;
     discountedProducts.value = discountedRes.data;
@@ -343,185 +316,44 @@ const fetchData = async () => {
 onMounted(() => {
   fetchData();
   updateCurrentTime(); 
-  // Dù set cứng giờ nhưng vẫn để interval theo code ban đầu theo yêu cầu không sửa gì khác
   timeInterval = setInterval(updateCurrentTime, 1000); 
 });
 
 onUnmounted(() => {
-  if (timeInterval) clearInterval(timeInterval);
+if (timeInterval) clearInterval(timeInterval);
 });
 </script>
 
 <style scoped>
-/* Reset & Typography */
-.home-page {
-  font-family: 'Inter', sans-serif;
-}
-
-.bg-light-gray {
-  background-color: #F8F9FA;
-}
-
-.fw-black {
-  font-weight: 900;
-}
-
-.fs-7 {
-  font-size: 0.85rem;
-}
-
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;  
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;  
-  overflow: hidden;
-}
-
-/* Các biến màu chủ đạo từ Figma */
-.text-neon {
-  color: #00FF33 !important;
-}
-
-.bg-neon {
-  background-color: #00FF33 !important;
-}
-
-.btn-neon {
-  background-color: #00FF33;
-  color: #000;
-  border: none;
-  transition: all 0.2s ease;
-}
-
-.btn-neon:hover {
-  background-color: #00cc29;
-  color: #000;
-  transform: translateY(-2px);
-}
-
-.border-neon {
-  border: 1px solid #00FF33 !important;
-}
-
-/* Nút tùy chỉnh */
-.btn-outline-dark {
-  border-color: #333;
-  color: #333;
-  transition: all 0.2s;
-}
-.btn-outline-dark:hover {
-  background-color: #00FF33;
-  border-color: #00FF33;
-  color: #000;
-}
-
-/* Nút cuộn ngang lơ lửng */
-.hover-neon {
-  transition: all 0.2s ease;
-}
-.hover-neon:hover {
-  background-color: #00FF33 !important;
-  border-color: #00FF33 !important;
-}
-
-/* Custom Container (Bóp nhỏ 2 bên) */
-.narrow-container {
-  max-width: 960px !important; 
-  margin-left: auto;
-  margin-right: auto;
-}
-
-/* Custom Carousel cho Hero Banner */
-.hero-carousel-inner {
-  height: 500px;
-}
-
-.absolute-img {
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 0;
-}
-
-.hero-overlay {
-  background: linear-gradient(90deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.1) 100%);
-  z-index: 1;
-}
-
-.carousel-caption {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 2;
-  padding-top: 0;
-  padding-bottom: 0;
-}
-
-/* Card Hover Effect */
-.card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important;
-}
-
-/* Scrollbar ngang (ẩn mượt) */
-.custom-scrollbar::-webkit-scrollbar {
-  height: 6px; 
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent; 
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #ddd; 
-  border-radius: 10px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #00FF33; 
-}
-
-/* =========================================
-   CSS CHO CUSTOM MODAL
-   ========================================= */
-.modal-backdrop-custom {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.65);
-  z-index: 1050;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.2s ease-out;
-}
-
-.modal-content-custom {
-  max-width: 480px;
-  width: 100%;
-  animation: slideUp 0.3s ease-out;
-}
-
-.tracking-wide {
-  letter-spacing: 2px;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
+.home-page { font-family: 'Inter', sans-serif; }
+.bg-light-gray { background-color: #F8F9FA; }
+.fw-black { font-weight: 900; }
+.fs-7 { font-size: 0.85rem; }
+.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.text-neon { color: #00FF33 !important; }
+.bg-neon { background-color: #00FF33 !important; }
+.btn-neon { background-color: #00FF33; color: #000; border: none; transition: all 0.2s ease; }
+.btn-neon:hover { background-color: #00cc29; color: #000; transform: translateY(-2px); }
+.border-neon { border: 1px solid #00FF33 !important; }
+.btn-outline-dark { border-color: #333; color: #333; transition: all 0.2s; }
+.btn-outline-dark:hover { background-color: #00FF33; border-color: #00FF33; color: #000; }
+.hover-neon { transition: all 0.2s ease; }
+.hover-neon:hover { background-color: #00FF33 !important; border-color: #00FF33 !important; }
+.narrow-container { max-width: 960px !important; margin-left: auto; margin-right: auto; }
+.hero-carousel-inner { height: 500px; }
+.absolute-img { position: absolute; top: 0; left: 0; z-index: 0; }
+.hero-overlay { background: linear-gradient(90deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.1) 100%); z-index: 1; }
+.carousel-caption { position: absolute; top: 0; bottom: 0; left: 0; right: 0; z-index: 2; padding-top: 0; padding-bottom: 0; }
+.card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05) !important; }
+.custom-scrollbar::-webkit-scrollbar { height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #00FF33; }
+.modal-backdrop-custom { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.65); z-index: 1050; backdrop-filter: blur(4px); animation: fadeIn 0.2s ease-out; }
+.modal-content-custom { max-width: 480px; width: 100%; animation: slideUp 0.3s ease-out; }
+.tracking-wide { letter-spacing: 2px; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
