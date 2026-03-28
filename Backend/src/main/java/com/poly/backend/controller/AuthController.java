@@ -1,6 +1,7 @@
 package com.poly.backend.controller;
 
 import com.poly.backend.dto.AuthResponse;
+import com.poly.backend.dto.GoogleLoginRequest;
 import com.poly.backend.dto.LoginRequest;
 import com.poly.backend.dto.RegisterRequest;
 import com.poly.backend.entity.User;
@@ -51,6 +52,16 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<?> authenticateGoogle(@RequestBody GoogleLoginRequest request) {
+        try {
+            AuthResponse authResponse = authService.loginWithGoogle(request.getToken());
+            return ResponseEntity.ok(authResponse);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Đăng nhập Google thất bại: " + e.getMessage());
         }
     }
 }

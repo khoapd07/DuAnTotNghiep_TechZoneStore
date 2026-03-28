@@ -12,13 +12,13 @@ public class AuthResponse {
     private String type = "Bearer"; // Kiểu token chuẩn
     private Integer userId;     // Để frontend lưu lại dùng khi gọi API khác
     private String username;
-    private String role;        // Để frontend phân quyền hiển thị menu
+    private String role;
 
-    // Constructor tiện lợi
+    // Constructor (hàm khởi tạo) tiện lợi
     public AuthResponse(String token, Integer userId, String username, String role) {
         this.token = token;
         this.userId = userId;
         this.username = username;
-        this.role = role;
+        this.role = role; // Gán đúng tham số role vào thuộc tính
     }
 }

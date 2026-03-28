@@ -89,12 +89,9 @@
             <hr class="flex-grow-1 text-muted opacity-25">
           </div>
 
-          <button type="button" class="btn btn-outline-light w-100 fw-bold py-2 rounded-3 text-dark d-flex justify-content-center align-items-center gap-2 border" :disabled="isLoading">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-google" viewBox="0 0 16 16">
-              <path d="M15.545 6.558a9.42 9.42 0 0 1 .139 1.626c0 2.434-.87 4.492-2.384 5.885h.002C11.978 15.292 10.158 16 8 16A8 8 0 1 1 8 0a7.689 7.689 0 0 1 5.352 2.082l-2.284 2.284A4.347 4.347 0 0 0 8 3.166c-2.087 0-3.86 1.408-4.492 3.304a4.792 4.792 0 0 0 0 3.063h.003c.635 1.893 2.405 3.301 4.492 3.301 1.078 0 2.004-.276 2.722-.764h-.003a3.702 3.702 0 0 0 1.599-2.431H8v-3.08h7.545z"/>
-            </svg>
-            Google 
-          </button>
+          <div class="d-flex justify-content-center">
+            <GoogleLogin :callback="handleGoogleLogin" />
+          </div>
 
         </form>
 
@@ -170,6 +167,66 @@ const handleRegister = async () => {
 
   } catch (error) {
     errorMessage.value = error.message;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Xử lý đăng nhập Google
+const handleGoogleLogin = async (response) => {
+  isLoading.value = true;
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  try {
+    // Gọi chung API google giống như bên Login
+    const res = await axios.post('http://localhost:8080/api/auth/google', {
+      token: response.credential
+    });
+
+    const data = res.data;
+
+    // Lưu token và thông tin người dùng
+    localStorage.setItem('jwt_token', data.token);
+    const expiryTime = new Date().getTime() + 86400000;
+    localStorage.setItem('token_expiry', expiryTime.toString());
+
+    const userInfo = {
+      userId: data.userId,
+      username: data.username,
+      role: data.role
+    };
+    localStorage.setItem('user_info', JSON.stringify(userInfo));
+
+    // Gộp giỏ hàng khách vãng lai
+    const guestCart = JSON.parse(localStorage.getItem('guest_cart') || '[]');
+    if (guestCart.length > 0) {
+        const mergeData = guestCart.map(item => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: item.quantity
+        }));
+        await axios.post(`http://localhost:8080/api/cart/${userInfo.userId}/merge`, mergeData);
+        localStorage.removeItem('guest_cart'); 
+    }
+
+    // Kích hoạt cập nhật Header
+    window.dispatchEvent(new Event('auth-change'));
+
+    // Báo thành công và chuyển hướng ngay lập tức (không cần đợi 2s như form thường)
+    successMessage.value = 'Xác thực Google thành công!';
+    if (data.role === 'Admin' || data.role === 'Staff') {
+      router.push('/admin'); 
+    } else {
+      router.push('/'); 
+    }
+
+  } catch (error) {
+    if (error.response && error.response.data) {
+       errorMessage.value = error.response.data;
+    } else {
+       errorMessage.value = "Xác thực Google thất bại!";
+    }
   } finally {
     isLoading.value = false;
   }

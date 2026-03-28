@@ -10,6 +10,8 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js'
 // Thêm dòng này để nạp font Bootstrap Icons
 import 'bootstrap-icons/font/bootstrap-icons.css' 
 
+import vue3GoogleLogin from 'vue3-google-login'
+
 axios.defaults.baseURL = 'http://localhost:8080';
 
 // Thêm Interceptor: Trước khi gửi bất kỳ request nào đi, hãy chạy hàm này
@@ -29,6 +31,12 @@ axios.interceptors.request.use(
   }
 );
 
+
 const app = createApp(App) 
+app.use(vue3GoogleLogin, {
+  clientId: '395876276596-co05jb5i08n3on1uu2nnh5b2b4ercsdn.apps.googleusercontent.com'
+})
+
+
 app.use(router) 
 app.mount('#app')
