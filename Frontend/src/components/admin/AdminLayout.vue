@@ -14,9 +14,15 @@
 
       <div class="p-2 flex-grow-1 overflow-auto">
         <ul class="nav flex-column gap-1 custom-nav">
-          <li class="nav-item">
+          <li class="nav-item" v-if="isAdmin">
             <router-link to="/admin" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" exact-active-class="active">
               <i class="bi bi-grid-1x2-fill"></i> <span class="fw-bold fs-7">Tổng quan</span>
+            </router-link>
+          </li>
+
+          <li class="nav-item mt-2" v-if="isAdmin">
+            <router-link to="/admin/report" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
+              <i class="bi bi-bar-chart-line"></i> <span class="fw-bold fs-7">Báo cáo</span>
             </router-link>
           </li>
           
@@ -52,29 +58,23 @@
             </router-link>
           </li>
 
-          <li class="nav-item">
+          <li class="nav-item" v-if="isAdmin">
             <router-link to="/admin/customers" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
               <i class="bi bi-people"></i> <span class="fw-bold fs-7">Khách hàng</span>
             </router-link>
           </li>
 
-          <li class="nav-item">
-            <router-link to="/admin/chat" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
-              <i class="bi bi-chat-dots"></i> <span class="fw-bold fs-7">Chat CSKH</span>
-            </router-link>
-          </li>
-
-          <li class="nav-item">
+          <li class="nav-item" v-if="isAdmin">
             <router-link to="/admin/employees" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
               <i class="bi bi-person-vcard"></i> <span class="fw-bold fs-7">Nhân viên</span>
             </router-link>
           </li>
 
-          <li class="nav-item mt-2">
-            <router-link to="/admin/report" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
-              <i class="bi bi-bar-chart-line"></i> <span class="fw-bold fs-7">Báo cáo</span>
-            </router-link>
-          </li>
+          
+
+          
+
+          
 
           <li class="nav-item">
             <router-link to="/admin/vouchers" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
@@ -93,6 +93,12 @@
               <i class="bi bi-images"></i> <span class="fw-bold fs-7">Slide Show</span>
             </router-link>
           </li>
+
+          <li class="nav-item">
+            <router-link to="/admin/chat" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark" active-class="active">
+              <i class="bi bi-chat-dots"></i> <span class="fw-bold fs-7">Chat CSKH</span>
+            </router-link>
+          </li>
         </ul>
       </div>
 
@@ -100,13 +106,15 @@
         <router-link to="/" class="nav-link rounded-3 d-flex align-items-center gap-3 text-dark mb-3 px-2">
           <i class="bi bi-arrow-left"></i><span class="fw-bold fs-7">Quay lại trang chủ</span>
         </router-link>
-        <div class="d-flex align-items-center gap-2 px-1">
-          <div class="avatar bg-neon text-dark fw-bold rounded-circle d-flex align-items-center justify-content-center" style="width: 35px; height: 35px; font-size: 0.85rem;">
-            A
-          </div>
+        
+        <div class="d-flex align-items-center gap-2 px-2 py-2 bg-light rounded-3">
+          <i class="bi bi-person-circle fs-3 text-muted"></i>
+          
           <div>
-            <h6 class="m-0 fw-bold fs-7">Admin TechZone</h6>
-            <small class="text-muted" style="font-size: 0.65rem;">admin@techzone.vn</small>
+            <h6 class="m-0 fw-bold fs-7 text-truncate" style="max-width: 130px;">{{ userName }}</h6>
+            <small class="text-muted fw-bold" style="font-size: 0.65rem;">
+              {{ isAdmin ? 'Quản trị viên' : 'Nhân viên' }}
+            </small>
           </div>
         </div>
       </div>
@@ -119,10 +127,32 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'AdminLayout'
-}
+<script setup>
+import { ref, onMounted, computed } from 'vue';
+
+const userRole = ref(null);
+const userName = ref('Admin TechZone');
+// const userInitial = ref('A');
+
+onMounted(() => {
+  const userInfoStr = localStorage.getItem('user_info');
+  if (userInfoStr) {
+    const userInfo = JSON.parse(userInfoStr);
+    
+    // Lấy Role (hỗ trợ cả chữ và số)
+    userRole.value = userInfo.role || userInfo.roleId;
+    
+    // Lấy Tên hiển thị ra góc dưới sidebar
+    const displayName = userInfo.fullName || userInfo.username || 'Staff';
+    userName.value = displayName;
+    // userInitial.value = displayName.charAt(0).toUpperCase();
+  }
+});
+
+// Tạo computed kiểm tra xem có phải Admin không
+const isAdmin = computed(() => {
+  return userRole.value === 'Admin' || userRole.value === 2;
+});
 </script>
 
 <style scoped>

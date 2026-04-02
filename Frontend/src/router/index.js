@@ -81,7 +81,8 @@ const routes = [
       { 
         path: '', // Khi vào /admin sẽ load Dashboard
         name: 'AdminDashboard', 
-        component: AdminDashboard 
+        component: AdminDashboard ,
+        meta: { requiresStrictAdmin: true }
       },
       { 
         path: 'blogs',
@@ -106,12 +107,14 @@ const routes = [
       { 
         path: 'customers', 
         name: 'Customer', 
-        component: Customer 
+        component: Customer ,
+        meta: { requiresStrictAdmin: true }
       },
       {
         path: 'employees',
         name: 'Employee',
-        component: Employee
+        component: Employee,
+        meta: { requiresStrictAdmin: true }
       },
       { 
         path: 'categories', 
@@ -126,7 +129,8 @@ const routes = [
       { 
         path: 'report', 
         name: 'Report', 
-        component: Report 
+        component: Report ,
+        meta: { requiresStrictAdmin: true }
       },
       {
         path: 'vouchers',
@@ -171,37 +175,52 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  // Kiểm tra xem route chuẩn bị vào có yêu cầu đăng nhập hay không
-  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
-  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin)
+  // Lấy các yêu cầu bảo mật từ meta của route
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+  const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin);
+  const requiresStrictAdmin = to.matched.some(record => record.meta.requiresStrictAdmin);
+  const requiresShipper = to.matched.some(record => record.meta.requiresShipper);
 
-  // Lấy thông tin xác thực từ localStorage (Do lúc Login bạn cần lưu xuống đây)
-  const token = localStorage.getItem('jwt_token')
-  const userStr = localStorage.getItem('user_info')
-  let user = null
+  // Lấy thông tin user từ LocalStorage
+  const token = localStorage.getItem('jwt_token');
+  const userStr = localStorage.getItem('user_info');
+  let user = null;
   if (userStr) {
-    try {
-      user = JSON.parse(userStr)
-    } catch (e) {}
+    try { user = JSON.parse(userStr); } catch (e) {}
   }
 
-  // 1. Nếu chưa đăng nhập mà đòi vào trang cần Auth -> Đẩy ra Login
+  // Khai báo các biến kiểm tra quyền (Hỗ trợ cả chuỗi 'Admin' hoặc roleId = 2)
+  const role = user ? (user.role || user.roleId) : null;
+  const isUserAdmin = role === 'Admin' || role === 2;
+  const isUserStaff = role === 'Staff' || role === 1;
+  const isUserShipper = role === 'Shipper' || role === 3;
+
+  // 1. Chưa đăng nhập
   if (requiresAuth && !token) {
     alert("Vui lòng đăng nhập để tiếp tục!");
     return next('/login');
   }
 
-  // 2. Nếu đã đăng nhập nhưng đòi vào trang Admin mà ko phải Admin -> Đẩy về Trang chủ
-  // Lưu ý: Đổi 'Admin' thành giá trị role thực tế bạn lưu trong DB (Ví dụ theo file SQL của bạn có thể là 2, 'ROLE_ADMIN', hoặc 'Admin')
-  if (requiresAdmin) {
-    if (!user || (user.role !== 'Admin' && user.role !== 'Staff')) {
-      alert("Bạn không có quyền...");
-      return next('/'); 
-      }
+  // 2. Chặn trang dành RIÊNG cho Shipper (Staff cũng ko được vào trang giao hàng)
+  if (requiresShipper && !isUserShipper && !isUserAdmin) {
+    alert("Trang này chỉ dành cho nhân viên giao hàng!");
+    return next('/');
   }
 
-  // Nếu hợp lệ thì cho qua
+  // 3. Chặn trang Quản trị (Chỉ Admin và Staff được vào)
+  if (requiresAdmin && !isUserAdmin && !isUserStaff) {
+    alert("Bạn không có quyền truy cập trang quản trị!");
+    return next('/'); 
+  }
+
+  // 4. Chặn Staff vào các trang STRICT ADMIN (Tổng quan, Báo cáo)
+  if (requiresStrictAdmin && !isUserAdmin) {
+    alert("Bạn không có quyền xem trang này! Đang chuyển hướng...");
+    return next('/admin/orders'); // Nếu Staff cố tình vào Dashboard, đẩy sang trang Đơn hàng
+  }
+
+  // Hợp lệ -> Cho qua
   next();
-})
+});
 
 export default router

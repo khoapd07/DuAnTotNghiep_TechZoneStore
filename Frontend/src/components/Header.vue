@@ -68,11 +68,11 @@
               <template v-if="isLoggedIn">
                 <li><h6 class="dropdown-header fw-bold text-dark">Xin chào, {{ userInfo }}</h6></li>
                 <li v-if="isAdmin">
-                    <router-link class="dropdown-item fw-bold text-neon-dark" to="/admin">
+                    <router-link class="dropdown-item fw-bold text-neon-dark" to="/admin/orders">
                       <i class="bi bi-speedometer2 me-2"></i>Trang quản trị
                     </router-link>
                 </li>
-                <li v-if="isShipper">
+                <li v-if="isShipper || isAdmin">
                     <router-link class="dropdown-item fw-bold text-primary" to="/shipping">
                       <i class="bi bi-truck me-2"></i>Trang vận chuyển
                     </router-link>

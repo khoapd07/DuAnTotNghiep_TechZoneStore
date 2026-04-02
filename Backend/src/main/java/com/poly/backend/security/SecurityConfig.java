@@ -40,12 +40,13 @@ public class SecurityConfig {
                 // 3 PHÂN QUYỀN API
                 .authorizeHttpRequests(auth -> auth
                         // 1. Cho phép truy cập không cần token: Đăng nhập, đăng ký, xem sản phẩm...
-                        .requestMatchers("/api/auth/**", "/api/product/**", "/api/categories/**", "/api/brands/**", "/api/cart/**", "/api/reviews/**", "/api/orders/**","/api/blogs/**").permitAll()
+                        .requestMatchers("/api/auth/**", "/api/product/**", "/api/categories/**", "/api/brands/**", "/api/cart/**", "/api/reviews/**", "/api/orders/**","/api/blogs/**", "/api/slideshows/**", "/api/vouchers/**").permitAll()
 
 //                        .requestMatchers("/api/cart").authenticated()
                                 .requestMatchers("/api/chat/**").permitAll()
                                 //AI
                                 .requestMatchers("/api/payment/**").permitAll()
+
 
                                 .requestMatchers("/uploads/**").permitAll()
 
