@@ -19,20 +19,16 @@
                 {{ blog.title }}
               </h1>
               <div class="d-flex align-items-center gap-3 text-muted fs-8">
-                <span><i class="bi bi-person-circle me-1"></i> {{ blog.author }}</span>
-                <span><i class="bi bi-calendar3 me-1"></i> {{ blog.date }}</span>
-                <span><i class="bi bi-clock me-1"></i> {{ blog.read }}</span>
-              </div>
+                <span><i class="bi bi-person-circle me-1"></i> Admin</span> <span><i class="bi bi-calendar3 me-1"></i> {{ formatDate(blog.createdAt) }}</span> <span><i class="bi bi-clock me-1"></i> 5 phút đọc</span> </div>
             </div>
 
             <div class="main-post-image rounded-4 overflow-hidden mb-4 shadow-sm">
-              <img :src="blog.image" class="w-100 object-fit-cover" style="max-height: 450px;" :alt="blog.title">
+              <img :src="blog.thumbnailUrl" class="w-100 object-fit-cover" style="max-height: 450px;" :alt="blog.title">
             </div>
 
             <div class="quote-box border-start border-neon border-4 ps-4 py-1 mb-4 bg-light-gray rounded-end-3">
               <p class="fst-italic text-dark m-0 fs-7 lh-lg">
-                "{{ blog.quote }}"
-              </p>
+                "{{ blog.summary }}" </p>
             </div>
 
             <div class="post-text fs-7 lh-lg text-secondary mb-5" style="white-space: pre-line;">
@@ -54,15 +50,15 @@
             <div class="related-sidebar d-flex flex-column gap-4">
               <div 
                 v-for="item in relatedPosts" 
-                :key="item.id" 
+                :key="item.blogId"  
                 class="related-item d-flex gap-3 align-items-center cursor-pointer"
-                @click="$router.push(`/blog/${item.id}`)"
+                @click="$router.push(`/blog/${item.blogId}`)" 
                 style="cursor: pointer;"
               >
-                <img :src="item.image" class="rounded-2 object-fit-cover" style="width: 80px; height: 60px;">
+                <img :src="item.thumbnailUrl" class="rounded-2 object-fit-cover" style="width: 80px; height: 60px;">
                 <div>
                   <h6 class="fs-8 fw-bold mb-1 line-clamp-2 hover-neon">{{ item.title }}</h6>
-                  <small class="text-muted fs-9">{{ item.date }}</small>
+                  <small class="text-muted fs-9">{{ formatDate(item.createdAt) }}</small>
                 </div>
               </div>
             </div>
@@ -71,8 +67,6 @@
       </div>
     </div>
   </div>
-  
- 
 </template>
 
 <script setup>

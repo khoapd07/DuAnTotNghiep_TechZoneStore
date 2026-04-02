@@ -74,7 +74,8 @@
 
       <div class="row g-4">
         <div class="col-md-6" v-for="product in featuredProducts" :key="'featured-' + product.productId">
-          <div class="card h-100 flex-row border-0 shadow-sm overflow-hidden bg-white rounded-3">
+          <div class="card h-100 flex-row border-0 shadow-sm overflow-hidden bg-white rounded-3" 
+               @click="goToProduct(product.productId)" style="cursor: pointer;">
             <div class="w-50 bg-dark">
               <img :src="product.imageUrl || 'https://images.unsplash.com/photo-1603302576837-37561b2e2302?w=500'" class="w-100 h-100 object-fit-cover" :alt="product.name">
             </div>
@@ -84,7 +85,7 @@
               <h4 class="text-neon fw-bold my-3">
                 {{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
               </h4>
-              <button class="btn btn-dark w-100 fw-bold border-neon text-neon">MUA NGAY</button>
+              <button class="btn btn-dark w-100 fw-bold border-neon text-neon" @click.stop>MUA NGAY</button>
             </div>
           </div>
         </div>
@@ -99,22 +100,23 @@
 
       <div class="row g-4">
         <div class="col-md-3" v-for="product in latestProducts" :key="'new-' + product.productId">
-          <div class="card border-0 shadow-sm h-100 bg-white rounded-3 position-relative p-2 d-flex flex-column">
+          <div class="card border-0 shadow-sm h-100 bg-white rounded-3 position-relative p-2 d-flex flex-column" 
+               @click="goToProduct(product.productId)" style="cursor: pointer;">
             <span class="badge bg-neon text-dark position-absolute top-0 start-0 m-3 z-1">NEW</span>
             <div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
                <img :src="product.imageUrl || 'https://via.placeholder.com/300'" class="img-fluid" style="height: 120px; object-fit: contain;">
             </div>
             <div class="card-body p-2 d-flex flex-column">
-              <h6 class="fw-bold mb-1 line-clamp-1" :title="product.name">{{ product.name }}</h6>
+              <h6 class="fw-bold mb-1 line-clamp-1 text-dark" :title="product.name">{{ product.name }}</h6>
               <small class="text-muted mb-3 line-clamp-1">{{ product.categoryName || 'Sản phẩm mới' }}</small>
               
               <h5 class="fw-bold mb-3 text-neon">
-{{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
+                {{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
               </h5>
 
               <div class="d-flex gap-2 mt-auto">
-                <button class="btn btn-dark flex-grow-1 fw-bold fs-7">MUA</button>
-                <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng">
+                <button class="btn btn-dark flex-grow-1 fw-bold fs-7" @click.stop>MUA</button>
+                <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng" @click.stop>
                   <i class="bi bi-cart-plus fs-5"></i>
                 </button>
               </div>
@@ -158,22 +160,23 @@
 
         <div class="d-flex flex-nowrap overflow-x-auto gap-4 pb-3 pt-2 custom-scrollbar px-2" ref="saleContainer" style="scroll-behavior: smooth;">
           <div class="flex-shrink-0" style="width: 250px;" v-for="product in discountedProducts" :key="'sale-' + product.productId">
-            <div class="card border-0 shadow-sm h-100 bg-white rounded-3 position-relative p-2 d-flex flex-column">
+            <div class="card border-0 shadow-sm h-100 bg-white rounded-3 position-relative p-2 d-flex flex-column" 
+                 @click="goToProduct(product.productId)" style="cursor: pointer;">
               <span class="badge bg-danger position-absolute top-0 end-0 m-3 z-1">
                 -{{ calculateDiscount(product.price, product.salePrice) }}%
               </span>
-<div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
+              <div class="bg-light rounded text-center py-4 mb-2 flex-grow-1 d-flex align-items-center justify-content-center">
                  <img :src="product.imageUrl || 'https://via.placeholder.com/300'" class="img-fluid" style="height: 120px; object-fit: contain;">
               </div>
               <div class="card-body p-2 d-flex flex-column text-center">
-                <h6 class="fw-bold mb-2 line-clamp-1" :title="product.name">{{ product.name }}</h6>
+                <h6 class="fw-bold mb-2 line-clamp-1 text-dark" :title="product.name">{{ product.name }}</h6>
                 <div class="d-flex flex-column justify-content-center gap-1 mb-3">
                   <h5 class="fw-bold text-neon mb-0">{{ formatCurrency(product.salePrice) }}</h5>
                   <span class="text-muted text-decoration-line-through small">{{ formatCurrency(product.price) }}</span>
                 </div>
                 <div class="d-flex gap-2 mt-auto">
-                  <button class="btn btn-dark flex-grow-1 fw-bold fs-7">MUA</button>
-                  <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng">
+                  <button class="btn btn-dark flex-grow-1 fw-bold fs-7" @click.stop>MUA</button>
+                  <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng" @click.stop>
                     <i class="bi bi-cart-plus fs-5"></i>
                   </button>
                 </div>
@@ -213,7 +216,7 @@
         </p>
 
         <p class="text-muted small lh-base mb-4 px-md-2" style="white-space: pre-line;">
-{{ flashSaleVoucher?.description || 'Nhanh tay sử dụng mã giảm giá này cho đơn hàng của bạn nhé!' }}
+          {{ flashSaleVoucher?.description || 'Nhanh tay sử dụng mã giảm giá này cho đơn hàng của bạn nhé!' }}
         </p>
 
         <button @click="closeModal" class="btn btn-dark w-100 fw-bold py-2 fs-6 border-neon text-neon">
@@ -227,7 +230,10 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router'; // ĐÃ THÊM: Import router
 import axios from 'axios';
+
+const router = useRouter(); // ĐÃ THÊM: Khởi tạo router
 
 const slideShows = ref([]);
 const featuredProducts = ref([]);
@@ -250,6 +256,13 @@ const updateCurrentTime = () => {
 
 const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'instant' });
+};
+
+// ĐÃ THÊM: Hàm điều hướng sang trang chi tiết sản phẩm
+const goToProduct = (productId) => {
+  if (!productId) return;
+  router.push(`/product/${productId}`);
+  window.scrollTo(0, 0); // Tự động cuộn lên đầu trang khi chuyển trang
 };
 
 const scrollSale = (direction) => {

@@ -1,7 +1,6 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
     <main class="flex-grow-1 p-4 overflow-auto">
-      <!-- Header -->
       <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
           <nav aria-label="breadcrumb">
@@ -37,7 +36,6 @@
         </div>
       </div>
 
-      <!-- Stats -->
       <div class="row g-4 mb-4">
         <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
@@ -76,7 +74,6 @@
         </div>
       </div>
 
-      <!-- Table -->
       <div class="card border-0 shadow-sm rounded-4 p-0">
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0 bg-white">
@@ -147,7 +144,6 @@
           </table>
         </div>
 
-        <!-- Pagination -->
         <div class="d-flex justify-content-between align-items-center p-3 border-top bg-white rounded-bottom-4">
           <span class="text-muted fs-8 fw-medium">
             Hiển thị {{ paginatedBlogs.length }} / {{ filteredBlogs.length }} bài viết
@@ -175,7 +171,6 @@
       </div>
     </main>
 
-    <!-- Modal -->
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal d-block" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -187,7 +182,6 @@
 
           <div class="modal-body p-4">
             <div class="row g-3">
-              <!-- Bắt buộc -->
               <div class="col-12">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tiêu đề *</label>
                 <input type="text" v-model="form.title" class="form-control fs-7" placeholder="Nhập tiêu đề..." />
@@ -199,11 +193,15 @@
               </div>
 
               <div class="col-12">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Hình ảnh (URL) *</label>
-                <input type="text" v-model="form.thumbnailUrl" class="form-control fs-7" placeholder="https://..." />
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Hình ảnh đại diện *</label>
+                <div class="d-flex gap-2 align-items-center">
+                  <input type="file" @change="uploadImage" class="form-control fs-7" accept="image/*" />
+                </div>
+                <div v-if="form.thumbnailUrl" class="mt-2 bg-dark rounded-3 overflow-hidden text-center" style="height: 150px;">
+                  <img :src="form.thumbnailUrl" class="img-fluid h-100 object-fit-contain" />
+                </div>
               </div>
 
-              <!-- Không bắt buộc -->
               <div class="col-12">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tóm tắt</label>
                 <textarea v-model="form.summary" class="form-control fs-7" rows="2"></textarea>
@@ -276,6 +274,26 @@ const getAuthHeader = () => {
   // Giống product: ưu tiên jwt_token
   const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+// ĐÃ SỬA: Thêm hàm xử lý Upload Ảnh gọi thẳng xuống API /api/upload
+const uploadImage = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const headers = getAuthHeader();
+    headers['Content-Type'] = 'multipart/form-data';
+    const response = await axios.post('http://localhost:8080/api/upload', formData, { headers });
+    // API trả về link (VD: http://localhost:8080/uploads/xyz.jpg), gán vào form
+    form.thumbnailUrl = response.data; 
+  } catch (error) {
+    console.error("Lỗi upload ảnh:", error);
+    alert("Upload ảnh thất bại! Vui lòng thử lại.");
+  }
 };
 
 const normalizeBlog = (b) => ({
