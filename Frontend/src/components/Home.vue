@@ -131,7 +131,7 @@
             {{ flashSaleVoucher.name }}
           </h2>
           <p class="m-0 fw-medium small" style="font-size: 13px;">
-            Ưu đãi giảm ngay <span class="fw-bold text-danger">{{ formatCurrency(flashSaleVoucher.discountAmount) }}</span> cho đơn hàng linh kiện.
+            Ưu đãi giảm ngay <span class="fw-bold text-danger">{{ formatCurrency(flashSaleVoucher.discountAmount) }}</span> cho tổng giá trị đơn hàng.
           </p>
         </div>
         <div class="d-flex align-items-center gap-2 mt-3 mt-md-0">

@@ -58,7 +58,7 @@
                 Ghi nhớ đăng nhập
               </label>
             </div>
-            <router-link class="text-neon text-decoration-none fw-bold" to="/reset-password">Quên mật khẩu?</router-link>
+            <router-link class="text-neon text-decoration-none fw-bold" to="/ForgotPassword">Quên mật khẩu?</router-link>
           </div>
 
           <button 
