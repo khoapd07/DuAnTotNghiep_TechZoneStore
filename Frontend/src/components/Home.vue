@@ -85,7 +85,7 @@
               <h4 class="text-neon fw-bold my-3">
                 {{ formatCurrency(product.salePrice && product.salePrice > 0 ? product.salePrice : product.price) }}
               </h4>
-              <button class="btn btn-dark w-100 fw-bold border-neon text-neon" @click.stop>MUA NGAY</button>
+              <button class="btn btn-dark w-100 fw-bold border-neon text-neon" @click.stop="goToProduct(product.productId)">MUA NGAY</button>
             </div>
           </div>
         </div>
@@ -115,8 +115,8 @@
               </h5>
 
               <div class="d-flex gap-2 mt-auto">
-                <button class="btn btn-dark flex-grow-1 fw-bold fs-7" @click.stop>MUA</button>
-                <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng" @click.stop>
+                <button class="btn btn-dark flex-grow-1 fw-bold fs-7" @click.stop="buyNow(product)">MUA</button>
+                <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng" @click.stop="addToCart(product)">
                   <i class="bi bi-cart-plus fs-5"></i>
                 </button>
               </div>
@@ -175,8 +175,8 @@
                   <span class="text-muted text-decoration-line-through small">{{ formatCurrency(product.price) }}</span>
                 </div>
                 <div class="d-flex gap-2 mt-auto">
-                  <button class="btn btn-dark flex-grow-1 fw-bold fs-7" @click.stop>MUA</button>
-                  <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng" @click.stop>
+                  <button class="btn btn-dark flex-grow-1 fw-bold fs-7" @click.stop="buyNow(product)">MUA</button>
+                  <button class="btn btn-outline-dark rounded-3 d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;" title="Thêm vào giỏ hàng" @click.stop="addToCart(product)">
                     <i class="bi bi-cart-plus fs-5"></i>
                   </button>
                 </div>
@@ -325,6 +325,73 @@ const fetchData = async () => {
     console.error("Lỗi khi tải dữ liệu trang chủ:", error);
   }
 };
+
+// --- BẮT ĐẦU: XỬ LÝ THÊM GIỎ HÀNG VÀ MUA NGAY ---
+const getCurrentUserId = () => {
+  const userInfoString = localStorage.getItem('user_info');
+  if (userInfoString) {
+    try {
+      return JSON.parse(userInfoString).userId;
+    } catch (e) { return null; }
+  }
+  return null;
+};
+
+// Nhận trực tiếp đối tượng product từ template
+const addToCart = async (productToAdd) => {
+  const userId = getCurrentUserId();
+  if (!productToAdd) return;
+
+  // LẤY BIẾN THỂ ĐẦU TIÊN
+  const defaultVariant = productToAdd.variants && productToAdd.variants.length > 0 ? productToAdd.variants[0] : null;
+  const vId = defaultVariant ? defaultVariant.variantId : null;
+  const vColor = defaultVariant ? defaultVariant.colorName : '';
+  const vOpt2 = defaultVariant ? defaultVariant.option2Value : '';
+  const vPrice = defaultVariant && defaultVariant.price > 0 ? (defaultVariant.salePrice || defaultVariant.price) : (productToAdd.salePrice || productToAdd.price);
+
+  if (userId) {
+    try {
+      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, {
+        productId: productToAdd.productId,
+        variantId: vId,
+        quantity: 1 
+      });
+      alert("Đã thêm sản phẩm vào giỏ hàng!");
+      window.dispatchEvent(new Event('cart-updated')); 
+    } catch (error) {
+      alert(error.response?.data || "Không thể thêm vào giỏ hàng");
+    }
+  } else {
+    // Luồng giỏ hàng cho khách vãng lai
+    let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
+    const existingItemIndex = guestCart.findIndex(i => i.productId === productToAdd.productId && i.variantId === vId);
+
+    if (existingItemIndex !== -1) {
+      guestCart[existingItemIndex].quantity += 1;
+    } else {
+      guestCart.push({
+        productId: productToAdd.productId,
+        variantId: vId,
+        name: productToAdd.name,
+        colorName: vColor,
+        option2Value: vOpt2,
+        price: vPrice,
+        quantity: 1,
+        img: defaultVariant?.imageUrl || productToAdd.imageUrl || 'https://via.placeholder.com/150'
+      });
+    }
+    localStorage.setItem('guest_cart', JSON.stringify(guestCart));
+    alert("Đã thêm sản phẩm vào giỏ hàng!");
+    window.dispatchEvent(new Event('cart-updated'));
+  }
+};
+
+const buyNow = async (productToAdd) => {
+  await addToCart(productToAdd);
+  router.push('/cart');
+};
+// --- KẾT THÚC: XỬ LÝ THÊM GIỎ HÀNG VÀ MUA NGAY ---
+
 
 onMounted(() => {
   fetchData();

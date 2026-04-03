@@ -172,11 +172,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 
 const router = useRouter();
+const route = useRoute();
 const products = ref([]);
 const categories = ref([]);
 const brands = ref([]);
@@ -198,7 +199,7 @@ const priceRanges = [
 ];
 
 const filters = reactive({
-  keyword: '',
+  keyword: route.query.keyword || '',
   categoryId: null,
   brandId: null,
   minPrice: null,
@@ -209,6 +210,15 @@ const filters = reactive({
   sortBy: 'createdAt',
   sortDir: 'desc'
 });
+
+watch(
+  () => route.query.keyword,
+  (newKeyword) => {
+    // Nếu URL đổi (có từ khóa mới hoặc bị xóa đi), ta cập nhật lại filter và gọi API
+    filters.keyword = newKeyword || '';
+    handleFilterChange();
+  }
+);
 
 // CẬP NHẬT: Xử lý khi chọn "Giảm giá"
 const updateSort = () => {
