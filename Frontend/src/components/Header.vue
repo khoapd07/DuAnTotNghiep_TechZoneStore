@@ -24,8 +24,12 @@
           
           <li class="nav-item d-none d-lg-block">
             <div class="input-group bg-light rounded-pill px-3 py-2" style="width: 250px;">
-              <i class="bi bi-search text-muted me-2 mt-1"></i>
-              <input type="text" class="form-control border-0 bg-transparent p-0 fs-7 shadow-none" placeholder="Tìm kiếm thiết bị...">
+              <i class="bi bi-search text-muted me-2 mt-1 cursor-pointer" @click="handleSearchProduct"></i>
+              <input type="text" 
+                     v-model="searchKeyword" 
+                     @keyup.enter="handleSearchProduct"
+                     class="form-control border-0 bg-transparent p-0 fs-7 shadow-none" 
+                     placeholder="Tìm kiếm thiết bị...">
             </div>
           </li>
 
@@ -133,6 +137,17 @@ const isShipper = ref(false);
 
 // Biến quản lý tra cứu đơn hàng
 const searchOrderCode = ref('');
+
+// biến tìm kiếm sản phẩm
+const searchKeyword = ref('');
+
+const handleSearchProduct = () => {
+  if (searchKeyword.value.trim()) {
+    // Chuyển hướng đến trang sản phẩm và truyền từ khóa lên URL
+    router.push({ path: '/products', query: { keyword: searchKeyword.value.trim() } });
+    searchKeyword.value = ''; // Reset ô tìm kiếm sau khi enter (tùy chọn)
+  }
+};
 
 const handleSearchOrder = () => {
   if (!searchOrderCode.value.trim()) return;
