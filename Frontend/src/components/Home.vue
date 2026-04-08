@@ -225,6 +225,24 @@
       </div>
     </div>
 
+    <div v-if="showSuccessModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Thành công!</h5>
+        <p class="text-muted fs-8 mb-4">Sản phẩm đã được thêm vào giỏ hàng.</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="closeSuccessModal" class="btn btn-outline-dark fs-8 fw-bold px-4 py-2 rounded-2">
+            Tiếp tục mua
+          </button>
+          <router-link to="/cart" class="btn btn-neon text-dark fs-8 fw-bold px-4 py-2 rounded-2 text-decoration-none">
+            Đến giỏ hàng
+          </router-link>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -245,6 +263,13 @@ const currentTime = ref('');
 let timeInterval = null;
 
 const showFlashSaleModal = ref(false);
+
+// State (trạng thái) để quản lý hiển thị Modal giỏ hàng
+const showSuccessModal = ref(false);
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false;
+};
 
 const updateCurrentTime = () => {
   const now = new Date();
@@ -337,8 +362,8 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// Nhận trực tiếp đối tượng product từ template
-const addToCart = async (productToAdd) => {
+// Cập nhật: Thêm parameter (tham số) showNotification
+const addToCart = async (productToAdd, showNotification = true) => {
   const userId = getCurrentUserId();
   if (!productToAdd) return;
 
@@ -356,7 +381,8 @@ const addToCart = async (productToAdd) => {
         variantId: vId,
         quantity: 1 
       });
-      alert("Đã thêm sản phẩm vào giỏ hàng!");
+      // Hiển thị modal thay vì alert (cảnh báo)
+      if (showNotification) showSuccessModal.value = true;
       window.dispatchEvent(new Event('cart-updated')); 
     } catch (error) {
       alert(error.response?.data || "Không thể thêm vào giỏ hàng");
@@ -381,13 +407,15 @@ const addToCart = async (productToAdd) => {
       });
     }
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));
-    alert("Đã thêm sản phẩm vào giỏ hàng!");
+    // Hiển thị modal thay vì alert (cảnh báo)
+    if (showNotification) showSuccessModal.value = true;
     window.dispatchEvent(new Event('cart-updated'));
   }
 };
 
 const buyNow = async (productToAdd) => {
-  await addToCart(productToAdd);
+  // Ẩn modal khi bấm Mua ngay
+  await addToCart(productToAdd, false);
   router.push('/cart');
 };
 // --- KẾT THÚC: XỬ LÝ THÊM GIỎ HÀNG VÀ MUA NGAY ---
@@ -409,6 +437,7 @@ if (timeInterval) clearInterval(timeInterval);
 .bg-light-gray { background-color: #F8F9FA; }
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
+.fs-8 { font-size: 0.75rem; } /* Thêm fs-8 cho modal */
 .line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .text-neon { color: #00FF33 !important; }
@@ -434,6 +463,35 @@ if (timeInterval) clearInterval(timeInterval);
 .modal-backdrop-custom { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.65); z-index: 1050; backdrop-filter: blur(4px); animation: fadeIn 0.2s ease-out; }
 .modal-content-custom { max-width: 480px; width: 100%; animation: slideUp 0.3s ease-out; }
 .tracking-wide { letter-spacing: 2px; }
+
+/* --- CSS THÊM MỚI CHO MODAL GIỎ HÀNG --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1050;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 </style>

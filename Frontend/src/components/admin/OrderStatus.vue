@@ -181,7 +181,7 @@
             </button>
           </div>
           <small v-if="availableStatuses.length <= 1" class="text-danger fs-9 mt-1 d-block fw-bold">
-            Đơn hàng đã kết thúc quy trình, không thể thay đổi trạng thái.
+            Đơn hàng đang giao hoặc đã kết thúc, không thể thay đổi trạng thái tại đây.
           </small>
         </div>
 
@@ -243,6 +243,24 @@
 
       </div>
     </div>
+
+    <div v-if="customModal.show" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg mx-3">
+        <div class="mb-3">
+          <i v-if="customModal.icon === 'success'" class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem;"></i>
+          <i v-else-if="customModal.icon === 'error'" class="bi bi-x-circle-fill text-danger" style="font-size: 3.5rem;"></i>
+          <i v-else-if="customModal.icon === 'warning'" class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">{{ customModal.title }}</h5>
+        <p class="text-muted fs-8 mb-4" v-html="customModal.message"></p>
+        <div class="d-flex justify-content-center">
+          <button @click="closeCustomModal" class="btn btn-dark fs-8 fw-bold px-4 py-2 rounded-2 w-100 text-uppercase">
+            XÁC NHẬN
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -268,6 +286,33 @@ const currentUser = ref({
 });
 
 const API_URL = 'http://localhost:8080/api/orders';
+
+// --- CẤU HÌNH CUSTOM MODAL ---
+const customModal = ref({
+  show: false,
+  icon: 'success', // 'success', 'error', 'warning'
+  title: '',
+  message: '',
+  onClose: null // Function callback
+});
+
+const showModal = (icon, title, message, onClose = null) => {
+  customModal.value = {
+    show: true,
+    icon,
+    title,
+    message,
+    onClose
+  };
+};
+
+const closeCustomModal = () => {
+  customModal.value.show = false;
+  if (customModal.value.onClose) {
+    customModal.value.onClose();
+  }
+};
+// -----------------------------
 
 onMounted(async () => {
   const userStr = localStorage.getItem('user_info');
@@ -339,15 +384,23 @@ const viewOrderDetail = (order) => {
   selectedOrderEditStatus.value = order.statusId; 
 };
 
+// ==========================================
+// CẬP NHẬT TRẠNG THÁI
+// ==========================================
 const updateStatus = async () => {
   if (!selectedOrder.value) return;
 
+  // Validate thanh toán
   if (
     selectedOrder.value.paymentMethod === 'BANK' && 
     !selectedOrder.value.paymentStatus && 
     selectedOrderEditStatus.value == 1 
   ) {
-    alert("CẢNH BÁO: Đơn hàng này là Chuyển khoản (VietQR). \nVui lòng kiểm tra tài khoản và gạt công tắc 'Đã thu tiền' trước khi Xác nhận đơn!");
+    showModal(
+      'warning', 
+      'Chưa xác nhận thanh toán', 
+      'CẢNH BÁO: Đơn hàng này là Chuyển khoản (VietQR). <br>Vui lòng kiểm tra tài khoản và gạt công tắc <b>"Đã thu tiền"</b> trước khi Xác nhận đơn!'
+    );
     return; 
   }
   
@@ -361,11 +414,17 @@ const updateStatus = async () => {
 
   try {
     await axios.put(url);
-    alert("Cập nhật trạng thái thành công!");
-    fetchOrders(); 
-    document.querySelector('.btn-close').click();
+    showModal(
+      'success', 
+      'Thành công!', 
+      'Cập nhật trạng thái đơn hàng thành công!', 
+      () => {
+        fetchOrders(); 
+        document.querySelector('.btn-close').click(); // Đóng offcanvas
+      }
+    );
   } catch (error) {
-    alert("Lỗi cập nhật: " + (error.response?.data || error.message));
+    showModal('error', 'Lỗi cập nhật', error.response?.data || error.message);
   } finally {
     isSaving.value = false;
   }
@@ -421,37 +480,34 @@ const getStatusClass = (id) => {
   return 'bg-secondary text-white';
 };
 
+// ==========================================
+// CẬP NHẬT LOGIC LỰA CHỌN TRẠNG THÁI MỚI
+// ==========================================
 const availableStatuses = computed(() => {
   if (!selectedOrder.value) return [];
   const currentStatus = selectedOrder.value.statusId;
 
   return dbStatuses.value.filter(st => {
     const targetStatus = st.statusId;
+    // Luôn cho phép hiển thị trạng thái hiện tại (để select không bị trắng)
     if (targetStatus === currentStatus) return true;
 
     switch (currentStatus) {
-      case 0: return targetStatus === 1 || targetStatus === 4;
-      case 1: return targetStatus === 2 || targetStatus === 4;
-      case 2: return targetStatus === 3 || targetStatus === 4;
-      case 3: return false; 
-      case 4: return false;
-      default: return false;
+      case 0: // Từ Chờ xử lý -> Đã xác nhận HOẶC Hủy
+        return targetStatus === 1 || targetStatus === 4;
+      case 1: // Từ Đã xác nhận -> Chỉ cho phép Hủy (việc giao cho shipper sẽ thực hiện ở màn hình shipper)
+        return targetStatus === 4;
+      case 2: // Đang giao -> Không cho phép thay đổi tại đây
+        return false;
+      case 3: // Hoàn thành -> Kết thúc
+        return false; 
+      case 4: // Hủy -> Kết thúc
+        return false;
+      default: 
+        return false;
     }
   });
 });
-
-
-// chuyển trạng thái thu tiền (cũ)
-// const togglePaymentStatus = async (order) => {
-//   const newStatus = !order.paymentStatus;
-//   try {
-//     await axios.put(`${API_URL}/admin/${order.orderId}/payment?status=${newStatus}`);
-//     order.paymentStatus = newStatus;
-//   } catch (error) {
-//     alert("Lỗi cập nhật thanh toán: " + (error.response?.data || error.message));
-//     order.paymentStatus = !newStatus; 
-//   }
-// };
 </script>
 
 <style scoped>
@@ -468,4 +524,38 @@ const availableStatuses = computed(() => {
 .border-bottom-dashed:last-child { border-bottom: none; }
 .cursor-pointer { cursor: pointer; }
 .table-hover tbody tr:hover td { background-color: #f8f9fa; }
+
+/* --- CSS CHO CUSTOM MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); /* Lớp nền đen mờ */
+  z-index: 1060; /* Đặt cao hơn offcanvas của bootstrap (thường là 1045) */
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 </style>
