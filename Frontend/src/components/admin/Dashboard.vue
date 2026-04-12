@@ -25,11 +25,6 @@
                 style="width: 40px; height: 40px;">
                 <i class="bi bi-cash-stack fs-5"></i>
               </div>
-              <span v-if="stats.revenueGrowth" class="badge fw-bold rounded-pill fs-8"
-                :class="stats.revenueGrowth >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
-                {{ stats.revenueGrowth >= 0 ? '+' : '' }}{{ stats.revenueGrowth }}%
-                <i :class="stats.revenueGrowth >= 0 ? 'bi bi-arrow-up-right' : 'bi bi-arrow-down-right'"></i>
-              </span>
             </div>
             <p class="text-muted fs-8 fw-bold text-uppercase m-0">Tổng doanh thu</p>
             <h4 class="fw-black text-dark m-0 mt-1">{{ formatCurrency(stats.totalRevenue) }}</h4>
@@ -43,11 +38,6 @@
                 style="width: 40px; height: 40px;">
                 <i class="bi bi-bag-check fs-5"></i>
               </div>
-              <span v-if="stats.orderGrowth" class="badge fw-bold rounded-pill fs-8"
-                :class="stats.orderGrowth >= 0 ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'">
-                {{ stats.orderGrowth >= 0 ? '+' : '' }}{{ stats.orderGrowth }}%
-                <i :class="stats.orderGrowth >= 0 ? 'bi bi-arrow-up-right' : 'bi bi-arrow-down-right'"></i>
-              </span>
             </div>
             <p class="text-muted fs-8 fw-bold text-uppercase m-0">Đơn hàng mới (7 ngày)</p>
             <h4 class="fw-black text-dark m-0 mt-1">{{ stats.newOrdersCount }} Đơn</h4>
@@ -57,7 +47,7 @@
           </div>
         </div>
 
-        <div class="col-md-4">
+        <!-- <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
             <div class="d-flex justify-content-between align-items-start mb-2">
               <div
@@ -69,7 +59,7 @@
             <p class="text-muted fs-8 fw-bold text-uppercase m-0">Sản phẩm hết hàng</p>
             <h4 class="fw-black text-dark m-0 mt-1">{{ stats.outOfStockCount }} Sản Phẩm</h4>
           </div>
-        </div>
+        </div> -->
       </div>
 
       <div class="row g-3 mb-3">

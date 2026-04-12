@@ -82,17 +82,53 @@
       </div>
 
       <div class="card border-0 shadow-sm rounded-4 p-4 mb-5">
-        <h6 class="fw-bold mb-3 d-flex align-items-center gap-2">
-          <i class="bi bi-box-fill text-success fs-5"></i> Đơn vị vận chuyển
+        <h6 class="fw-bold mb-4 d-flex align-items-center gap-2">
+          <i class="bi bi-box-seam text-success fs-5"></i> Sản phẩm đã đặt ({{ orderData.orderDetails.length }})
         </h6>
         
-        <div class="d-flex align-items-center gap-3 border rounded-3 p-3">
-          <div class="bg-warning-subtle text-warning d-flex align-items-center justify-content-center rounded" style="width: 40px; height: 40px;">
-            <i class="bi bi-lightning-fill fs-5"></i>
+        <div v-for="(item, index) in orderData.orderDetails" :key="index" class="d-flex flex-column flex-sm-row gap-3" :class="{'mt-4 pt-4 border-top': index > 0}">
+          <div class="bg-light rounded-3 d-flex align-items-center justify-content-center border flex-shrink-0 overflow-hidden" style="width: 80px; height: 80px;" :class="{'grayscale': orderData.status === 4}">
+            <img v-if="item.imageUrl" :src="item.imageUrl" class="img-fluid object-fit-contain p-2" alt="product">
+            <i v-else class="bi bi-box text-secondary opacity-50 fs-2"></i>
           </div>
-          <div>
-            <div class="fw-bold fs-7">{{ orderData.carrier.name }}</div>
-            <div class="text-muted fs-8">Mã vận đơn: {{ orderData.carrier.trackingCode }}</div>
+          
+          <div class="flex-grow-1">
+            <h6 class="fw-bold text-dark mb-1 line-clamp-2">{{ item.productName }}</h6>
+            <p class="text-muted fs-8 mb-1" style="font-style: italic;">
+              Phân loại: {{ item.colorName || 'Mặc định' }} 
+              <span v-if="item.option2Value"> - {{ item.option2Value }}</span>
+            </p>
+            <p class="text-muted fs-8 mb-2">Giá: {{ formatCurrency(item.price) }}</p>
+            <div class="d-flex align-items-center justify-content-between mt-auto">
+              <span class="text-muted fs-7">x{{ item.quantity }}</span>
+              <span class="fw-bold text-dark fs-7">{{ formatCurrency(item.subTotal) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-4 pt-3 border-top">
+          <div class="d-flex justify-content-between mb-2 fs-7">
+            <span class="text-muted">Tạm tính</span>
+            <span class="fw-bold">{{ formatCurrency(orderData.subTotal) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2 fs-7" v-if="orderData.discountAmount > 0">
+            <span class="text-muted">Giảm giá (Voucher)</span>
+            <span class="fw-bold text-danger">- {{ formatCurrency(orderData.discountAmount) }}</span>
+          </div>
+          <div class="d-flex justify-content-between mb-2 fs-7">
+            <span class="text-muted">Phí vận chuyển</span>
+            <span class="fw-bold text-success">Miễn phí</span>
+          </div>
+          
+          <div class="d-flex justify-content-between pt-3 mt-2 border-top align-items-end">
+            <div>
+               <span class="fw-bold text-dark d-block">Tổng cộng</span>
+               <span class="badge mt-1 border" :class="orderData.paymentStatus ? 'bg-success-subtle text-success border-success-subtle' : 'bg-warning-subtle text-warning border-warning-subtle'">
+                 {{ orderData.paymentMethod === 'BANK' ? 'Chuyển khoản' : 'Tiền mặt (COD)' }} - 
+                 {{ orderData.paymentStatus ? 'Đã thu tiền' : 'Chưa thu tiền' }}
+               </span>
+            </div>
+            <span class="fw-black text-danger fs-4">{{ formatCurrency(orderData.totalAmount) }}</span>
           </div>
         </div>
       </div>
@@ -125,10 +161,14 @@ const orderData = ref({
   orderCode: 'Đang tải...',
   orderDate: 'Đang tải...',
   totalAmount: 0,
+  subTotal: 0,
+  discountAmount: 0,
+  paymentMethod: 'COD',
+  paymentStatus: false,
   status: 0, 
   estimatedDelivery: 'Đang cập nhật',
   shippingInfo: { name: 'Đang tải...', phone: '...', address: '...' },
-  carrier: { name: 'Đang chờ điều phối', trackingCode: 'Chưa có' }
+  orderDetails: [] // Mảng chứa SP
 });
 
 // Nhận orderCode làm tham số để linh hoạt khi theo dõi
@@ -156,21 +196,23 @@ const fetchOrderDetail = async (orderCode) => {
         hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' 
       }),
       totalAmount: data.finalAmount, 
+      subTotal: data.totalMoney,
+      discountAmount: data.discountAmount,
+      paymentMethod: data.paymentMethod,
+      paymentStatus: data.paymentStatus,
       status: parseStatusToNumber(data.statusName),
       estimatedDelivery: 'Đang cập nhật',
       shippingInfo: { name: extName, phone: extPhone, address: extAddress },
-      carrier: { name: 'Đang chờ điều phối', trackingCode: 'Chưa có' }
+      orderDetails: data.orderDetails || [] // Hứng data sản phẩm
     };
 
   } catch (error) {
     console.error("Lỗi lấy chi tiết đơn hàng:", error);
     alert("❌ Không tìm thấy đơn hàng hợp lệ! Vui lòng kiểm tra lại mã đơn.");
-    router.push('/'); // Đẩy về trang chủ nếu mã sai
+    router.push('/'); 
   }
 };
 
-// Lắng nghe sự thay đổi của Param trên URL. 
-// Nếu Khách hàng tìm 1 mã khác trên Navbar, nó sẽ tự động chạy lại API
 watch(
   () => route.params.id,
   (newOrderCode) => {
@@ -178,7 +220,7 @@ watch(
       fetchOrderDetail(newOrderCode);
     }
   },
-  { immediate: true } // Chạy ngay lập tức khi Component vừa Render (Thay thế cho onMounted)
+  { immediate: true } 
 );
 
 const formatCurrency = (value) => {
@@ -272,4 +314,10 @@ const statusMessage = computed(() => {
 }
 .stepper-item.active .step-title { color: #000; }
 .stepper-item.active .step-time { color: #1ED760; }
+
+/* Thêm css cho danh sách SP */
+.grayscale { filter: grayscale(100%); }
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bg-warning-subtle { background-color: #fff8e1 !important; }
+.text-warning { color: #ffc107 !important; }
 </style>
