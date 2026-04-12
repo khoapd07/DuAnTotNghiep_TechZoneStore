@@ -193,6 +193,25 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showSuccessModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Thành công!</h5>
+        <p class="text-muted fs-8 mb-4">Sản phẩm đã được thêm vào giỏ hàng.</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="closeSuccessModal" class="btn btn-outline-dark fs-8 fw-bold px-4 py-2 rounded-2">
+            Tiếp tục mua
+          </button>
+          <router-link to="/cart" class="btn btn-neon text-dark fs-8 fw-bold px-4 py-2 rounded-2 text-decoration-none">
+            Đến giỏ hàng
+          </router-link>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -212,6 +231,13 @@ const currentImage = ref('');
 const selectedColor = ref('');
 const selectedOption2 = ref('');
 const lastClicked = ref('none');
+
+// State (trạng thái) để quản lý hiển thị Modal
+const showSuccessModal = ref(false);
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false;
+};
 
 const uniqueThumbnails = computed(() => {
   if (!product.value) return [];
@@ -357,15 +383,13 @@ const getCurrentUserId = () => {
 };
 
 // ==========================================
-// CẬP NHẬT: THÊM VÀO GIỎ HÀNG THEO BIẾN THỂ
+// CẬP NHẬT: THÊM parameter (tham số) showNotification
 // ==========================================
-const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false) => {
+const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, showNotification = true) => {
   if (!productObj) return;
   const pId = productObj.productId || productObj.id;
   const userId = getCurrentUserId();
   
-  // NẾU LÀ SẢN PHẨM CHÍNH: Lấy biến thể khách đang chọn trên màn hình
-  // NẾU LÀ SẢN PHẨM TƯƠNG TỰ: Lấy biến thể đầu tiên làm mặc định
   let vId = null;
   let vColor = '';
   let vOpt2 = '';
@@ -389,19 +413,17 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false) =
 
   if (userId) {
     try {
-      // TRUYỀN THÊM variantId LÊN BACKEND (Backend cần cập nhật DTO để nhận)
       await axios.post(`http://localhost:8080/api/cart/${userId}/add`, { 
           productId: pId, 
           variantId: vId, 
           quantity: qtyToAdd 
       });
-      alert("Đã thêm sản phẩm vào giỏ hàng!");
+      if (showNotification) showSuccessModal.value = true;
       window.dispatchEvent(new Event('cart-updated')); 
     } catch (error) {
       alert(error.response?.data || "Không thể thêm vào giỏ hàng");
     }
   } else {
-    // XỬ LÝ CHO KHÁCH VÃNG LAI: Kiểm tra trùng cả Product VÀ Variant
     let guestCart = JSON.parse(localStorage.getItem('guest_cart')) || [];
     const existingItemIndex = guestCart.findIndex(i => i.productId === pId && i.variantId === vId);
 
@@ -412,37 +434,33 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false) =
         productId: pId,
         variantId: vId,
         name: productObj.name,
-        colorName: vColor,      // Ghi nhớ màu
-        option2Value: vOpt2,    // Ghi nhớ size/tùy chọn
+        colorName: vColor,
+        option2Value: vOpt2,
         price: vPrice,
         quantity: qtyToAdd,
         img: vImg
       });
     }
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));
-    alert("Đã thêm sản phẩm vào giỏ hàng!");
+    if (showNotification) showSuccessModal.value = true;
     window.dispatchEvent(new Event('cart-updated'));
   }
 };
 
-// Cập nhật lại 2 hàm gọi
-const addToCartMain = () => handleAddToCart(product.value, quantity.value, false);
-const buyNowMain = async () => { await addToCartMain(); router.push('/cart'); };
+// Cập nhật lại các hàm gọi: Thêm argument (đối số) tương ứng
+const addToCartMain = () => handleAddToCart(product.value, quantity.value, false, true);
 
-const addToCartSimilar = (item) => handleAddToCart(item, 1, true);
-const buyNowSimilar = async (item) => { await addToCartSimilar(item); router.push('/cart'); };
+const buyNowMain = async () => { 
+  await handleAddToCart(product.value, quantity.value, false, false); 
+  router.push('/cart'); 
+};
 
-// const addToCartMain = () => handleAddToCart(product.value, quantity.value);
-// const buyNowMain = async () => {
-//   await addToCartMain();
-//   router.push('/cart');
-// };
+const addToCartSimilar = (item) => handleAddToCart(item, 1, true, true);
 
-// const addToCartSimilar = (item) => handleAddToCart(item, 1);
-// const buyNowSimilar = async (item) => {
-//   await addToCartSimilar(item);
-//   router.push('/cart');
-// };
+const buyNowSimilar = async (item) => { 
+  await handleAddToCart(item, 1, true, false); 
+  router.push('/cart'); 
+};
 
 //////////////////////////////////////
 
@@ -486,5 +504,39 @@ onMounted(() => fetchProductDetail(route.params.id));
   -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* --- CSS THÊM MỚI CHO MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); /* Lớp nền đen mờ */
+  z-index: 1050; /* Z-index (chỉ mục chiều Z) cao hơn để đè lên UI */
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 </style>

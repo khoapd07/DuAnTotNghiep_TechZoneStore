@@ -168,6 +168,25 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showSuccessModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Thành công!</h5>
+        <p class="text-muted fs-8 mb-4">Sản phẩm đã được thêm vào giỏ hàng.</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="closeSuccessModal" class="btn btn-outline-dark fs-8 fw-bold px-4 py-2 rounded-2">
+            Tiếp tục mua
+          </button>
+          <router-link to="/cart" class="btn btn-neon text-dark fs-8 fw-bold px-4 py-2 rounded-2 text-decoration-none">
+            Đến giỏ hàng
+          </router-link>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -184,6 +203,13 @@ const brands = ref([]);
 const totalPages = ref(0);
 const totalElements = ref(0);
 const loading = ref(false);
+
+// State (trạng thái) để quản lý hiển thị Modal
+const showSuccessModal = ref(false);
+
+const closeSuccessModal = () => {
+  showSuccessModal.value = false;
+};
 
 const selectedPriceRange = ref(null);
 
@@ -204,7 +230,7 @@ const filters = reactive({
   brandId: null,
   minPrice: null,
   maxPrice: null,
-  isSale: null, // MỚI THÊM: Truyền trạng thái sale lên API
+  isSale: null, 
   page: 0,
   size: 15,
   sortBy: 'createdAt',
@@ -214,20 +240,18 @@ const filters = reactive({
 watch(
   () => route.query.keyword,
   (newKeyword) => {
-    // Nếu URL đổi (có từ khóa mới hoặc bị xóa đi), ta cập nhật lại filter và gọi API
     filters.keyword = newKeyword || '';
     handleFilterChange();
   }
 );
 
-// CẬP NHẬT: Xử lý khi chọn "Giảm giá"
 const updateSort = () => {
   if (currentSort.value === 'discount-desc') {
-    filters.isSale = true; // Kích hoạt bộ lọc giảm giá
-    filters.sortBy = 'createdAt'; // Mặc định xếp mới nhất cho giảm giá
+    filters.isSale = true; 
+    filters.sortBy = 'createdAt'; 
     filters.sortDir = 'desc';
   } else {
-    filters.isSale = null; // Tắt bộ lọc giảm giá
+    filters.isSale = null; 
     const parts = currentSort.value.split('-');
     filters.sortBy = parts[0];
     filters.sortDir = parts[1];
@@ -306,12 +330,12 @@ const getCurrentUserId = () => {
   return null;
 };
 
-const addToCart = async (productId) => {
+// Cập nhật: Thêm parameter (tham số) showNotification để không hiển thị khi dùng "Mua ngay"
+const addToCart = async (productId, showNotification = true) => {
   const userId = getCurrentUserId();
   const productToAdd = products.value.find(p => p.productId === productId);
   if (!productToAdd) return;
 
-  // LẤY BIẾN THỂ ĐẦU TIÊN
   const defaultVariant = productToAdd.variants && productToAdd.variants.length > 0 ? productToAdd.variants[0] : null;
   const vId = defaultVariant ? defaultVariant.variantId : null;
   const vColor = defaultVariant ? defaultVariant.colorName : '';
@@ -322,10 +346,11 @@ const addToCart = async (productId) => {
     try {
       await axios.post(`http://localhost:8080/api/cart/${userId}/add`, {
         productId: productId,
-        variantId: vId, // Backend cần nhận trường này
+        variantId: vId, 
         quantity: 1 
       });
-      alert("Đã thêm sản phẩm vào giỏ hàng!");
+      if (showNotification) showSuccessModal.value = true;
+      // Phát event (sự kiện) báo giỏ hàng đã update
       window.dispatchEvent(new Event('cart-updated')); 
     } catch (error) {
       alert(error.response?.data || "Không thể thêm vào giỏ hàng");
@@ -349,18 +374,20 @@ const addToCart = async (productId) => {
       });
     }
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));
-    alert("Đã thêm sản phẩm vào giỏ hàng!");
+    if (showNotification) showSuccessModal.value = true;
     window.dispatchEvent(new Event('cart-updated'));
   }
 };
 
 const buyNow = async (productId) => {
-  await addToCart(productId);
+  // Gửi argument (đối số) false để ẩn modal khi redirect (chuyển hướng)
+  await addToCart(productId, false); 
   router.push('/cart');
 };
 </script>
 
 <style scoped>
+/* CSS hiện tại của bạn */
 .fw-black {
   font-weight: 900;
 }
@@ -458,9 +485,42 @@ const buyNow = async (productId) => {
   font-weight: bold;
 }
 
-/* Thêm style cho checkbox/radio để giống mockup */
 .custom-checkbox .form-check-input:checked {
   background-color: #00FF33;
   border-color: #00FF33;
+}
+
+/* --- CSS THÊM MỚI CHO MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); /* Lớp nền đen mờ */
+  z-index: 1050; /* Z-index (chỉ mục chiều Z) cao hơn để đè lên UI */
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 </style>
