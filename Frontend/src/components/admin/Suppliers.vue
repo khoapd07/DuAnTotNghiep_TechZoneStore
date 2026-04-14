@@ -1,13 +1,14 @@
 <template>
   <div class="bg-white min-vh-100 py-5">
     <main class="container-fluid" style="max-width: 1400px;">
-      
+
       <header class="d-flex justify-content-between align-items-center mb-4 mt-2">
         <div>
           <div class="text-muted fw-semibold small mb-1">
             Admin <span class="mx-1">/</span> <span class="text-dark fw-bold">Nhà cung cấp</span>
           </div>
-          <h2 class="fw-bolder text-dark mb-0" style="font-size: 1.8rem; letter-spacing: -0.5px; font-family: 'Space Grotesk', sans-serif;">
+          <h2 class="fw-bolder text-dark mb-0"
+            style="font-size: 1.8rem; letter-spacing: -0.5px; font-family: 'Space Grotesk', sans-serif;">
             Quản Lý Nhà Cung Cấp
           </h2>
         </div>
@@ -16,22 +17,21 @@
             <span class="input-group-text bg-light border-end-0" id="search-icon">
               <i class="bi bi-search text-muted"></i>
             </span>
-            <input 
-              type="text" 
-              class="form-control border-start-0 bg-light fs-6 shadow-none" 
-              placeholder="Tìm kiếm theo tên, ID..." 
-              v-model="searchQuery"
-            />
+            <input type="text" class="form-control border-start-0 bg-light fs-6 shadow-none"
+              placeholder="Tìm kiếm theo tên, ID, mã số thuế..." v-model="searchQuery" />
           </div>
         </div>
       </header>
 
-      <div class="card border-0 shadow-sm rounded-4 mb-4" style="background: rgba(255, 255, 255, 1); border: 1px solid rgba(171, 173, 174, 0.2) !important;">
+      <div class="card border-0 shadow-sm rounded-4 mb-4"
+        style="background: rgba(255, 255, 255, 1); border: 1px solid rgba(171, 173, 174, 0.2) !important;">
         <div class="card-body p-4 p-md-5">
           <div class="d-flex justify-content-between align-items-center mb-4">
             <h4 class="fw-bold mb-0" style="font-family: 'Space Grotesk', sans-serif;">Danh Sách Đối Tác</h4>
-            
-            <button @click="openAddModal" class="btn btn-success px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm rounded-3" style="background-color: #00DF3A; border-color: #00DF3A;">
+
+            <button @click="openAddModal"
+              class="btn btn-success px-4 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm rounded-3"
+              style="background-color: #00DF3A; border-color: #00DF3A;">
               <i class="bi bi-person-plus-fill"></i> Thêm Nhà Cung Cấp
             </button>
           </div>
@@ -56,29 +56,36 @@
                   <td colspan="9" class="text-center py-4 text-muted">Không tìm thấy dữ liệu.</td>
                 </tr>
 
-                <tr v-for="(supplier, index) in filteredSuppliers" :key="index" class="position-relative group-hover-show">
-                  <td class="py-3 text-muted font-monospace" style="font-size: 13px;">SUP-{{ supplier.id || supplier.supplierId }}</td>
-                  <td class="py-3"><p class="fw-bold text-dark mb-0">{{ supplier.name || supplier.supplierName }}</p></td>
-                  <td class="py-3 text-dark" style="font-size: 14px;">{{ supplier.contact || supplier.contactName }}</td>
+                <tr v-for="(supplier, index) in filteredSuppliers" :key="index"
+                  class="position-relative group-hover-show">
+                  <td class="py-3 text-muted font-monospace" style="font-size: 13px;">SUP-{{ supplier.id ||
+                    supplier.supplierId }}</td>
+                  <td class="py-3">
+                    <p class="fw-bold text-dark mb-0">{{ supplier.name || supplier.supplierName }}</p>
+                  </td>
+                  <td class="py-3 text-dark" style="font-size: 14px;">{{ supplier.contact || supplier.contactName }}
+                  </td>
                   <td class="py-3 text-muted" style="font-size: 14px;">{{ supplier.phone || supplier.phoneNumber }}</td>
                   <td class="py-3 text-muted" style="font-size: 14px;">{{ supplier.email }}</td>
                   <td class="py-3 text-dark fw-semibold" style="font-size: 14px;">{{ supplier.taxCode || '---' }}</td>
                   <td class="py-3 text-muted" style="font-size: 14px;">{{ supplier.address }}</td>
                   <td class="py-3">
-                    <span 
-                      class="badge rounded-pill border py-2 px-3 text-uppercase"
+                    <span class="badge rounded-pill border py-2 px-3 text-uppercase"
                       :class="supplier.status ? 'bg-success-subtle text-success border-success-subtle' : 'bg-secondary-subtle text-secondary border-secondary-subtle'"
-                      style="font-size: 10px; font-weight: 700;"
-                    >
+                      style="font-size: 10px; font-weight: 700;">
                       {{ supplier.status ? 'Đang hợp tác' : 'Ngừng hợp tác' }}
                     </span>
                   </td>
                   <td class="py-3 text-end">
                     <div class="d-flex justify-content-end gap-1 action-buttons">
-                      <button @click="openEditModal(supplier)" class="btn btn-sm btn-light text-primary hover-bg-primary rounded-circle shadow-none" title="Sửa">
+                      <button @click="openEditModal(supplier)"
+                        class="btn btn-sm btn-light text-primary hover-bg-primary rounded-circle shadow-none"
+                        title="Sửa">
                         <i class="bi bi-pencil-square"></i>
                       </button>
-                      <button @click="deleteSupplier(supplier.id || supplier.supplierId)" class="btn btn-sm btn-light text-danger hover-bg-danger rounded-circle shadow-none" title="Ngừng hợp tác (Xóa)">
+                      <button @click="deleteSupplier(supplier.id || supplier.supplierId)"
+                        class="btn btn-sm btn-light text-danger hover-bg-danger rounded-circle shadow-none"
+                        title="Ngừng hợp tác (Xóa)">
                         <i class="bi bi-trash"></i>
                       </button>
                     </div>
@@ -95,56 +102,82 @@
       <div v-if="showModal" class="modal-custom-overlay">
         <div class="modal-dialog modal-dialog-centered" style="width: 100%; max-width: 650px; margin: auto;">
           <div class="modal-content rounded-4 border-0 shadow-lg bg-white">
-            
+
             <div class="modal-header border-bottom p-4">
               <h5 class="modal-title fw-bold m-0" style="font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem;">
                 {{ isEdit ? 'Cập Nhật Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp Mới' }}
               </h5>
               <button type="button" class="btn-close shadow-none" @click="closeModal"></button>
             </div>
-            
+
             <div class="modal-body p-4">
               <form @submit.prevent="saveSupplier">
+
                 <div class="mb-3">
-                  <label class="form-label fw-semibold small text-muted">Tên nhà cung cấp <span class="text-danger">*</span></label>
-                  <input type="text" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.name" required placeholder="Nhập tên đối tác...">
+                  <label class="form-label fw-semibold small text-muted">Tên nhà cung cấp <span
+                      class="text-danger">*</span></label>
+                  <input type="text" class="form-control bg-light shadow-none py-2"
+                    :class="{ 'is-invalid border-danger': errors.name, 'border-0': !errors.name }" v-model="formData.name"
+                    placeholder="Nhập tên đối tác...">
+                  <small v-if="errors.name" class="text-danger mt-1 d-block">{{ errors.name }}</small>
                 </div>
-                
+
                 <div class="row">
                   <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold small text-muted">Người liên hệ</label>
-                    <input type="text" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.contact" placeholder="Tên đại diện...">
+                    <input type="text" class="form-control bg-light shadow-none border-0 py-2"
+                      v-model="formData.contact" placeholder="Tên đại diện...">
                   </div>
+
                   <div class="col-md-6 mb-3">
-                    <label class="form-label fw-semibold small text-muted">Số điện thoại</label>
-                    <input type="text" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.phone" placeholder="09xx...">
+                    <label class="form-label fw-semibold small text-muted">Số điện thoại <span
+                        class="text-danger">*</span></label>
+                    <input type="text" class="form-control bg-light shadow-none py-2"
+                      :class="{ 'is-invalid border-danger': errors.phone, 'border-0': !errors.phone }"
+                      v-model="formData.phone" placeholder="09xx...">
+                    <small v-if="errors.phone" class="text-danger mt-1 d-block">{{ errors.phone }}</small>
                   </div>
                 </div>
 
                 <div class="row">
                   <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold small text-muted">Email</label>
-                    <input type="email" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.email" placeholder="email@example.com">
+                    <input type="text" class="form-control bg-light shadow-none py-2"
+                      :class="{ 'is-invalid border-danger': errors.email, 'border-0': !errors.email }"
+                      v-model="formData.email" placeholder="email@example.com">
+                    <small v-if="errors.email" class="text-danger mt-1 d-block">{{ errors.email }}</small>
                   </div>
+
                   <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold small text-muted">Mã số thuế</label>
-                    <input type="text" class="form-control bg-light shadow-none border-0 py-2" v-model="formData.taxCode" placeholder="Nhập mã số thuế...">
+                    <input type="text" class="form-control bg-light shadow-none py-2"
+                      :class="{ 'is-invalid border-danger': errors.taxCode, 'border-0': !errors.taxCode }"
+                      v-model="formData.taxCode" placeholder="Nhập mã số thuế...">
+                    <small v-if="errors.taxCode" class="text-danger mt-1 d-block">{{ errors.taxCode }}</small>
                   </div>
                 </div>
 
                 <div class="mb-3">
-                  <label class="form-label fw-semibold small text-muted">Địa chỉ</label>
-                  <textarea class="form-control bg-light shadow-none border-0 py-2" v-model="formData.address" rows="2" placeholder="Nhập địa chỉ chi tiết..."></textarea>
+                  <label class="form-label fw-semibold small text-muted">Địa chỉ <span
+                      class="text-danger">*</span></label>
+                  <textarea class="form-control bg-light shadow-none py-2"
+                    :class="{ 'is-invalid border-danger': errors.address, 'border-0': !errors.address }"
+                    v-model="formData.address" rows="2" placeholder="Nhập địa chỉ chi tiết...">
+  </textarea>
+                  <small v-if="errors.address" class="text-danger mt-1 d-block">{{ errors.address }}</small>
                 </div>
-                
+
                 <div class="mb-3 form-check form-switch" v-if="isEdit">
-                  <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="statusSwitch" v-model="formData.status">
-                  <label class="form-check-label fw-semibold cursor-pointer ms-2" for="statusSwitch">Đang hợp tác</label>
+                  <input class="form-check-input shadow-none cursor-pointer" type="checkbox" id="statusSwitch"
+                    v-model="formData.status">
+                  <label class="form-check-label fw-semibold cursor-pointer ms-2" for="statusSwitch">Đang hợp
+                    tác</label>
                 </div>
 
                 <div class="d-flex justify-content-end gap-3 mt-4 pt-3 border-top">
                   <button type="button" class="btn btn-light fw-bold px-4" @click="closeModal">Hủy</button>
-                  <button type="submit" class="btn text-white fw-bold px-4 shadow-sm" style="background-color: #00DF3A; border-color: #00DF3A;">
+                  <button type="submit" class="btn text-white fw-bold px-4 shadow-sm"
+                    style="background-color: #00DF3A; border-color: #00DF3A;">
                     {{ isEdit ? 'Cập Nhật Đối Tác' : 'Lưu Nhà Cung Cấp' }}
                   </button>
                 </div>
@@ -174,10 +207,12 @@ const formData = ref({
   contact: '',
   phone: '',
   email: '',
-  taxCode: '', // Khai báo thêm mã số thuế
+  taxCode: '',
   address: '',
   status: true
 });
+
+const errors = ref({});
 
 const apiUrl = '/api/admin/suppliers';
 
@@ -189,10 +224,10 @@ const getAuthHeader = () => {
 const filteredSuppliers = computed(() => {
   if (!searchQuery.value) return suppliers.value;
   const lowerQuery = searchQuery.value.toLowerCase();
-  return suppliers.value.filter(sup => 
-    ((sup.name || sup.supplierName) && (sup.name || sup.supplierName).toLowerCase().includes(lowerQuery)) || 
+  return suppliers.value.filter(sup =>
+    ((sup.name || sup.supplierName) && (sup.name || sup.supplierName).toLowerCase().includes(lowerQuery)) ||
     ((sup.id || sup.supplierId) && (sup.id || sup.supplierId).toString().includes(lowerQuery)) ||
-    (sup.taxCode && sup.taxCode.includes(lowerQuery)) // Cho phép search luôn bằng mã số thuế
+    (sup.taxCode && sup.taxCode.includes(lowerQuery))
   );
 });
 
@@ -205,24 +240,114 @@ const fetchSuppliers = async () => {
   }
 };
 
+// Hàm validate (Bắt cả định dạng rỗng/sai + Bắt luôn trùng lặp)
+const validateForm = () => {
+  errors.value = {};
+  let isValid = true;
+
+  // Lấy danh sách các NCC khác (Bỏ qua chính nó đang sửa và bỏ qua các NCC đã ngừng hợp tác)
+  const otherSuppliers = suppliers.value.filter(s => {
+    const sId = s.id || s.supplierId;
+    return sId !== formData.value.id && s.status !== false;
+  });
+
+  // 1. Tên nhà cung cấp (Bắt buộc + Check trùng)
+  if (!formData.value.name || !formData.value.name.trim()) {
+    errors.value.name = "Vui lòng thêm vào trường này";
+    isValid = false;
+  } else {
+    const isDuplicateName = otherSuppliers.some(s => 
+      (s.name || s.supplierName)?.toLowerCase() === formData.value.name.trim().toLowerCase()
+    );
+    if (isDuplicateName) {
+      errors.value.name = "Tên Nhà cung cấp đã tồn tại";
+      isValid = false;
+    }
+  }
+
+  // 2. Số điện thoại (Bắt buộc + Định dạng + Check trùng)
+  if (!formData.value.phone || !formData.value.phone.trim()) {
+    errors.value.phone = "Số điện thoại không được để trống";
+    isValid = false;
+  } else {
+    const phoneRegex = /^[0-9]{10,11}$/;
+    if (!phoneRegex.test(formData.value.phone.trim())) {
+      errors.value.phone = "Số điện thoại không hợp lệ (chỉ số, 10-11 ký tự)";
+      isValid = false;
+    } else {
+      const isDuplicatePhone = otherSuppliers.some(s => 
+        (s.phone || s.phoneNumber) === formData.value.phone.trim()
+      );
+      if (isDuplicatePhone) {
+        errors.value.phone = "Số điện thoại này đã được sử dụng";
+        isValid = false;
+      }
+    }
+  }
+
+  // 3. Email (Định dạng + Check trùng)
+  if (formData.value.email && formData.value.email.trim()) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.value.email.trim())) {
+      errors.value.email = "Email không đúng định dạng";
+      isValid = false;
+    } else {
+      const isDuplicateEmail = otherSuppliers.some(s => 
+        s.email?.toLowerCase() === formData.value.email.trim().toLowerCase()
+      );
+      if (isDuplicateEmail) {
+        errors.value.email = "Email này đã được sử dụng";
+        isValid = false;
+      }
+    }
+  }
+
+  // 4. Mã số thuế (Định dạng + Check trùng)
+  if (formData.value.taxCode && formData.value.taxCode.trim()) {
+    const taxCodeRegex = /^(\d{10}|\d{10}-\d{3}|\d{13})$/;
+    if (!taxCodeRegex.test(formData.value.taxCode.trim())) {
+      errors.value.taxCode = "Mã số thuế phải gồm 10 hoặc 13 số";
+      isValid = false;
+    } else {
+      const isDuplicateTaxCode = otherSuppliers.some(s => 
+        s.taxCode === formData.value.taxCode.trim()
+      );
+      if (isDuplicateTaxCode) {
+        errors.value.taxCode = "Mã số thuế này đã được đăng ký";
+        isValid = false;
+      }
+    }
+  }
+
+  // 5. Địa chỉ (Bắt buộc)
+  if (!formData.value.address || !formData.value.address.trim()) {
+    errors.value.address = "Địa chỉ không được để trống";
+    isValid = false;
+  }
+
+  return isValid;
+};
+
 const openAddModal = () => {
   isEdit.value = false;
   formData.value = { id: null, name: '', contact: '', phone: '', email: '', taxCode: '', address: '', status: true };
+  errors.value = {}; 
   showModal.value = true;
 };
 
 const openEditModal = (supplier) => {
   isEdit.value = true;
-  formData.value = { 
+  formData.value = {
     id: supplier.id || supplier.supplierId,
     name: supplier.name || supplier.supplierName,
     contact: supplier.contact || supplier.contactName,
     phone: supplier.phone || supplier.phoneNumber,
     email: supplier.email,
-    taxCode: supplier.taxCode, // Map mã số thuế
+    taxCode: supplier.taxCode,
     address: supplier.address,
     status: supplier.status
   };
+  errors.value = {}; 
   showModal.value = true;
 };
 
@@ -231,13 +356,17 @@ const closeModal = () => {
 };
 
 const saveSupplier = async () => {
+  if (!validateForm()) {
+    return;
+  }
+
   try {
     const payload = {
       supplierName: formData.value.name,
       contactName: formData.value.contact,
       phoneNumber: formData.value.phone,
       email: formData.value.email,
-      taxCode: formData.value.taxCode, // Gửi mã số thuế xuống backend
+      taxCode: formData.value.taxCode,
       address: formData.value.address,
       status: formData.value.status
     };
@@ -251,25 +380,25 @@ const saveSupplier = async () => {
       await axios.post(apiUrl, payload, { headers });
       alert('Thêm nhà cung cấp thành công!');
     }
-    
+
     closeModal();
-    fetchSuppliers(); 
+    fetchSuppliers();
   } catch (error) {
     console.error("Lỗi khi lưu:", error);
-    const errorMsg = error.response?.data?.message || error.response?.data || 'Có lỗi xảy ra, vui lòng kiểm tra lại!';
-    alert(typeof errorMsg === 'string' ? errorMsg : "Lỗi kết nối máy chủ.");
+    alert("Lỗi kết nối máy chủ.");
   }
 };
 
 const deleteSupplier = async (id) => {
-  if (confirm('Bạn có chắc chắn muốn ngừng hợp tác với nhà cung cấp này không?')) {
+  if (confirm('Bạn có chắc chắn muốn xóa vĩnh viễn nhà cung cấp này không? Hành động này không thể hoàn tác!')) {
     try {
       await axios.delete(`${apiUrl}/${id}`, { headers: getAuthHeader() });
-      alert('Đã cập nhật trạng thái ngừng hợp tác!');
-      fetchSuppliers(); 
+      alert('Đã xóa nhà cung cấp thành công!');
+      fetchSuppliers();
     } catch (error) {
       console.error("Lỗi khi xóa:", error);
-      alert('Không thể thực hiện thao tác này vì nhà cung cấp đang có giao dịch phát sinh.');
+      // Lỗi này bắt từ Backend quăng ra khi NCC đã có phiếu nhập
+      alert('Không thể xóa NCC đã có dữ liệu phiếu nhập'); 
     }
   }
 };
@@ -282,13 +411,15 @@ onMounted(() => {
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-.cursor-pointer { cursor: pointer; }
+.cursor-pointer {
+  cursor: pointer;
+}
 
-/* Nút hành động ẩn hiện khi hover */
 .action-buttons {
   opacity: 0;
   transition: opacity 0.2s ease-in-out;
 }
+
 .group-hover-show:hover .action-buttons {
   opacity: 1;
 }
@@ -297,19 +428,19 @@ onMounted(() => {
   background-color: #0d6efd !important;
   color: #fff !important;
 }
+
 .hover-bg-danger:hover {
   background-color: #dc3545 !important;
   color: #fff !important;
 }
 
-/* --- HIỆU ỨNG TRƯỢT MƯỢT CHO MODAL VUE --- */
 .modal-custom-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.4); /* Nền mờ */
+  background-color: rgba(0, 0, 0, 0.4);
   z-index: 1050;
   display: flex;
   align-items: center;

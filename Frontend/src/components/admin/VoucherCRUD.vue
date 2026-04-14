@@ -91,31 +91,31 @@
           <div class="modal-body p-4">
             <div class="row g-3">
               <div class="col-md-6">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mã Voucher</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mã Voucher <span class="text-danger">*</span></label>
                 <input type="text" v-model="form.code" class="form-control fs-7 text-uppercase" placeholder="VD: SUMMER2024">
               </div>
               <div class="col-md-6">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên chương trình</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên chương trình <span class="text-danger">*</span></label>
                 <input type="text" v-model="form.name" class="form-control fs-7" placeholder="Nhập tên chương trình">
               </div>
               <div class="col-md-6">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giảm giá (VNĐ)</label>
-                <input type="number" v-model="form.discountAmount" class="form-control fs-7" placeholder="0">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giảm giá (VNĐ) <span class="text-danger">*</span></label>
+                <input type="number" v-model="form.discountAmount" class="form-control fs-7" placeholder="0" min="0">
               </div>
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Đơn hàng tối thiểu (VNĐ)</label>
-                <input type="number" v-model="form.minOrderValue" class="form-control fs-7" placeholder="0">
+                <input type="number" v-model="form.minOrderValue" class="form-control fs-7" placeholder="0" min="0">
               </div>
               <div class="col-md-4">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng</label>
-                <input type="number" v-model="form.quantity" class="form-control fs-7" placeholder="100">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng <span class="text-danger">*</span></label>
+                <input type="number" v-model="form.quantity" class="form-control fs-7" placeholder="100" min="1">
               </div>
               <div class="col-md-4">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Ngày bắt đầu</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Ngày bắt đầu <span class="text-danger">*</span></label>
                 <input type="datetime-local" v-model="form.startDate" class="form-control fs-7">
               </div>
               <div class="col-md-4">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Ngày kết thúc</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Ngày kết thúc <span class="text-danger">*</span></label>
                 <input type="datetime-local" 
                         v-model="form.endDate" 
                         :min="form.startDate" class="form-control fs-7">
@@ -284,6 +284,35 @@ const openEditModal = (voucher) => {
 };
 
 const saveVoucher = async () => {
+  // Validation Mã Voucher
+  if (!form.code || form.code.trim() === '') {
+    alert("Vui lòng nhập Mã Voucher!");
+    return;
+  }
+
+  // Validation Tên chương trình
+  if (!form.name || form.name.trim() === '') {
+    alert("Vui lòng nhập Tên chương trình!");
+    return;
+  }
+
+  // ĐÃ THÊM: Validation số lượng, tiền nong không được âm
+  if (form.discountAmount === null || form.discountAmount < 0) {
+    alert("Lỗi: Giảm giá không được là số âm!");
+    return;
+  }
+
+  if (form.minOrderValue === null || form.minOrderValue < 0) {
+    alert("Lỗi: Đơn hàng tối thiểu không được là số âm!");
+    return;
+  }
+
+  if (form.quantity === null || form.quantity < 1) {
+    alert("Lỗi: Số lượng voucher phải từ 1 trở lên!");
+    return;
+  }
+
+  // Validation ngày tháng
   if (!form.startDate || !form.endDate) {
     alert("Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc!");
     return;
@@ -299,7 +328,13 @@ const saveVoucher = async () => {
 
   try {
     const headers = getAuthHeader();
-    const payload = { ...form };
+    
+    // Tự động xóa dấu cách thừa và viết hoa Mã Voucher trước khi lưu
+    const payload = { 
+      ...form, 
+      code: form.code.trim().toUpperCase(),
+      name: form.name.trim()
+    };
 
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/vouchers/${currentId.value}`, payload, { headers });

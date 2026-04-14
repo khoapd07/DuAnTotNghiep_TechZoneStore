@@ -1,5 +1,6 @@
 package com.poly.backend.service.impl;
 
+import com.poly.backend.dao.ImportReceiptDAO;
 import com.poly.backend.dao.SupplierDAO;
 import com.poly.backend.dto.SupplierDTO;
 import com.poly.backend.entity.Supplier;
@@ -15,6 +16,10 @@ public class SupplierServiceImpl implements SupplierService {
 
     @Autowired
     private SupplierDAO supplierDAO;
+
+    // Tiêm thêm DAO của Phiếu nhập để check điều kiện Xóa (TC208, TC209)
+    @Autowired
+    private ImportReceiptDAO importReceiptDAO;
 
     // ======================================================
     // 1. HÀM DTO (Lấy danh sách trả về cho Vue.js)
@@ -54,6 +59,8 @@ public class SupplierServiceImpl implements SupplierService {
         if (supplier.getStatus() == null) {
             supplier.setStatus(true);
         }
+
+        // Vue.js đã check trùng lặp rồi, backend chỉ việc lưu!
         return supplierDAO.save(supplier);
     }
 
@@ -61,6 +68,8 @@ public class SupplierServiceImpl implements SupplierService {
     public Supplier updateSupplier(Integer id, Supplier supplierDetails) {
         Supplier existingSupplier = getSupplierById(id);
         if (existingSupplier != null) {
+
+            // Vue.js đã check trùng lặp rồi, backend chỉ việc cập nhật!
             existingSupplier.setSupplierName(supplierDetails.getSupplierName());
             existingSupplier.setContactName(supplierDetails.getContactName());
             existingSupplier.setPhoneNumber(supplierDetails.getPhoneNumber());
@@ -78,9 +87,16 @@ public class SupplierServiceImpl implements SupplierService {
     public void deleteSupplier(Integer id) {
         Supplier existingSupplier = getSupplierById(id);
         if (existingSupplier != null) {
-            // Thay vì xóa hẳn, ta cập nhật status = false (Ngừng hợp tác)
-            existingSupplier.setStatus(false);
-            supplierDAO.save(existingSupplier);
+
+            // BẮT BUỘC GIỮ LẠI: Kiểm tra xem đã có Phiếu Nhập nào dùng NCC này chưa (TC209)
+            boolean hasReceipts = importReceiptDAO.existsBySupplier_SupplierId(id);
+            if (hasReceipts) {
+                // Ném lỗi để từ chối Xóa
+                throw new IllegalArgumentException("Không thể xóa NCC đã có dữ liệu phiếu nhập");
+            }
+
+            // XÓA HẲN: Xóa vĩnh viễn khỏi Database thay vì chỉ đổi trạng thái
+            supplierDAO.deleteById(id);
         }
     }
 }
