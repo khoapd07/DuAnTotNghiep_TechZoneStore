@@ -24,7 +24,7 @@
           </div>
 
           <div class="d-flex flex-column gap-3">
-            <div v-for="item in cartItems" :key="item.productId" class="card border-0 shadow-sm rounded-3 overflow-hidden">
+            <div v-for="item in cartItems" :key="item.productId + '-' + item.variantId" class="card border-0 shadow-sm rounded-3 overflow-hidden">
               <div class="card-body p-4 d-flex align-items-center gap-4">
                 
                 <div class="form-check custom-checkbox">
@@ -87,26 +87,22 @@
                   <span class="text-muted">Phí vận chuyển</span>
                   <span class="text-success fw-bold">Miễn phí</span>
                 </div>
-                </div>
+              </div>
 
               <div class="d-flex justify-content-between align-items-end mb-4">
                 <h5 class="fw-black m-0 fs-6">Tổng cộng</h5>
                 <div class="text-end">
                   <h5 class=" fw-black mb-0">{{ formatCurrency(subtotal) }}</h5>
-                  <!-- <small class="text-muted fs-9">ĐÃ BAO GỒM VAT</small> -->
                 </div>
               </div>
               
               <div class="d-flex justify-content-between align-items-end mb-4">
-                
                   <small class="text-muted fs-9">TỔNG CỘNG GIÁ TRỊ ĐÃ BAO GỒM THUẾ VAT</small>
-                
               </div>
 
-              
-
-              <button @click="goToCheckout" class="btn btn-neon w-100 fw-black py-3 rounded-3 d-flex align-items-center justify-content-center gap-2 fs-7 text-dark shadow-sm">
-                TIẾN HÀNH THANH TOÁN <i class="bi bi-lightning-fill"></i>
+              <button @click="goToCheckout" :disabled="selectedCount === 0 || isCheckingOut" class="btn btn-neon w-100 fw-black py-3 rounded-3 d-flex align-items-center justify-content-center gap-2 fs-7 text-dark shadow-sm">
+                <span v-if="isCheckingOut" class="spinner-border spinner-border-sm me-1"></span>
+                <template v-else>TIẾN HÀNH THANH TOÁN <i class="bi bi-lightning-fill"></i></template>
               </button>
             </div>
 
@@ -141,6 +137,7 @@ const API_URL = 'http://localhost:8080/api/cart';
 
 const cartItems = ref([]);
 const selectAll = ref(false);
+const isCheckingOut = ref(false); // Biến chặn click nhiều lần lúc thanh toán
 let debounceTimer;
 
 const getCurrentUserId = () => {
@@ -175,11 +172,11 @@ const fetchCart = async () => {
     const backendItems = response.data.items || response.data;
 
     cartItems.value = backendItems.map(bItem => {
-      const existingItem = cartItems.value.find(i => i.productId === bItem.productId);
+      const existingItem = cartItems.value.find(i => i.productId === bItem.productId && i.variantId === bItem.variantId);
       return {
         productId: bItem.productId,
-        variantId: bItem.variantId,       
-        colorName: bItem.colorName,       
+        variantId: bItem.variantId,
+        colorName: bItem.colorName,
         option2Value: bItem.option2Value,
         name: bItem.productName,
         desc: 'Sản phẩm chính hãng TechZone',
@@ -218,16 +215,14 @@ const subtotal = computed(() => {
     .reduce((total, item) => total + (item.price * item.quantity), 0);
 });
 
-// ❌ ĐÃ XÓA 2 BIẾN NÀY KHỎI CODE ĐỂ TRÁNH LỖI THỪA BIẾN
-// const tax = computed(() => subtotal.value * 0.1);
-// const total = computed(() => subtotal.value + tax.value);
-
-
-const syncQuantityWithBackend = (productId, newQuantity) => {
+// ==========================================
+// 1. LOGIC XỬ LÝ SỐ LƯỢNG KHI CÓ LỖI TỒN KHO
+// ==========================================
+const syncQuantityWithBackend = (item, newQuantity) => {
   const userId = getCurrentUserId();
 
   if (!userId) {
-    const itemIndex = cartItems.value.findIndex(i => i.productId === productId);
+    const itemIndex = cartItems.value.findIndex(i => i.productId === item.productId && i.variantId === item.variantId);
     if (itemIndex !== -1) {
       cartItems.value[itemIndex].quantity = newQuantity;
       localStorage.setItem('guest_cart', JSON.stringify(cartItems.value));
@@ -240,33 +235,62 @@ const syncQuantityWithBackend = (productId, newQuantity) => {
   debounceTimer = setTimeout(async () => {
     try {
       await axios.put(`${API_URL}/${userId}/update`, { 
-        productId: productId,
+        productId: item.productId,
+        variantId: item.variantId,
         quantity: newQuantity
       });
       await fetchCart();
       window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
-      alert(error.response?.data || 'Cập nhật thất bại');
-      fetchCart(); 
+      const errorMsg = error.response?.data || 'Cập nhật thất bại';
+      
+      // THUẬT TOÁN MỚI: Trích xuất số tồn kho từ câu báo lỗi của Backend
+      // (Backend đang ném ra lỗi: "Kho chỉ còn 4 sản phẩm...")
+      const match = errorMsg.match(/Kho chỉ còn (\d+)/i);
+      
+      if (match && match[1]) {
+        const maxStock = parseInt(match[1], 10);
+        alert(`Sản phẩm này hiện chỉ còn tối đa ${maxStock} chiếc trong kho!`);
+        
+        // Ép số lượng trong giỏ về giới hạn của kho
+        item.quantity = maxStock;
+
+        // Gọi API ép lưu số lượng Max này xuống Database
+        try {
+          await axios.put(`${API_URL}/${userId}/update`, { 
+            productId: item.productId,
+            variantId: item.variantId,
+            quantity: maxStock
+          });
+          await fetchCart();
+          window.dispatchEvent(new Event('cart-updated'));
+        } catch(e) {
+          await fetchCart();
+        }
+      } else {
+        alert(errorMsg);
+        await fetchCart(); 
+      }
     }
-  }, 1000); 
+  }, 600); 
 };
 
+// TRUYỀN CẢ OBJECT VÀO HÀM THAY VÌ CHỈ TRUYỀN ID
 const increaseQty = (item) => {
   item.quantity++; 
-  syncQuantityWithBackend(item.productId, item.quantity);
+  syncQuantityWithBackend(item, item.quantity);
 };
 
 const decreaseQty = (item) => {
   if (item.quantity > 1) {
     item.quantity--; 
-    syncQuantityWithBackend(item.productId, item.quantity);
+    syncQuantityWithBackend(item, item.quantity);
   }
 };
 
 const updateQty = (item) => {
   if (item.quantity < 1) item.quantity = 1;
-  syncQuantityWithBackend(item.productId, item.quantity);
+  syncQuantityWithBackend(item, item.quantity);
 };
 
 const removeItem = async (productId) => {
@@ -315,29 +339,72 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
 };
 
-const goToCheckout = () => {
+// ==========================================
+// 2. CHỐT CHẶN DOUBLE-CHECK TỒN KHO KHI THANH TOÁN
+// ==========================================
+const goToCheckout = async () => {
   const userId = getCurrentUserId();
-  
-  if (selectedCount.value === 0) {
-    alert('Vui lòng chọn ít nhất 1 sản phẩm để thanh toán!');
-    return;
-  }
-
   const selectedItems = cartItems.value.filter(item => item.selected);
-  const checkoutData = {
-    items: selectedItems,
-    // ĐÃ SỬA: Đẩy thẳng giá trị subtotal vào tổng cộng, bỏ đi phần tính thuế
-    subtotal: subtotal.value,
-    total: subtotal.value
-  };
-  sessionStorage.setItem('checkout_data', JSON.stringify(checkoutData));
+  
+  if (selectedItems.length === 0) return;
+  
+  isCheckingOut.value = true;
 
-  router.push('/checkout');
+  try {
+    // Duyệt qua từng sản phẩm được tích chọn và đối chiếu tồn kho mới nhất
+    for (const item of selectedItems) {
+      const res = await axios.get(`http://localhost:8080/api/product/${item.productId}`);
+      const productData = res.data;
+
+      // Tìm tồn kho thực tế của biến thể đó
+      let maxStock = productData.totalStock;
+      if (item.variantId && productData.variants) {
+        const variant = productData.variants.find(v => v.variantId === item.variantId);
+        if (variant) maxStock = variant.stockQuantity;
+      }
+
+      // KẾT QUẢ DOUBLE-CHECK: Nếu mua lố
+      if (item.quantity > maxStock) {
+        alert(`Sản phẩm "${item.name}" ${item.colorName ? '('+item.colorName+')' : ''} hiện chỉ còn ${maxStock} chiếc do vừa có khách hàng khác đặt mua.\n\nHệ thống sẽ tự động điều chỉnh số lượng!`);
+        
+        item.quantity = maxStock;
+
+        // Lưu lại DB để khách confirm lại trên UI
+        if (userId) {
+           await axios.put(`${API_URL}/${userId}/update`, {
+             productId: item.productId,
+             variantId: item.variantId,
+             quantity: maxStock
+           });
+           await fetchCart();
+        } else {
+           saveGuestCartState();
+        }
+
+        isCheckingOut.value = false;
+        return; // BLOCK không cho sang Checkout, ép khách xem lại số lượng
+      }
+    }
+
+    // NẾU TẤT CẢ VƯỢT QUA BÀI TEST -> CHUYỂN SANG CHECKOUT BÌNH THƯỜNG
+    const checkoutData = {
+      items: selectedItems,
+      subtotal: subtotal.value,
+      total: subtotal.value
+    };
+    sessionStorage.setItem('checkout_data', JSON.stringify(checkoutData));
+    router.push('/checkout');
+
+  } catch (error) {
+    console.error("Lỗi kiểm tra tồn kho:", error);
+    alert("Có lỗi xảy ra khi kiểm tra giỏ hàng. Vui lòng tải lại trang!");
+  } finally {
+    isCheckingOut.value = false;
+  }
 };
 </script>
 
 <style scoped>
-/* Toàn bộ CSS của bạn được giữ nguyên không mất một dòng nào */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
@@ -345,8 +412,9 @@ const goToCheckout = () => {
 .bg-light-gray { background-color: #F8F9FA; }
 .text-neon { color: #00FF33 !important; }
 .bg-neon-light { background-color: rgba(0, 255, 51, 0.1); }
-.btn-neon { background-color: #00FF33; color: #000; border: none; }
-.btn-neon:hover { background-color: #00cc29; transform: translateY(-2px); transition: all 0.2s; }
+.btn-neon { background-color: #00FF33; color: #000; border: none; transition: 0.2s; }
+.btn-neon:hover:not(:disabled) { background-color: #00cc29; transform: translateY(-2px); }
+.btn-neon:disabled { background-color: #00FF33; opacity: 0.7; cursor: not-allowed; }
 .narrow-container { max-width: 1100px !important; margin: 0 auto; }
 .custom-checkbox .form-check-input { width: 20px; height: 20px; border-radius: 4px; border-color: #ccc; cursor: pointer; }
 .custom-checkbox .form-check-input:checked { background-color: #00FF33; border-color: #00FF33; }
