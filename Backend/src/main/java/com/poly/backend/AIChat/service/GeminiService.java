@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.poly.backend.entity.Product;
-import com.poly.backend.dao.ProductDAO;
+import com.poly.backend.dao.ProductRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +32,7 @@ public class GeminiService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Autowired
-    private ProductDAO productDAO;
+    private ProductRepository productRepository;
 
     // =========================================================================
     // TƯ DUY GỐC DÀNH CHO ĐỒ ÁN (Phiên bản Chuyên viên CSKH Full Kỹ Năng)
@@ -65,7 +65,7 @@ public class GeminiService {
             String contextData = "";
 
             // Lấy TẤT CẢ sản phẩm từ Database (Do DB đồ án ít sản phẩm nên dùng findAll là an toàn và dễ nhất)
-            List<Product> products = productDAO.findAll();
+            List<Product> products = productRepository.findAll();
 
             if (!products.isEmpty()) {
                 contextData = "\n\n[DANH SÁCH SẢN PHẨM HIỆN CÓ TẠI SHOP]:\n";

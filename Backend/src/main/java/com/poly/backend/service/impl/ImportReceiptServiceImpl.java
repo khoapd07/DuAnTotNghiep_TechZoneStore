@@ -1,8 +1,8 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.ImportReceiptDAO;
-import com.poly.backend.dao.ProductDAO;
-import com.poly.backend.dao.ProductVariantDAO;
+import com.poly.backend.dao.ImportReceiptRepository;
+import com.poly.backend.dao.ProductRepository;
+import com.poly.backend.dao.ProductVariantRepository;
 import com.poly.backend.dto.ImportReceiptDetailDTO;
 import com.poly.backend.dto.ImportReceiptListDTO;
 import com.poly.backend.entity.ImportReceipt;
@@ -23,13 +23,13 @@ import java.util.stream.Collectors;
 public class ImportReceiptServiceImpl implements ImportReceiptService {
 
     @Autowired
-    private ImportReceiptDAO importReceiptDAO;
+    private ImportReceiptRepository importReceiptRepository;
 
     @Autowired
-    private ProductDAO productDAO;
+    private ProductRepository productRepository;
 
     @Autowired
-    private ProductVariantDAO productVariantDAO;
+    private ProductVariantRepository productVariantRepository;
 
     // ==========================================
     //         CÁC HÀM XỬ LÝ CHÍNH (PUBLIC)
@@ -37,12 +37,12 @@ public class ImportReceiptServiceImpl implements ImportReceiptService {
 
     @Override
     public List<ImportReceipt> getAllReceipts() {
-        return importReceiptDAO.findAll();
+        return importReceiptRepository.findAll();
     }
 
     @Override
     public ImportReceipt getReceiptById(Integer id) {
-        return importReceiptDAO.findById(id).orElse(null);
+        return importReceiptRepository.findById(id).orElse(null);
     }
 
     @Override
@@ -74,24 +74,24 @@ public class ImportReceiptServiceImpl implements ImportReceiptService {
                     int currentStock = getSafeStock(variant);
                     variant.setStockQuantity(currentStock + detail.getQuantity());
 
-                    productVariantDAO.save(variant);
+                    productVariantRepository.save(variant);
                     detail.setVariant(variant);
                 }
             }
         }
-        return importReceiptDAO.save(receipt);
+        return importReceiptRepository.save(receipt);
     }
 
     @Override
     public List<ImportReceiptListDTO> getAllReceiptsForList() {
-        return importReceiptDAO.findAll().stream()
+        return importReceiptRepository.findAll().stream()
                 .map(this::mapToListDTO) // Gọi helper function cho gọn code
                 .collect(Collectors.toList());
     }
 
     @Override
     public ImportReceiptDetailDTO getReceiptDetail(Integer id) {
-        return importReceiptDAO.findById(id)
+        return importReceiptRepository.findById(id)
                 .map(this::mapToDetailDTO) // Gọi helper function
                 .orElse(null);
     }
@@ -99,16 +99,16 @@ public class ImportReceiptServiceImpl implements ImportReceiptService {
     @Override
     @Transactional
     public ImportReceipt updateReceipt(Integer id, ImportReceipt receiptDetails) {
-        return importReceiptDAO.findById(id).map(existing -> {
+        return importReceiptRepository.findById(id).map(existing -> {
             existing.setNote(receiptDetails.getNote());
-            return importReceiptDAO.save(existing);
+            return importReceiptRepository.save(existing);
         }).orElse(null);
     }
 
     @Override
     @Transactional
     public void cancelReceipt(Integer receiptId) {
-        ImportReceipt receipt = importReceiptDAO.findById(receiptId)
+        ImportReceipt receipt = importReceiptRepository.findById(receiptId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy phiếu nhập có ID: " + receiptId));
 
         if (receipt.getDetails() != null) {
@@ -126,11 +126,11 @@ public class ImportReceiptServiceImpl implements ImportReceiptService {
                     }
                     // Trừ kho hoàn trả
                     variant.setStockQuantity(currentStock - detail.getQuantity());
-                    productVariantDAO.save(variant);
+                    productVariantRepository.save(variant);
                 }
             }
         }
-        importReceiptDAO.delete(receipt);
+        importReceiptRepository.delete(receipt);
     }
 
     // ==========================================
@@ -139,11 +139,11 @@ public class ImportReceiptServiceImpl implements ImportReceiptService {
 
     private Product getProductOrThrow(Integer id) {
         if (id == null) throw new RuntimeException("ID Sản phẩm bị trống!");
-        return productDAO.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + id));
+        return productRepository.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm ID: " + id));
     }
 
     private ProductVariant getVariantOrThrow(Integer id) {
-        return productVariantDAO.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy phân loại ID: " + id));
+        return productVariantRepository.findById(id).orElseThrow(() -> new RuntimeException("Không tìm thấy phân loại ID: " + id));
     }
 
     private int getSafeStock(ProductVariant variant) {

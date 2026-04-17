@@ -6,7 +6,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface SlideShowDAO extends JpaRepository<SlideShow, Integer> {
+public interface SlideShowRepository extends JpaRepository<SlideShow, Integer> {
     // Chỉ lấy những slide có active = true, sắp xếp theo thứ tự
     List<SlideShow> findByActiveTrueOrderByDisplayOrderAsc();
     // Lấy tất cả sắp xếp theo thứ tự cho trang Admin

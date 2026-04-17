@@ -1,12 +1,9 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.OrderDAO;
-import com.poly.backend.dao.OrderStatusDAO;
-import com.poly.backend.dao.ProductVariantDAO;
-import com.poly.backend.dto.CartItemRequestDTO;
+import com.poly.backend.dao.OrderRepository;
+import com.poly.backend.dao.OrderStatusRepository;
+import com.poly.backend.dao.ProductVariantRepository;
 import com.poly.backend.dto.CreatePaymentLinkRequestBody;
-import com.poly.backend.entity.Order;
-import com.poly.backend.entity.ProductVariant;
 import com.poly.backend.service.CartService;
 import com.poly.backend.service.PaymentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +16,6 @@ import vn.payos.model.v2.paymentRequests.PaymentLinkItem;
 import vn.payos.model.webhooks.WebhookData;
 
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -28,16 +24,16 @@ public class PaymentServiceImpl implements PaymentService {
     private final PayOS payOS;
 
     @Autowired
-    private OrderDAO orderDAO;
+    private OrderRepository orderRepository;
 
     @Autowired
-    private OrderStatusDAO orderStatusDAO;
+    private OrderStatusRepository orderStatusRepository;
 
     @Autowired
     private CartService cartService;
 
     @Autowired
-    private ProductVariantDAO productVariantDAO;
+    private ProductVariantRepository productVariantRepository;
 
     // 🔥 TUYỆT CHIÊU: BỘ NHỚ TẠM ĐỂ WEBHOOK BÁO TIN CHO FRONTEND
     private final Map<String, Boolean> paidTransactions = new ConcurrentHashMap<>();

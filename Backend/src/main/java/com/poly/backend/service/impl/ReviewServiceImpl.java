@@ -3,14 +3,14 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.poly.backend.dao.ProductDAO;
-import com.poly.backend.dao.UserDAO;
+import com.poly.backend.dao.ProductRepository;
+import com.poly.backend.dao.UserRepository;
 import com.poly.backend.dto.ReviewDTO;
 import com.poly.backend.entity.Product;
 import com.poly.backend.entity.User;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.ReviewDAO;
+import com.poly.backend.dao.ReviewRepository;
 import com.poly.backend.entity.Review;
 import com.poly.backend.service.ReviewService;
 
@@ -18,24 +18,24 @@ import com.poly.backend.service.ReviewService;
 @RequiredArgsConstructor
 public class ReviewServiceImpl implements ReviewService {
 
-    private final ReviewDAO reviewDAO;
-    private final UserDAO userDAO;
-    private final ProductDAO productDAO;
+    private final ReviewRepository reviewRepository;
+    private final UserRepository userRepository;
+    private final ProductRepository productRepository;
 
     public List<Review> findAll() {
-        return reviewDAO.findAll();
+        return reviewRepository.findAll();
     }
 
     public Review findById(Integer id) {
-        return reviewDAO.findById(id).orElse(null);
+        return reviewRepository.findById(id).orElse(null);
     }
 
     public Review save(Review review) {
-        return reviewDAO.save(review);
+        return reviewRepository.save(review);
     }
 
     public void deleteById(Integer id) {
-        reviewDAO.deleteById(id);
+        reviewRepository.deleteById(id);
     }
 
     // Map Entity -> DTO để trả về Frontend
@@ -56,14 +56,14 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     public List<ReviewDTO> getReviewsByProductId(Integer productId) {
-        return reviewDAO.findByProductId(productId).stream()
+        return reviewRepository.findByProductId(productId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<ReviewDTO> getReviewsByUserId(Integer userId) {
-        return reviewDAO.findByUserId(userId).stream()
+        return reviewRepository.findByUserId(userId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -71,10 +71,10 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     public ReviewDTO createReview(ReviewDTO reviewDTO) {
         // Tìm User và Product từ ID mà Frontend gửi lên
-        User user = userDAO.findById(reviewDTO.getUserId())
+        User user = userRepository.findById(reviewDTO.getUserId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
-        Product product = productDAO.findById(reviewDTO.getProductId())
+        Product product = productRepository.findById(reviewDTO.getProductId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Sản phẩm"));
 
         // Build Entity để lưu vào DB
@@ -85,7 +85,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .product(product)
                 .build();
 
-        Review savedReview = reviewDAO.save(review);
+        Review savedReview = reviewRepository.save(review);
 
         return mapToDTO(savedReview);
     }

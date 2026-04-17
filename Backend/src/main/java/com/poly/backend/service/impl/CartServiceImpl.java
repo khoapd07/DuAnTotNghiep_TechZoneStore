@@ -20,11 +20,11 @@ import java.util.Optional;
 @Service
 public class CartServiceImpl implements CartService {
 
-    @Autowired private CartDAO cartDAO;
-    @Autowired private CartItemDAO cartItemDAO;
-    @Autowired private ProductDAO productDAO;
-    @Autowired private ProductVariantDAO variantDAO;
-    @Autowired private UserDAO userDAO;
+    @Autowired private CartRepository cartRepository;
+    @Autowired private CartItemRepository cartItemRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductVariantRepository variantDAO;
+    @Autowired private UserRepository userRepository;
 
     // ======================================================
     // 1. HÀM CHUYỂN ĐỔI (MAPPING) & TÍNH TIỀN TỰ ĐỘNG
@@ -78,9 +78,9 @@ public class CartServiceImpl implements CartService {
     }
 
     private Cart getEntityCart(Integer userId) {
-        return cartDAO.findByUser_UserId(userId).orElseGet(() -> {
-            User user = userDAO.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
-            return cartDAO.save(Cart.builder().user(user).build());
+        return cartRepository.findByUser_UserId(userId).orElseGet(() -> {
+            User user = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
+            return cartRepository.save(Cart.builder().user(user).build());
         });
     }
 
@@ -93,7 +93,7 @@ public class CartServiceImpl implements CartService {
     @Transactional
     public CartResponseDTO addOrUpdateCartItem(Integer userId, CartItemRequestDTO request) {
         Cart cart = getEntityCart(userId);
-        Product product = productDAO.findById(request.getProductId())
+        Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy sản phẩm"));
 
         // XÁC ĐỊNH BIẾN THỂ
@@ -124,7 +124,7 @@ public class CartServiceImpl implements CartService {
             int newQuantity = item.getQuantity() + request.getQuantity();
             if (newQuantity > maxStock) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kho chỉ còn " + maxStock + " sản phẩm!");
             item.setQuantity(newQuantity);
-            cartItemDAO.save(item);
+            cartItemRepository.save(item);
         } else {
             CartItem newItem = CartItem.builder()
                     .cart(cart)
@@ -133,10 +133,10 @@ public class CartServiceImpl implements CartService {
                     .quantity(request.getQuantity())
                     .build();
             cart.getCartItems().add(newItem);
-            cartItemDAO.save(newItem);
+            cartItemRepository.save(newItem);
         }
 
-        return mapToDTO(cartDAO.save(cart));
+        return mapToDTO(cartRepository.save(cart));
     }
 
     @Override
@@ -160,12 +160,12 @@ public class CartServiceImpl implements CartService {
 
             if (request.getQuantity() <= 0) {
                 cart.getCartItems().remove(item);
-                cartItemDAO.delete(item);
+                cartItemRepository.delete(item);
             } else {
                 item.setQuantity(request.getQuantity());
             }
         }
-        return mapToDTO(cartDAO.save(cart));
+        return mapToDTO(cartRepository.save(cart));
     }
 
     @Override
@@ -185,7 +185,7 @@ public class CartServiceImpl implements CartService {
         Cart cart = getEntityCart(userId);
         if (cart.getCartItems() != null) {
             cart.getCartItems().removeIf(item -> item.getProduct().getProductId().equals(productId));
-            cart = cartDAO.save(cart);
+            cart = cartRepository.save(cart);
         }
         return mapToDTO(cart);
     }
@@ -196,7 +196,7 @@ public class CartServiceImpl implements CartService {
         Cart cart = getEntityCart(userId);
         if (cart.getCartItems() != null) {
             cart.getCartItems().clear();
-            cart = cartDAO.save(cart);
+            cart = cartRepository.save(cart);
         }
         return mapToDTO(cart);
     }

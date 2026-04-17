@@ -3,7 +3,7 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.CategoryDAO;
+import com.poly.backend.dao.CategoryRepository;
 import com.poly.backend.entity.Category;
 import com.poly.backend.service.CategoryService;
 
@@ -11,42 +11,42 @@ import com.poly.backend.service.CategoryService;
 @RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    private final CategoryDAO categoryDAO;
+    private final CategoryRepository categoryRepository;
 
     @Override
     public List<Category> findAll() {
-        return categoryDAO.findAll();
+        return categoryRepository.findAll();
     }
 
     @Override
     public Category findById(Integer id) {
-        return categoryDAO.findById(id).orElse(null);
+        return categoryRepository.findById(id).orElse(null);
     }
 
     @Override
     public Category create(Category category) {
-        if (categoryDAO.existsByCategoryName(category.getCategoryName())) {
+        if (categoryRepository.existsByCategoryName(category.getCategoryName())) {
             throw new IllegalArgumentException("Tên danh mục này đã tồn tại!");
         }
-        return categoryDAO.save(category);
+        return categoryRepository.save(category);
     }
 
     @Override
     public Category update(Integer id, Category category) {
-        if (categoryDAO.existsByCategoryNameAndCategoryIdNot(category.getCategoryName(), id)) {
+        if (categoryRepository.existsByCategoryNameAndCategoryIdNot(category.getCategoryName(), id)) {
             throw new IllegalArgumentException("Tên danh mục này đã bị trùng với danh mục khác!");
         }
 
-        Category existingCategory = categoryDAO.findById(id)
+        Category existingCategory = categoryRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy danh mục!"));
 
         existingCategory.setCategoryName(category.getCategoryName());
         // Đã xóa thuộc tính attributes cũ ở đây
-        return categoryDAO.save(existingCategory);
+        return categoryRepository.save(existingCategory);
     }
 
     @Override
     public void deleteById(Integer id) {
-        categoryDAO.deleteById(id);
+        categoryRepository.deleteById(id);
     }
 }

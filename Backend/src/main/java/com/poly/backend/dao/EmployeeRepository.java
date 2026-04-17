@@ -1,9 +1,9 @@
 package com.poly.backend.dao;
 
-import com.poly.backend.entity.CartItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import com.poly.backend.entity.Employee;
 
 @Repository
-public interface CartItemDAO extends JpaRepository<CartItem, Integer> {
+public interface EmployeeRepository extends JpaRepository<Employee, Integer> {
 }

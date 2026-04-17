@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.CustomerDAO;
-import com.poly.backend.dao.RoleDAO;
+import com.poly.backend.dao.CustomerRepository;
+import com.poly.backend.dao.RoleRepository;
 import com.poly.backend.entity.Customer;
 import com.poly.backend.entity.Role;
 import com.poly.backend.dto.CustomerDTO;
@@ -16,20 +16,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class CustomerServiceImpl implements CustomerService {
 
-    private final CustomerDAO customerDAO;
-    private final RoleDAO roleDAO; // Tiêm RoleDAO để set quyền
+    private final CustomerRepository customerRepository;
+    private final RoleRepository roleRepository; // Tiêm RoleDAO để set quyền
     private final PasswordEncoder passwordEncoder; // Tiêm PasswordEncoder để mã hóa pass
 
     @Override
     public List<CustomerDTO> findAll() {
-        return customerDAO.findAll().stream()
+        return customerRepository.findAll().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public CustomerDTO findById(Integer id) {
-        Customer customer = customerDAO.findById(id).orElse(null);
+        Customer customer = customerRepository.findById(id).orElse(null);
         return customer != null ? mapToDTO(customer) : null;
     }
 
@@ -37,13 +37,13 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public CustomerDTO create(CustomerDTO dto) {
         // --- BẮT ĐẦU VALIDATE ---
-        if (customerDAO.existsByUsername(dto.getUsername())) {
+        if (customerRepository.existsByUsername(dto.getUsername())) {
             throw new IllegalArgumentException("Tên đăng nhập đã tồn tại!");
         }
-        if (dto.getEmail() != null && !dto.getEmail().isEmpty() && customerDAO.existsByEmail(dto.getEmail())) {
+        if (dto.getEmail() != null && !dto.getEmail().isEmpty() && customerRepository.existsByEmail(dto.getEmail())) {
             throw new IllegalArgumentException("Email này đã được sử dụng!");
         }
-        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isEmpty() && customerDAO.existsByPhoneNumber(dto.getPhoneNumber())) {
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isEmpty() && customerRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
             throw new IllegalArgumentException("Số điện thoại này đã được sử dụng!");
         }
         // --- KẾT THÚC VALIDATE ---
@@ -58,22 +58,22 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setStatus(dto.getStatus() != null ? dto.getStatus() : true);
 
         // Mặc định gán quyền Customer (Role ID = 0, tùy theo DB của bạn)
-        Role userRole = roleDAO.findById(0).orElseThrow(() -> new RuntimeException("Role không tồn tại"));
+        Role userRole = roleRepository.findById(0).orElseThrow(() -> new RuntimeException("Role không tồn tại"));
         customer.setRole(userRole);
 
-        return mapToDTO(customerDAO.save(customer));
+        return mapToDTO(customerRepository.save(customer));
     }
 
     @Override
     public CustomerDTO save(CustomerDTO dto) {
-        Customer customer = customerDAO.findById(dto.getUserId()).orElse(null);
+        Customer customer = customerRepository.findById(dto.getUserId()).orElse(null);
         if(customer == null) throw new IllegalArgumentException("Không tìm thấy khách hàng!");
 
         // --- BẮT ĐẦU VALIDATE ---
-        if (dto.getEmail() != null && !dto.getEmail().isEmpty() && customerDAO.existsByEmailAndUserIdNot(dto.getEmail(), dto.getUserId())) {
+        if (dto.getEmail() != null && !dto.getEmail().isEmpty() && customerRepository.existsByEmailAndUserIdNot(dto.getEmail(), dto.getUserId())) {
             throw new IllegalArgumentException("Email này đã được khách hàng khác sử dụng!");
         }
-        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isEmpty() && customerDAO.existsByPhoneNumberAndUserIdNot(dto.getPhoneNumber(), dto.getUserId())) {
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().isEmpty() && customerRepository.existsByPhoneNumberAndUserIdNot(dto.getPhoneNumber(), dto.getUserId())) {
             throw new IllegalArgumentException("Số điện thoại này đã được khách hàng khác sử dụng!");
         }
         // --- KẾT THÚC VALIDATE ---
@@ -91,20 +91,20 @@ public class CustomerServiceImpl implements CustomerService {
             customer.setStatus(dto.getStatus());
         }
 
-        return mapToDTO(customerDAO.save(customer));
+        return mapToDTO(customerRepository.save(customer));
     }
 
     @Override
     public void deleteById(Integer id) {
-        customerDAO.deleteById(id);
+        customerRepository.deleteById(id);
     }
 
     @Override
     public String toggleStatus(Integer id) {
-        Customer customer = customerDAO.findById(id).orElse(null);
+        Customer customer = customerRepository.findById(id).orElse(null);
         if (customer == null) return null;
         customer.setStatus(!customer.getStatus());
-        customerDAO.save(customer);
+        customerRepository.save(customer);
         return customer.getStatus() ? "Đã mở khóa tài khoản" : "Đã khóa tài khoản";
     }
 

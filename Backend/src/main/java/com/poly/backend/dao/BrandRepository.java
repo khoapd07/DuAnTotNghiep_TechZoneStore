@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface BrandDAO extends JpaRepository<Brand, Integer> {
+public interface BrandRepository extends JpaRepository<Brand, Integer> {
 
     boolean existsByBrandName(String brandName);
     boolean existsByBrandNameAndBrandIdNot(String brandName, Integer brandId);

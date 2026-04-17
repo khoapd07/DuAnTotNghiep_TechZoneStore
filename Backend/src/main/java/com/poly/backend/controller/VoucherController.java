@@ -1,6 +1,6 @@
 package com.poly.backend.controller;
 
-import com.poly.backend.dao.VoucherDAO;
+import com.poly.backend.dao.VoucherRepository;
 import com.poly.backend.entity.Voucher;
 import com.poly.backend.service.VoucherService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VoucherController {
 
-    private final VoucherDAO voucherDAO;
+    private final VoucherRepository voucherRepository;
     private final VoucherService voucherService;
 
     @GetMapping
@@ -124,7 +124,7 @@ public class VoucherController {
         try {
             BigDecimal orderValue = new BigDecimal(orderValueStr.trim());
 
-            return voucherDAO.findByCode(code.trim())
+            return voucherRepository.findByCode(code.trim())
                     .map(v -> {
                         LocalDateTime now = LocalDateTime.now();
 

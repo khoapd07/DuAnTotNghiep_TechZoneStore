@@ -1,8 +1,7 @@
 package com.poly.backend.controller;
 
-import com.poly.backend.dao.ReviewDAO;
+//import com.poly.backend.dao.ReviewRepository;
 import com.poly.backend.dto.ReviewDTO;
-import com.poly.backend.entity.Review;
 import com.poly.backend.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +15,7 @@ import java.util.List;
 @CrossOrigin("*")
 public class ReviewController {
 
-    private final ReviewDAO reviewDAO;
+//    private final ReviewRepository reviewRepository;
     private final ReviewService reviewService;
 
     @GetMapping("/product/{productId}")

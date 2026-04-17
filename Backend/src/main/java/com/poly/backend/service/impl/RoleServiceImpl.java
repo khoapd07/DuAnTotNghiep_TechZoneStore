@@ -3,7 +3,7 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.RoleDAO;
+import com.poly.backend.dao.RoleRepository;
 import com.poly.backend.entity.Role;
 import com.poly.backend.service.RoleService;
 
@@ -11,21 +11,21 @@ import com.poly.backend.service.RoleService;
 @RequiredArgsConstructor
 public class RoleServiceImpl implements RoleService {
 
-    private final RoleDAO roleDAO;
+    private final RoleRepository roleRepository;
 
     public List<Role> findAll() {
-        return roleDAO.findAll();
+        return roleRepository.findAll();
     }
 
     public Role findById(Integer id) {
-        return roleDAO.findById(id).orElse(null);
+        return roleRepository.findById(id).orElse(null);
     }
 
     public Role save(Role role) {
-        return roleDAO.save(role);
+        return roleRepository.save(role);
     }
 
     public void deleteById(Integer id) {
-        roleDAO.deleteById(id);
+        roleRepository.deleteById(id);
     }
 }

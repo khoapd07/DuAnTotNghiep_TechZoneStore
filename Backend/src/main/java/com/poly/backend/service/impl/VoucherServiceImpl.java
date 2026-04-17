@@ -3,7 +3,7 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.VoucherDAO;
+import com.poly.backend.dao.VoucherRepository;
 import com.poly.backend.entity.Voucher;
 import com.poly.backend.service.VoucherService;
 
@@ -11,27 +11,27 @@ import com.poly.backend.service.VoucherService;
 @RequiredArgsConstructor
 public class VoucherServiceImpl implements VoucherService {
 
-    private final VoucherDAO voucherDAO;
+    private final VoucherRepository voucherRepository;
 
     public List<Voucher> findAll() {
-        return voucherDAO.findAll();
+        return voucherRepository.findAll();
     }
 
     public Voucher findById(Integer id) {
-        return voucherDAO.findById(id).orElse(null);
+        return voucherRepository.findById(id).orElse(null);
     }
 
     public Voucher save(Voucher voucher) {
-        return voucherDAO.save(voucher);
+        return voucherRepository.save(voucher);
     }
 
     public void deleteById(Integer id) {
-        voucherDAO.deleteById(id);
+        voucherRepository.deleteById(id);
     }
 
     // MỚI THÊM
     @Override
     public Voucher findByCode(String code) {
-        return voucherDAO.findByCode(code).orElse(null);
+        return voucherRepository.findByCode(code).orElse(null);
     }
 }

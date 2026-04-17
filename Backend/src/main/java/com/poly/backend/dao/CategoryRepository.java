@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CategoryDAO extends JpaRepository<Category, Integer> {
+public interface CategoryRepository extends JpaRepository<Category, Integer> {
 
     boolean existsByCategoryName(String categoryName);
     boolean existsByCategoryNameAndCategoryIdNot(String categoryName, Integer categoryId);

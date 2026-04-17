@@ -6,9 +6,9 @@ import com.poly.backend.dto.RegisterRequest;
 import com.poly.backend.entity.Customer;
 import com.poly.backend.entity.Role;
 import com.poly.backend.entity.User;
-import com.poly.backend.dao.RoleDAO;
-import com.poly.backend.dao.UserDAO;
-import com.poly.backend.dao.CustomerDAO; // Thêm dòng này
+import com.poly.backend.dao.RoleRepository;
+import com.poly.backend.dao.UserRepository;
+import com.poly.backend.dao.CustomerRepository; // Thêm dòng này
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,20 +34,20 @@ public class AuthService {
     private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
-    private UserDAO userDAO;
+    private UserRepository userRepository;
 
     @Autowired
-    private CustomerDAO customerDAO; // Dùng CustomerDAO cho an toàn
+    private CustomerRepository customerRepository; // Dùng CustomerDAO cho an toàn
 
     @Autowired
-    private RoleDAO roleDAO;
+    private RoleRepository roleRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     // Đăng ký (Mặc định tạo Customer)
     public User register(RegisterRequest req) {
-        if (userDAO.existsByUsername(req.getUsername())) {
+        if (userRepository.existsByUsername(req.getUsername())) {
             throw new RuntimeException("Tài khoản đã tồn tại. Vui lòng chọn tên khác!");
         }
 
@@ -64,17 +64,17 @@ public class AuthService {
         customer.setStatus(true);
 
         // Gán quyền User (Role ID = 0)
-        Role userRole = roleDAO.findById(0)
+        Role userRole = roleRepository.findById(0)
                 .orElseThrow(() -> new RuntimeException("Role User không tồn tại"));
         customer.setRole(userRole);
 
         // DÙNG customerDAO THAY VÌ userDAO
-        return customerDAO.save(customer);
+        return customerRepository.save(customer);
     }
 
     // Đăng nhập
     public User login(LoginRequest req) {
-        User user = userDAO.findByUsername(req.getUsername())
+        User user = userRepository.findByUsername(req.getUsername())
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại!"));
 
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
@@ -108,7 +108,7 @@ public class AuthService {
             String name = (String) payload.get("name");
 
             // Kiểm tra xem User (người dùng) đã tồn tại trong hệ thống chưa (dùng email làm username)
-            User user = userDAO.findByUsername(email).orElse(null);
+            User user = userRepository.findByUsername(email).orElse(null);
 
             if (user == null) {
                 // Nếu chưa có, tiến hành Register (đăng ký) tự động
@@ -123,11 +123,11 @@ public class AuthService {
                 customer.setLoyaltyPoints(0);
                 customer.setStatus(true);
 
-                Role userRole = roleDAO.findById(0)
+                Role userRole = roleRepository.findById(0)
                         .orElseThrow(() -> new RuntimeException("Role User không tồn tại"));
                 customer.setRole(userRole);
 
-                user = customerDAO.save(customer); // Lưu vào Database (cơ sở dữ liệu)
+                user = customerRepository.save(customer); // Lưu vào Database (cơ sở dữ liệu)
             }
 
             // Kiểm tra trạng thái khóa tài khoản

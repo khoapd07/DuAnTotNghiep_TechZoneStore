@@ -1,7 +1,7 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.ImportReceiptDAO;
-import com.poly.backend.dao.SupplierDAO;
+import com.poly.backend.dao.ImportReceiptRepository;
+import com.poly.backend.dao.SupplierRepository;
 import com.poly.backend.dto.SupplierDTO;
 import com.poly.backend.entity.Supplier;
 import com.poly.backend.service.SupplierService;
@@ -15,11 +15,11 @@ import java.util.stream.Collectors;
 public class SupplierServiceImpl implements SupplierService {
 
     @Autowired
-    private SupplierDAO supplierDAO;
+    private SupplierRepository supplierRepository;
 
     // Tiêm thêm DAO của Phiếu nhập để check điều kiện Xóa (TC208, TC209)
     @Autowired
-    private ImportReceiptDAO importReceiptDAO;
+    private ImportReceiptRepository importReceiptRepository;
 
     // ======================================================
     // 1. HÀM DTO (Lấy danh sách trả về cho Vue.js)
@@ -39,7 +39,7 @@ public class SupplierServiceImpl implements SupplierService {
 
     @Override
     public List<SupplierDTO> getAllSuppliers() {
-        return supplierDAO.findAll().stream()
+        return supplierRepository.findAll().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -50,7 +50,7 @@ public class SupplierServiceImpl implements SupplierService {
 
     @Override
     public Supplier getSupplierById(Integer id) {
-        return supplierDAO.findById(id).orElse(null);
+        return supplierRepository.findById(id).orElse(null);
     }
 
     @Override
@@ -61,7 +61,7 @@ public class SupplierServiceImpl implements SupplierService {
         }
 
         // Vue.js đã check trùng lặp rồi, backend chỉ việc lưu!
-        return supplierDAO.save(supplier);
+        return supplierRepository.save(supplier);
     }
 
     @Override
@@ -78,7 +78,7 @@ public class SupplierServiceImpl implements SupplierService {
             existingSupplier.setTaxCode(supplierDetails.getTaxCode());
             existingSupplier.setStatus(supplierDetails.getStatus());
 
-            return supplierDAO.save(existingSupplier);
+            return supplierRepository.save(existingSupplier);
         }
         return null;
     }
@@ -89,14 +89,14 @@ public class SupplierServiceImpl implements SupplierService {
         if (existingSupplier != null) {
 
             // BẮT BUỘC GIỮ LẠI: Kiểm tra xem đã có Phiếu Nhập nào dùng NCC này chưa (TC209)
-            boolean hasReceipts = importReceiptDAO.existsBySupplier_SupplierId(id);
+            boolean hasReceipts = importReceiptRepository.existsBySupplier_SupplierId(id);
             if (hasReceipts) {
                 // Ném lỗi để từ chối Xóa
                 throw new IllegalArgumentException("Không thể xóa NCC đã có dữ liệu phiếu nhập");
             }
 
             // XÓA HẲN: Xóa vĩnh viễn khỏi Database thay vì chỉ đổi trạng thái
-            supplierDAO.deleteById(id);
+            supplierRepository.deleteById(id);
         }
     }
 }
