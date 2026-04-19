@@ -105,6 +105,8 @@ public class ImportReceiptServiceImpl implements ImportReceiptService {
         }).orElse(null);
     }
 
+
+    // hàm khá đạc biệt giúp khi mình lỡ bán cho khách mà âm kho thì có thể hủy phiếu nhập để trả hàng về kho, nhưng nếu kho không đủ để trả thì sẽ báo lỗi
     @Override
     @Transactional
     public void cancelReceipt(Integer receiptId) {
