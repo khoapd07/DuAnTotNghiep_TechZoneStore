@@ -17,7 +17,7 @@ public class SupplierServiceImpl implements SupplierService {
     @Autowired
     private SupplierRepository supplierRepository;
 
-    // Tiêm thêm DAO của Phiếu nhập để check điều kiện Xóa (TC208, TC209)
+
     @Autowired
     private ImportReceiptRepository importReceiptRepository;
 
@@ -88,14 +88,12 @@ public class SupplierServiceImpl implements SupplierService {
         Supplier existingSupplier = getSupplierById(id);
         if (existingSupplier != null) {
 
-            // BẮT BUỘC GIỮ LẠI: Kiểm tra xem đã có Phiếu Nhập nào dùng NCC này chưa (TC209)
             boolean hasReceipts = importReceiptRepository.existsBySupplier_SupplierId(id);
             if (hasReceipts) {
                 // Ném lỗi để từ chối Xóa
                 throw new IllegalArgumentException("Không thể xóa NCC đã có dữ liệu phiếu nhập");
             }
 
-            // XÓA HẲN: Xóa vĩnh viễn khỏi Database thay vì chỉ đổi trạng thái
             supplierRepository.deleteById(id);
         }
     }

@@ -165,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue'; // Đã xóa computed vì không dùng đến nữa
 import axios from 'axios';
 
 // 1. Biến chứa dữ liệu
@@ -197,39 +197,18 @@ const getInitials = (name) => {
 };
 
 // --- LOGIC CHO BIỂU ĐỒ CỘT (Phân bổ đơn hàng) ---
-// Tính chiều cao % của từng cột dựa vào ngày có số đơn cao nhất
 const getBarHeight = (count) => {
-  if (!chartData.value.length || count === 0) return 5; // Chiều cao tối thiểu 5% để không bị tàng hình
-  const maxOrders = Math.max(...chartData.value.map(d => d.orderCount));
-  return maxOrders === 0 ? 5 : (count / maxOrders) * 95; // Tối đa 95% chiều cao div
+  if (!chartData.value.length || !count) return 5; 
+  const maxOrders = Math.max(...chartData.value.map(d => d.orderCount || 0));
+  return maxOrders === 0 ? 5 : (count / maxOrders) * 95; 
 };
 
 // --- LOGIC CHO BIỂU ĐỒ CỘT DOANH THU ---
 const getRevenueBarHeight = (revenue) => {
-  if (!chartData.value.length || revenue === 0) return 5; // Tối thiểu 5% để không bị tàng hình
-  const maxRev = Math.max(...chartData.value.map(d => d.revenue));
-  return maxRev === 0 ? 5 : (revenue / maxRev) * 95; // Tính tỷ lệ phần trăm (Max là 95% thẻ div)
+  if (!chartData.value.length || !revenue) return 5; 
+  const maxRev = Math.max(...chartData.value.map(d => d.revenue || 0));
+  return maxRev === 0 ? 5 : (revenue / maxRev) * 95; 
 };
-
-// --- LOGIC CHO BIỂU ĐỒ ĐƯỜNG (Xu hướng doanh thu) ---
-// Tự động tính toán đường line SVG d nối các điểm lại với nhau
-const linePath = computed(() => {
-  if (chartData.value.length === 0) return '';
-  const maxRev = Math.max(...chartData.value.map(d => d.revenue), 1);
-
-  return chartData.value.map((d, index) => {
-    const x = (index / 6) * 500; // Trải dài 7 điểm trên chiều rộng 500px
-    const y = 140 - ((d.revenue / maxRev) * 120); // Đỉnh cao nhất là Y=20, thấp nhất là Y=140
-    return `${index === 0 ? 'M' : 'L'}${x},${y}`;
-  }).join(' ');
-});
-
-// Tự động vẽ mảng màu xanh nhạt phía dưới đường line
-const areaPath = computed(() => {
-  if (!linePath.value) return '';
-  return `${linePath.value} L500,150 L0,150 Z`; // Bo vòng xuống đáy biểu đồ
-});
-
 
 // Lấy dữ liệu từ Backend
 const fetchDashboardData = async () => {
@@ -244,7 +223,7 @@ const fetchDashboardData = async () => {
     ]);
 
     stats.value = statsRes.data;
-    chartData.value = chartRes.data; // Gán data vẽ biểu đồ
+    chartData.value = chartRes.data; 
 
     recentOrders.value = ordersRes.data.map(order => ({
       id: order.orderCode,

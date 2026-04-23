@@ -34,4 +34,27 @@ public class EmailService {
             }
         }).start();
     }
+
+    public void sendPasswordResetEmail(String toEmail, String resetLink) {
+        if (toEmail == null || toEmail.trim().isEmpty()) return;
+
+        new Thread(() -> {
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom("TechZone Store <no-reply@techzone.com>");
+                message.setTo(toEmail);
+                message.setSubject("Yêu cầu đặt lại mật khẩu - TechZone Store");
+                message.setText("Chào bạn,\n\n"
+                        + "Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn tại TechZone Store.\n"
+                        + "Vui lòng click vào link bên dưới để đặt lại mật khẩu của bạn:\n"
+                        + resetLink + "\n\n"
+                        + "Lưu ý: Link này có hiệu lực trong một khoảng thời gian giới hạn. Nếu bạn không yêu cầu đặt lại mật khẩu, xin hãy bỏ qua email này.\n\n"
+                        + "Trân trọng,\nTechZone Store");
+
+                mailSender.send(message);
+            } catch (Exception e) {
+                System.err.println("Lỗi gửi email reset password: " + e.getMessage());
+            }
+        }).start();
+    }
 }

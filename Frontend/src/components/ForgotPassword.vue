@@ -15,6 +15,9 @@
 
         <form @submit.prevent="handleResetPassword">
           
+          <div v-if="errorMessage" class="alert alert-danger py-2 fs-7 mb-3 text-start">{{ errorMessage }}</div>
+          <div v-if="successMessage" class="alert alert-success py-2 fs-7 mb-3 text-start">{{ successMessage }}</div>
+
           <div class="mb-4 text-start">
             <label class="form-label fs-8 fw-bold text-muted">Email đăng kí</label>
             <div class="input-group custom-input-group rounded-3 overflow-hidden">
@@ -27,12 +30,18 @@
                 v-model="email" 
                 placeholder="name@example.com"
                 required
+                :disabled="isLoading"
               >
             </div>
           </div>
 
-          <button type="submit" class="btn btn-neon w-100 fw-bold py-2 rounded-3 mb-4 d-flex justify-content-center align-items-center gap-2">
-            GỬI LIÊN KẾT KHÔI PHỤC <i class="bi bi-arrow-right fs-5"></i>
+          <button 
+            type="submit" 
+            class="btn btn-neon w-100 fw-bold py-2 rounded-3 mb-4 d-flex justify-content-center align-items-center gap-2"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            <span v-else>GỬI LIÊN KẾT KHÔI PHỤC <i class="bi bi-arrow-right fs-5"></i></span>
           </button>
         </form>
 
@@ -53,24 +62,44 @@
 
 <script setup>
 import { ref } from 'vue';
+import axios from 'axios';
 
 const email = ref('');
+const isLoading = ref(false);
+const errorMessage = ref('');
+const successMessage = ref('');
 
-// Xử lý gửi yêu cầu khôi phục
-const handleResetPassword = () => {
+const handleResetPassword = async () => {
   if (!email.value) {
-    alert('Vui lòng nhập địa chỉ email!');
+    errorMessage.value = 'Vui lòng nhập địa chỉ email!';
     return;
   }
-  console.log('Requesting password reset for:', email.value);
   
-  // Bạn sẽ gọi API ở đây, sau khi thành công thì thông báo
-  alert(`Liên kết khôi phục mật khẩu đã được gửi đến: ${email.value}\nVui lòng kiểm tra hộp thư của bạn!`);
+  isLoading.value = true;
+  errorMessage.value = '';
+  successMessage.value = '';
+  
+  try {
+    const response = await axios.post('http://localhost:8080/api/auth/forgot-password', {
+      email: email.value
+    });
+    
+    successMessage.value = response.data.message || `Liên kết khôi phục mật khẩu đã được gửi đến: ${email.value}. Vui lòng kiểm tra hộp thư.`;
+    email.value = ''; 
+    
+  } catch (error) {
+    if (error.response && error.response.data && error.response.data.message) {
+      errorMessage.value = error.response.data.message;
+    } else {
+      errorMessage.value = 'Đã xảy ra lỗi khi gửi yêu cầu. Vui lòng thử lại sau.';
+    }
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
 
 <style scoped>
-/* Reset & Typography */
 .forgot-password-page {
   font-family: 'Inter', sans-serif;
   background: radial-gradient(circle at top left, #f1f8f3, #ffffff 40%, #f4f6f8 100%);
@@ -81,12 +110,10 @@ const handleResetPassword = () => {
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
 
-/* Biến màu thương hiệu */
 .text-neon { color: #00FF33 !important; }
 .bg-neon-light { background-color: rgba(0, 255, 51, 0.15) !important; }
 .text-neon-dark { color: #00cc29 !important; }
 
-/* Thẻ Form (Card) */
 .forgot-card {
   width: 100%;
   max-width: 420px;
@@ -94,7 +121,6 @@ const handleResetPassword = () => {
   backdrop-filter: blur(10px);
 }
 
-/* Custom Input Box */
 .custom-input-group {
   background-color: #F4F5F7; 
   border: 1px solid transparent;
@@ -109,7 +135,6 @@ const handleResetPassword = () => {
   font-weight: 500;
 }
 
-/* Nút Neon */
 .btn-neon {
   background-color: #00FF33;
   color: #000;
@@ -122,7 +147,13 @@ const handleResetPassword = () => {
   box-shadow: 0 5px 15px rgba(0, 255, 51, 0.3);
 }
 
-/* Hover text */
+.btn-neon:disabled {
+  background-color: #a3e4b1;
+  transform: none;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
 .hover-neon {
   transition: color 0.2s;
 }

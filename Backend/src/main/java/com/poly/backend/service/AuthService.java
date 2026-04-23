@@ -8,19 +8,19 @@ import com.poly.backend.entity.Role;
 import com.poly.backend.entity.User;
 import com.poly.backend.dao.RoleRepository;
 import com.poly.backend.dao.UserRepository;
-import com.poly.backend.dao.CustomerRepository; // Thêm dòng này
+import com.poly.backend.dao.CustomerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-//import thêm cần thiết cho google
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
 import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 
 import java.util.Collections;
+import java.util.UUID;
 
 import com.poly.backend.security.JwtTokenProvider;
 
@@ -29,6 +29,9 @@ public class AuthService {
 
     @Value("${google.client.id}")
     private String googleClientId;
+
+    @Value("${frontend.url:http://localhost:5173}")
+    private String frontendUrl;
 
     @Autowired
     private JwtTokenProvider jwtTokenProvider;
@@ -44,6 +47,9 @@ public class AuthService {
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private EmailService emailService;
 
     // Đăng ký (Mặc định tạo Customer)
     public User register(RegisterRequest req) {
@@ -145,6 +151,32 @@ public class AuthService {
         } else {
             throw new RuntimeException("Token Google không hợp lệ!");
         }
+    }
+
+    public void forgotPassword(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy tài khoản với email này!"));
+
+        // Tạo token ngẫu nhiên
+        String token = UUID.randomUUID().toString();
+        user.setResetPasswordToken(token);
+        userRepository.save(user);
+
+        // Tạo link reset password
+        String resetLink = frontendUrl + "/reset-password?token=" + token;
+
+        // Gửi email
+        emailService.sendPasswordResetEmail(user.getEmail(), resetLink);
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        User user = userRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new RuntimeException("Token không hợp lệ hoặc đã hết hạn!"));
+
+        // Cập nhật mật khẩu mới và xóa token
+        user.setPassword(passwordEncoder.encode(newPassword));
+        user.setResetPasswordToken(null);
+        userRepository.save(user);
     }
 
 }
