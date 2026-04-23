@@ -119,7 +119,7 @@ const confirmPassword = ref('');
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 
-const isLoading = ref(false);
+const isLoading = ref(false);// Trạng thái thông báo
 const errorMessage = ref('');
 const successMessage = ref('');
 

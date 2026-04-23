@@ -27,7 +27,7 @@ import com.poly.backend.security.JwtTokenProvider;
 @Service
 public class AuthService {
 
-    @Value("${google.client.id}") // Khai báo Client ID trong application.properties
+    @Value("${google.client.id}")
     private String googleClientId;
 
     @Autowired
@@ -37,7 +37,7 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
-    private CustomerRepository customerRepository; // Dùng CustomerDAO cho an toàn
+    private CustomerRepository customerRepository;
 
     @Autowired
     private RoleRepository roleRepository;
@@ -55,9 +55,6 @@ public class AuthService {
         customer.setUsername(req.getUsername());
         customer.setPassword(passwordEncoder.encode(req.getPassword()));
 
-        // Mẹo: Tạm lấy username làm tên hiển thị luôn để Frontend đỡ bị trống,
-        // khách hàng có thể đổi lại tên thật sau.
-//        customer.setFullName(req.getUsername());
 
         // Đảm bảo các thuộc tính của Customer không bị rỗng
         customer.setLoyaltyPoints(0);
@@ -68,7 +65,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Role User không tồn tại"));
         customer.setRole(userRole);
 
-        // DÙNG customerDAO THAY VÌ userDAO
+
         return customerRepository.save(customer);
     }
 
