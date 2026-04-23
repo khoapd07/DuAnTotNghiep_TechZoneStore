@@ -36,7 +36,7 @@ const checkTokenExpiration = () => {
     localStorage.removeItem('user_info');
     localStorage.removeItem('token_expiry');
     window.dispatchEvent(new Event('auth-change'));
-    alert('Phiên đăng nhập đã hết hạn sau 24 giờ. Vui lòng đăng nhập lại!');
+    // alert('Phiên đăng nhập đã hết hạn sau 24 giờ. Vui lòng đăng nhập lại!');
     router.push('/login');
   }
 };

@@ -197,25 +197,25 @@ router.beforeEach((to, from, next) => {
 
   // 1. Chưa đăng nhập
   if (requiresAuth && !token) {
-    alert("Vui lòng đăng nhập để tiếp tục!");
+    // alert("Vui lòng đăng nhập để tiếp tục!");
     return next('/login');
   }
 
   // 2. Chặn trang dành RIÊNG cho Shipper (Staff cũng ko được vào trang giao hàng)
   if (requiresShipper && !isUserShipper && !isUserAdmin) {
-    alert("Trang này chỉ dành cho nhân viên giao hàng!");
+    // alert("Trang này chỉ dành cho nhân viên giao hàng!");
     return next('/');
   }
 
   // 3. Chặn trang Quản trị (Chỉ Admin và Staff được vào)
   if (requiresAdmin && !isUserAdmin && !isUserStaff) {
-    alert("Bạn không có quyền truy cập trang quản trị!");
+    // alert("Bạn không có quyền truy cập trang quản trị!");
     return next('/'); 
   }
 
   // 4. Chặn Staff vào các trang STRICT ADMIN (Tổng quan, Báo cáo)
   if (requiresStrictAdmin && !isUserAdmin) {
-    alert("Bạn không có quyền xem trang này! Đang chuyển hướng...");
+    // alert("Bạn không có quyền xem trang này! Đang chuyển hướng...");
     return next('/admin/orders'); // Nếu Staff cố tình vào Dashboard, đẩy sang trang Đơn hàng
   }
 

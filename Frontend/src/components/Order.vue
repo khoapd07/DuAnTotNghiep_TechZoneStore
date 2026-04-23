@@ -93,7 +93,7 @@
               </router-link>
               
               <template v-if="translateStatus(order.statusName) === 'Giao hàng thành công'">
-                <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2">Mua lại</button>
+                <button class="btn btn-outline-dark fw-bold fs-8 rounded-3 px-3 py-2" @click="reOrder(order)">Mua lại</button>
                 <button v-if="hasUnreviewedItems(order)" @click="openReviewModal(order)" data-bs-toggle="modal" data-bs-target="#reviewModal" class="btn btn-neon fw-bold text-dark fs-8 rounded-3 px-3 py-2 shadow-sm">
                   Đánh giá
                 </button>
@@ -190,11 +190,11 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router'; 
 import axios from 'axios';
+import Swal from 'sweetalert2'; // <-- THÊM IMPORT SWEETALERT
 
 const router = useRouter();
 const activeTab = ref('Tất cả');
 
-// ĐÃ SỬA: Bổ sung thêm Tab 'Chờ lấy hàng' vào mảng (Nó sẽ tự link với trạng thái Đã xác nhận)
 const tabs = ['Tất cả', 'Chờ xác nhận', 'Chờ lấy hàng', 'Đang giao', 'Đã giao', 'Đã hủy'];
 const orders = ref([]);
 const loading = ref(true);
@@ -220,8 +220,14 @@ const getAuthConfig = () => {
 const fetchOrders = async () => {
   const userId = getCurrentUserId();
   if (!userId) {
-    alert("Vui lòng đăng nhập để xem lịch sử đơn hàng!");
-    router.push('/login');
+    Swal.fire({
+      title: 'Yêu cầu đăng nhập',
+      text: 'Vui lòng đăng nhập để xem lịch sử đơn hàng!',
+      icon: 'info',
+      confirmButtonText: 'Đăng nhập ngay',
+      confirmButtonColor: '#00FF33',
+      customClass: { confirmButton: 'text-dark fw-bold' }
+    }).then(() => router.push('/login'));
     return;
   }
 
@@ -245,15 +251,37 @@ onMounted(() => {
 });
 
 // ==========================================
-// LOGIC HỦY ĐƠN HÀNG (DO KHÁCH HÀNG THỰC HIỆN)
+// LOGIC HỦY ĐƠN HÀNG (SỬ DỤNG SWEETALERT)
 // ==========================================
 const cancelOrder = async (order) => {
+  let confirmResult;
+
   if (order.paymentMethod === 'BANK' && order.paymentStatus === true) {
-    const confirmRefund = confirm("Đơn hàng này đã được xác nhận thanh toán. Nếu hủy, Admin sẽ liên hệ qua Số điện thoại để hoàn tiền cho bạn (Từ 1-3 ngày làm việc). Bạn có chắc chắn muốn hủy?");
-    if (!confirmRefund) return;
+    confirmResult = await Swal.fire({
+      title: 'Hủy đơn đã thanh toán?',
+      text: "Đơn hàng này đã được thanh toán. Nếu hủy, Admin sẽ liên hệ qua Số điện thoại để hoàn tiền cho bạn (Từ 1-3 ngày làm việc).",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Xác nhận hủy',
+      cancelButtonText: 'Không hủy'
+    });
   } else {
-    if (!confirm("Bạn có chắc chắn muốn hủy đơn hàng này không?")) return;
+    confirmResult = await Swal.fire({
+      title: 'Bạn chắc chắn muốn hủy?',
+      text: "Đơn hàng sẽ bị hủy và không thể khôi phục lại.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc3545',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Hủy đơn hàng',
+      cancelButtonText: 'Đóng'
+    });
   }
+
+  // NẾU NGƯỜI DÙNG BẤM HỦY (CANCEL) HOẶC ĐÓNG POPUP
+  if (!confirmResult.isConfirmed) return;
 
   isCancelling.value = order.orderId;
   const userId = getCurrentUserId();
@@ -261,12 +289,19 @@ const cancelOrder = async (order) => {
   try {
     await axios.put(`http://localhost:8080/api/orders/admin/${order.orderId}/status?statusId=4&employeeId=${userId}`, null, getAuthConfig());
     
-    alert("Đã hủy đơn hàng thành công!");
+    Swal.fire({
+      title: 'Thành công!',
+      text: 'Đã hủy đơn hàng thành công.',
+      icon: 'success',
+      confirmButtonText: 'Đóng',
+      confirmButtonColor: '#00FF33',
+      customClass: { confirmButton: 'text-dark fw-bold' }
+    });
     fetchOrders(); 
 
   } catch (error) {
     console.error("Lỗi hủy đơn:", error);
-    alert("Không thể hủy đơn hàng lúc này: " + (error.response?.data || error.message));
+    Swal.fire('Lỗi', 'Không thể hủy đơn hàng lúc này: ' + (error.response?.data || error.message), 'error');
   } finally {
     isCancelling.value = null;
   }
@@ -372,22 +407,36 @@ const submitReviews = async () => {
     }
 
     if (successCount > 0) {
-      alert("Cảm ơn bạn đã đánh giá sản phẩm!");
+      Swal.fire({
+        title: 'Cảm ơn bạn!',
+        text: 'Đánh giá sản phẩm đã được gửi thành công.',
+        icon: 'success',
+        confirmButtonText: 'Tuyệt vời',
+        confirmButtonColor: '#00FF33',
+        customClass: { confirmButton: 'text-dark fw-bold' }
+      });
       document.querySelector('#reviewModal .btn-close').click();
     } else {
-      alert("Vui lòng nhập bình luận cho ít nhất 1 sản phẩm trước khi gửi!");
+      Swal.fire({
+        title: 'Chú ý',
+        text: 'Vui lòng nhập bình luận cho ít nhất 1 sản phẩm trước khi gửi!',
+        icon: 'warning',
+        confirmButtonText: 'Đóng',
+        confirmButtonColor: '#ffc107',
+        customClass: { confirmButton: 'text-dark fw-bold' }
+      });
     }
 
   } catch (error) {
     console.error("Lỗi khi gửi đánh giá:", error);
-    alert("Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại!");
+    Swal.fire('Lỗi', 'Có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại!', 'error');
   } finally {
     isSubmittingReview.value = false;
   }
 };
 
 // ==========================================
-// LOGIC MUA LẠI ĐƠN HÀNG (THÊM VÀO GIỎ HÀNG TRƯỚC)
+// LOGIC MUA LẠI ĐƠN HÀNG (SỬ DỤNG SWEETALERT)
 // ==========================================
 const isReordering = ref(false);
 
@@ -398,8 +447,14 @@ const reOrder = async (order) => {
   try {
     const userId = getCurrentUserId();
     if (!userId) {
-      alert("Vui lòng đăng nhập để thực hiện chức năng này!");
-      router.push('/login');
+      Swal.fire({
+        title: 'Yêu cầu đăng nhập',
+        text: 'Vui lòng đăng nhập để thực hiện chức năng này!',
+        icon: 'info',
+        confirmButtonText: 'Đăng nhập ngay',
+        confirmButtonColor: '#00FF33',
+        customClass: { confirmButton: 'text-dark fw-bold' }
+      }).then(() => router.push('/login'));
       return;
     }
 
@@ -414,21 +469,19 @@ const reOrder = async (order) => {
       const currentProductInfo = allProducts.find(p => p.productId === item.productId);
       
       if (!currentProductInfo || !currentProductInfo.active) {
-        outOfStockItems.push(`- ${item.productName} (Đã ngừng kinh doanh)`);
+        outOfStockItems.push(`<li><b>${item.productName}</b> (Đã ngừng kinh doanh)</li>`);
         continue;
       }
 
-      // TÌM BIẾN THỂ CỤ THỂ TRONG KHO (NẾU CÓ)
       let targetVariant = null;
       if (item.variantId && currentProductInfo.variants) {
         targetVariant = currentProductInfo.variants.find(v => v.variantId === item.variantId);
       }
       
-      // KIỂM TRA TỒN KHO CỦA ĐÚNG BIẾN THỂ ĐÓ
       const maxStock = targetVariant ? targetVariant.stockQuantity : currentProductInfo.stockQuantity;
 
       if (maxStock <= 0 || !targetVariant) {
-        outOfStockItems.push(`- ${item.productName} ${item.colorName ? '('+item.colorName+')' : ''} (Hết hàng/Ngừng bán)`);
+        outOfStockItems.push(`<li><b>${item.productName}</b> ${item.colorName ? '('+item.colorName+')' : ''} (Đã hết hàng)</li>`);
         continue;
       }
 
@@ -436,32 +489,59 @@ const reOrder = async (order) => {
       
       itemsToAdd.push({
         productId: currentProductInfo.productId,
-        variantId: item.variantId, // BẮT BUỘC TRUYỀN LÊN ĐỂ ADD ĐÚNG LOẠI
+        variantId: item.variantId, 
         quantity: qtyToBuy
       });
     }
 
+    // NẾU TẤT CẢ ĐỀU HẾT HÀNG
     if (itemsToAdd.length === 0) {
-      alert("Rất tiếc! Tất cả sản phẩm trong đơn hàng này hiện đã hết hàng hoặc ngừng kinh doanh.");
+      Swal.fire({
+        title: 'Rất tiếc!',
+        text: 'Tất cả sản phẩm trong đơn hàng này hiện đã hết hàng hoặc ngừng kinh doanh.',
+        icon: 'error',
+        confirmButtonText: 'Đóng',
+        confirmButtonColor: '#dc3545'
+      });
       return;
     }
 
+    // NẾU CÓ VÀI MÓN HẾT HÀNG (CẢNH BÁO BẰNG SWEETALERT HTML)
     if (outOfStockItems.length > 0) {
-      const msg = "Một số sản phẩm không thể mua lại:\n" + outOfStockItems.join('\n') + "\n\nBạn có muốn thêm các món còn lại vào Giỏ hàng?";
-      if (!confirm(msg)) return; 
+      const confirmResult = await Swal.fire({
+        title: 'Một số sản phẩm không thể mua lại:',
+        html: `<ul class="text-start fs-8 mb-0">${outOfStockItems.join('')}</ul><br>Bạn có muốn thêm các món còn lại vào Giỏ hàng?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#00FF33',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Thêm vào giỏ',
+        cancelButtonText: 'Hủy',
+        customClass: { confirmButton: 'text-dark fw-bold' }
+      });
+
+      if (!confirmResult.isConfirmed) return; 
     }
 
     for (const item of itemsToAdd) {
       await axios.post(`http://localhost:8080/api/cart/${userId}/add`, item);
     }
 
-    alert("Đã thêm các sản phẩm vào giỏ hàng thành công!");
+    // THÀNH CÔNG -> HIỂN THỊ ALERT RỒI CHUYỂN TRANG
+    await Swal.fire({
+      title: 'Thành công!',
+      text: 'Đã thêm các sản phẩm vào giỏ hàng.',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false
+    });
+
     window.dispatchEvent(new Event('cart-updated')); 
     router.push('/cart'); 
 
   } catch (error) {
     console.error("Lỗi khi xử lý mua lại:", error);
-    alert("Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại!");
+    Swal.fire('Lỗi', 'Có lỗi xảy ra khi thêm vào giỏ hàng. Vui lòng thử lại!', 'error');
   } finally {
     isReordering.value = false;
   }

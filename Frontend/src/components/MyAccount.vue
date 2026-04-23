@@ -60,8 +60,9 @@
                       <input type="text" class="form-control custom-input" v-model="profileForm.address" placeholder="Nhập địa chỉ" required>
                     </div>
                   </div>
-                  <button type="submit" class="btn btn-neon fw-bold px-4 py-2 fs-7 rounded-2 text-dark">
-                    LƯU THAY ĐỔI
+                  <button type="submit" class="btn btn-neon fw-bold px-4 py-2 fs-7 rounded-2 text-dark" :disabled="isSavingProfile">
+                    <span v-if="isSavingProfile" class="spinner-border spinner-border-sm me-2"></span>
+                    {{ isSavingProfile ? 'ĐANG LƯU...' : 'LƯU THAY ĐỔI' }}
                   </button>
                 </form>
               </div>
@@ -92,7 +93,7 @@
                     <div class="col-md-6">
                       <label class="form-label fw-bold fs-8 text-dark">Mật khẩu mới</label>
                       <div class="input-group">
-                        <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.newPassword" placeholder="Mật khẩu ít nhất 8 ký tự" required>
+                        <input :type="showNewPassword ? 'text' : 'password'" class="form-control custom-input border-end-0" v-model="pwdForm.newPassword" placeholder="Mật khẩu ít nhất 8 ký tự" required minlength="8">
                         <span class="input-group-text custom-input bg-white border-start-0 cursor-pointer" @click="showNewPassword = !showNewPassword">
                           <i :class="showNewPassword ? 'bi bi-eye-slash text-muted' : 'bi bi-eye text-neon'"></i>
                         </span>
@@ -111,8 +112,9 @@
                   </div>
 
                   <div class="d-flex align-items-center gap-4">
-                    <button type="submit" class="btn btn-outline-neon fw-bold px-4 py-2 fs-7 rounded-2">
-                      CẬP NHẬT MẬT KHẨU
+                    <button type="submit" class="btn btn-outline-neon fw-bold px-4 py-2 fs-7 rounded-2" :disabled="isChangingPwd">
+                      <span v-if="isChangingPwd" class="spinner-border spinner-border-sm me-2"></span>
+                      {{ isChangingPwd ? 'ĐANG XỬ LÝ...' : 'CẬP NHẬT MẬT KHẨU' }}
                     </button>
                     <a href="#" class="text-neon fw-bold text-decoration-none fs-7">QUÊN MẬT KHẨU?</a>
                   </div>
@@ -210,11 +212,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import Swal from 'sweetalert2'; // THÊM IMPORT SWEETALERT
 
 const router = useRouter();
 
 // --- STATE ĐIỀU HƯỚNG TAB ---
-const currentTab = ref('profile'); // Mặc định là tab 'profile'
+const currentTab = ref('profile');
 
 // ==========================================
 // LOGIC TAB 1: THÔNG TIN CÁ NHÂN
@@ -222,6 +225,8 @@ const currentTab = ref('profile'); // Mặc định là tab 'profile'
 const showCurrentPassword = ref(false);
 const showNewPassword = ref(false);
 const showConfirmPassword = ref(false);
+const isSavingProfile = ref(false);
+const isChangingPwd = ref(false);
 
 const profileForm = ref({ fullName: '', phoneNumber: '', email: '', address: '' });
 const pwdForm = ref({ currentPassword: '', newPassword: '', confirmPassword: '' });
@@ -242,14 +247,24 @@ const getUserId = () => {
 const fetchProfile = async () => {
   const userId = getUserId();
   if (!userId) {
-    alert("Vui lòng đăng nhập!"); router.push('/login'); return;
+    Swal.fire({
+      title: 'Yêu cầu đăng nhập',
+      text: 'Vui lòng đăng nhập để xem thông tin tài khoản!',
+      icon: 'info',
+      confirmButtonText: 'Đăng nhập ngay',
+      confirmButtonColor: '#00FF33',
+      customClass: { confirmButton: 'text-dark fw-bold' }
+    }).then(() => router.push('/login'));
+    return;
   }
+
   try {
     const response = await axios.get(`http://localhost:8080/api/profile/${userId}`, getAuthConfig());
     profileForm.value = response.data;
   } catch (error) {
     if (error.response?.status === 401) {
-      alert("Phiên đăng nhập hết hạn!"); localStorage.clear(); router.push('/login');
+      Swal.fire('Lỗi xác thực', 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.', 'error')
+          .then(() => { localStorage.clear(); router.push('/login'); });
     }
   }
 };
@@ -257,36 +272,78 @@ const fetchProfile = async () => {
 const saveProfile = async () => {
   const userId = getUserId();
   if (!userId) return;
+  
+  isSavingProfile.value = true;
   try {
     const response = await axios.put(`http://localhost:8080/api/profile/${userId}`, profileForm.value, getAuthConfig());
-    alert(response.data);
+    
     // Cập nhật lại localStorage để header cập nhật tên
     const userInfo = JSON.parse(localStorage.getItem('user_info'));
     userInfo.fullName = profileForm.value.fullName;
     localStorage.setItem('user_info', JSON.stringify(userInfo));
     window.dispatchEvent(new Event('auth-change'));
+
+    // HIỂN THỊ MODAL THÀNH CÔNG
+    Swal.fire({
+      title: 'Thành công!',
+      text: response.data || 'Cập nhật thông tin cá nhân thành công.',
+      icon: 'success',
+      confirmButtonText: 'Đóng',
+      confirmButtonColor: '#00FF33',
+      customClass: { confirmButton: 'text-dark fw-bold' }
+    });
+
   } catch (error) {
-    alert(error.response?.data || 'Đã xảy ra lỗi!');
+    Swal.fire('Lỗi', error.response?.data || 'Đã xảy ra lỗi khi lưu thông tin!', 'error');
+  } finally {
+    isSavingProfile.value = false;
   }
 };
 
 const updatePassword = async () => {
   if (pwdForm.value.newPassword !== pwdForm.value.confirmPassword) {
-    alert("Mật khẩu xác nhận không khớp!"); return;
+    Swal.fire('Chú ý', 'Mật khẩu xác nhận không khớp!', 'warning');
+    return;
   }
+  
+  isChangingPwd.value = true;
   try {
     const response = await axios.put(`http://localhost:8080/api/profile/${getUserId()}/password`, pwdForm.value, getAuthConfig());
-    alert(response.data);
+    
+    Swal.fire({
+      title: 'Thành công!',
+      text: response.data || 'Đổi mật khẩu thành công.',
+      icon: 'success',
+      confirmButtonText: 'Đóng',
+      confirmButtonColor: '#00FF33',
+      customClass: { confirmButton: 'text-dark fw-bold' }
+    });
+
     pwdForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' };
   } catch (error) {
-    alert(error.response?.data || 'Lỗi đổi mật khẩu!');
+    Swal.fire('Lỗi', error.response?.data || 'Lỗi đổi mật khẩu!', 'error');
+  } finally {
+    isChangingPwd.value = false;
   }
 };
 
-const handleLogout = () => {
-  localStorage.clear();
-  window.dispatchEvent(new Event('auth-change'));
-  router.push('/login');
+const handleLogout = async () => {
+  const result = await Swal.fire({
+    title: 'Đăng xuất?',
+    text: "Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?",
+    icon: 'question',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Đăng xuất',
+    cancelButtonText: 'Hủy'
+  });
+
+  if (result.isConfirmed) {
+    localStorage.clear();
+    window.dispatchEvent(new Event('auth-change'));
+    router.push('/login');
+  }
 };
 
 // ==========================================

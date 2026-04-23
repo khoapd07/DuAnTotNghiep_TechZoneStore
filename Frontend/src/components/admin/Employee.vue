@@ -114,28 +114,32 @@
               <div class="row mb-3">
                 <div class="col-md-6" v-if="!isEditMode">
                   <label class="form-label fs-8 fw-bold text-muted">Tên đăng nhập (*)</label>
-                  <input v-model="form.username" type="text" class="form-control shadow-none fs-7" required>
-                  <small class="text-success fs-8">Mật khẩu mặc định sẽ là: 123456</small>
+                  <input v-model="form.username" type="text" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.username}" @input="errors.username = ''">
+                  <span v-if="errors.username" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.username }}</span>
+                  <small v-else class="text-success fs-8">Mật khẩu mặc định sẽ là: 123456</small>
                 </div>
                 <div class="col-md-6" v-else>
                   <label class="form-label fs-8 fw-bold text-muted">Tên đăng nhập</label>
                   <input v-model="form.username" type="text" class="form-control shadow-none fs-7" disabled>
                 </div>
+                
                 <div class="col-md-6">
                   <label class="form-label fs-8 fw-bold text-muted">Mã nhân viên (*)</label>
-                  <input v-model="form.employeeCode" type="text" class="form-control shadow-none fs-7" required>
+                  <input v-model="form.employeeCode" type="text" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.employeeCode}" @input="errors.employeeCode = ''">
+                  <span v-if="errors.employeeCode" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.employeeCode }}</span>
                 </div>
               </div>
 
               <div class="row mb-3">
                 <div class="col-md-6">
                   <label class="form-label fs-8 fw-bold text-muted">Họ và tên (*)</label>
-                  <input v-model="form.fullName" type="text" class="form-control shadow-none fs-7" required>
+                  <input v-model="form.fullName" type="text" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.fullName}" @input="errors.fullName = ''">
+                  <span v-if="errors.fullName" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.fullName }}</span>
                 </div>
                 
                 <div class="col-md-6">
                   <label class="form-label fs-8 fw-bold text-muted">Cấp quyền (*)</label>
-                  <select v-model="form.roleId" class="form-select shadow-none fs-7" required>
+                  <select v-model="form.roleId" class="form-select shadow-none fs-7">
                     <option :value="1">Staff (Nhân viên)</option>
                     <option :value="2">Admin (Quản trị viên)</option>
                     <option :value="3">Shipper (Giao hàng)</option>
@@ -146,22 +150,27 @@
               <div class="row mb-3">
                 <div class="col-md-6">
                   <label class="form-label fs-8 fw-bold text-muted">Email</label>
-                  <input v-model="form.email" type="email" class="form-control shadow-none fs-7">
+                  <input v-model="form.email" type="email" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.contact}" @input="errors.contact = ''">
                 </div>
                 <div class="col-md-6">
                   <label class="form-label fs-8 fw-bold text-muted">Số điện thoại</label>
-                  <input v-model="form.phoneNumber" type="text" class="form-control shadow-none fs-7">
+                  <input v-model="form.phoneNumber" type="text" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.contact}" @input="errors.contact = ''">
+                </div>
+                <div class="col-12 mt-1" v-if="errors.contact">
+                  <span class="text-danger fs-8 fw-bold d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.contact }}</span>
                 </div>
               </div>
 
               <div class="row mb-3">
                 <div class="col-md-4">
-                  <label class="form-label fs-8 fw-bold text-muted">Ngày vào làm</label>
-                  <input v-model="form.hireDate" type="date" class="form-control shadow-none fs-7" required>
+                  <label class="form-label fs-8 fw-bold text-muted">Ngày vào làm (*)</label>
+                  <input v-model="form.hireDate" type="date" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.hireDate}" @input="errors.hireDate = ''">
+                  <span v-if="errors.hireDate" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.hireDate }}</span>
                 </div>
                 <div class="col-md-4">
-                  <label class="form-label fs-8 fw-bold text-muted">Mức lương (VNĐ)</label>
-                  <input v-model="form.salary" type="number" min="0" class="form-control shadow-none fs-7" required>
+                  <label class="form-label fs-8 fw-bold text-muted">Mức lương (VNĐ) (*)</label>
+                  <input v-model="form.salary" type="number" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.salary}" @input="errors.salary = ''">
+                  <span v-if="errors.salary" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.salary }}</span>
                 </div>
                 <div class="col-md-4">
                   <label class="form-label fs-8 fw-bold text-muted">Trạng thái</label>
@@ -186,16 +195,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, reactive } from 'vue';
 import axios from 'axios';
 
 const employees = ref([]);
 const isLoading = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('ALL');
-const roleFilter = ref('ALL'); // Đổi từ deptFilter sang roleFilter
+const roleFilter = ref('ALL');
 
 const isEditMode = ref(false);
+const errors = reactive({}); // Khởi tạo object (đối tượng) chứa lỗi
 
 const form = ref({
   userId: null,
@@ -204,7 +214,7 @@ const form = ref({
   email: '',
   phoneNumber: '',
   employeeCode: '',
-  roleId: 1, // Thay department bằng roleId (mặc định là 1: Staff)
+  roleId: 1, 
   hireDate: '',
   salary: 0,
   status: true
@@ -241,6 +251,7 @@ const toggleStatus = async (id) => {
 
 const openAddModal = () => {
   isEditMode.value = false;
+  Object.keys(errors).forEach(k => delete errors[k]); // Reset (Đặt lại) lỗi khi mở form
   form.value = {
     userId: null, username: '', fullName: '', email: '', phoneNumber: '', 
     employeeCode: '', roleId: 1, hireDate: new Date().toISOString().split('T')[0], 
@@ -250,13 +261,51 @@ const openAddModal = () => {
 
 const openEditModal = (emp) => {
   isEditMode.value = true;
+  Object.keys(errors).forEach(k => delete errors[k]); // Reset (Đặt lại) lỗi khi mở form
   form.value = { 
     ...emp,
-    roleId: emp.roleId || 1 // Gán lại roleId khi mở Form sửa
+    roleId: emp.roleId || 1 
   };
 };
 
 const saveEmployee = async () => {
+  // Validate (Xác thực) dữ liệu đầu vào
+  Object.keys(errors).forEach(k => delete errors[k]);
+  let isValid = true;
+
+  if (!isEditMode.value && (!form.value.username || form.value.username.trim() === '')) {
+    errors.username = "Vui lòng nhập tên đăng nhập!";
+    isValid = false;
+  }
+  if (!form.value.employeeCode || form.value.employeeCode.trim() === '') {
+    errors.employeeCode = "Vui lòng nhập mã nhân viên!";
+    isValid = false;
+  }
+  if (!form.value.fullName || form.value.fullName.trim() === '') {
+    errors.fullName = "Vui lòng nhập họ và tên!";
+    isValid = false;
+  }
+  if (!form.value.hireDate) {
+    errors.hireDate = "Vui lòng chọn ngày vào làm!";
+    isValid = false;
+  }
+  
+  // Validate Contact (Xác thực Liên hệ): Ít nhất 1 trong 2
+  if ((!form.value.email || form.value.email.trim() === '') && 
+      (!form.value.phoneNumber || form.value.phoneNumber.trim() === '')) {
+    errors.contact = "Vui lòng nhập ít nhất Email hoặc Số điện thoại!";
+    isValid = false;
+  }
+
+  // Validate Salary (Xác thực Mức lương)
+  if (!form.value.salary || Number(form.value.salary) <= 0) {
+    errors.salary = "Mức lương không được để trống và phải lớn hơn 0!";
+    isValid = false;
+  }
+
+  // Dừng lại nếu có lỗi
+  if (!isValid) return;
+
   try {
     if (isEditMode.value) {
       await axios.put(`${API_URL}/${form.value.userId}`, form.value, getAuthConfig());
@@ -289,7 +338,6 @@ const filteredEmployees = computed(() => {
     if (statusFilter.value === 'ACTIVE') matchStatus = emp.status === true;
     if (statusFilter.value === 'LOCKED') matchStatus = emp.status === false;
 
-    // Lọc theo Role
     let matchRole = true;
     if (roleFilter.value !== 'ALL') {
       matchRole = emp.roleId === Number(roleFilter.value);

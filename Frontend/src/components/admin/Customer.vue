@@ -135,14 +135,21 @@
           </div>
           <div class="modal-body">
             <form @submit.prevent="saveCustomer">
+              
+              <div class="alert alert-danger fs-8 py-2" v-if="errors.general">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ errors.general }}
+              </div>
+
               <div v-if="!isEditing" class="row">
                 <div class="col-6 mb-3">
                   <label class="form-label fs-8 fw-bold text-muted">Tên đăng nhập *</label>
-                  <input v-model="form.username" type="text" class="form-control shadow-none fs-7" required>
+                  <input v-model="form.username" type="text" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.username}" @input="errors.username = ''">
+                  <span v-if="errors.username" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.username }}</span>
                 </div>
                 <div class="col-6 mb-3">
                   <label class="form-label fs-8 fw-bold text-muted">Mật khẩu *</label>
-                  <input v-model="form.password" type="password" class="form-control shadow-none fs-7" required>
+                  <input v-model="form.password" type="password" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.password}" @input="errors.password = ''">
+                  <span v-if="errors.password" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.password }}</span>
                 </div>
               </div>
 
@@ -150,20 +157,28 @@
                 <label class="form-label fs-8 fw-bold text-muted">Họ và tên</label>
                 <input v-model="form.fullName" type="text" class="form-control shadow-none fs-7">
               </div>
+
               <div class="row">
                 <div class="col-6 mb-3">
                   <label class="form-label fs-8 fw-bold text-muted">Email</label>
-                  <input v-model="form.email" type="email" class="form-control shadow-none fs-7">
+                  <input v-model="form.email" type="text" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.email || errors.contact}" @input="errors.email = ''; errors.contact = ''">
+                  <span v-if="errors.email" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.email }}</span>
                 </div>
                 <div class="col-6 mb-3">
                   <label class="form-label fs-8 fw-bold text-muted">Số điện thoại</label>
-                  <input v-model="form.phoneNumber" type="text" class="form-control shadow-none fs-7">
+                  <input v-model="form.phoneNumber" type="text" class="form-control shadow-none fs-7" :class="{'is-invalid': errors.phoneNumber || errors.contact}" @input="errors.phoneNumber = ''; errors.contact = ''">
+                  <span v-if="errors.phoneNumber" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.phoneNumber }}</span>
+                </div>
+                <div class="col-12 mt-0 mb-3" v-if="errors.contact">
+                  <span class="text-danger fs-8 fw-bold d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.contact }}</span>
                 </div>
               </div>
+
               <div class="mb-3">
                 <label class="form-label fs-8 fw-bold text-muted">Địa chỉ giao hàng</label>
                 <textarea v-model="form.shippingAddress" class="form-control shadow-none fs-7" rows="2"></textarea>
               </div>
+
               <div class="row">
                 <div class="col-12 mb-3">
                   <label class="form-label fs-8 fw-bold text-muted">Trạng thái</label>
@@ -173,6 +188,7 @@
                   </select>
                 </div>
               </div>
+
               <div class="d-flex justify-content-end gap-2 mt-4">
                 <button type="button" class="btn btn-light fw-bold fs-7" data-bs-dismiss="modal">Hủy</button>
                 <button type="submit" class="btn btn-success fw-bold fs-7">{{ isEditing ? 'Lưu thay đổi' : 'Tạo khách hàng' }}</button>
@@ -186,7 +202,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, reactive } from 'vue';
 import axios from 'axios';
 
 const customers = ref([]);
@@ -194,6 +210,8 @@ const isLoading = ref(false);
 const searchQuery = ref('');
 const statusFilter = ref('ALL');
 const isEditing = ref(false);
+
+const errors = reactive({}); // Đối tượng quản lý lỗi hiển thị
 
 const form = ref({
   userId: null,
@@ -260,13 +278,16 @@ const deleteCustomer = async (id) => {
 
 const openAddModal = () => {
   isEditing.value = false;
+  Object.keys(errors).forEach(k => delete errors[k]); // Reset lỗi
   form.value = { userId: null, username: '', password: '', fullName: '', email: '', phoneNumber: '', shippingAddress: '', status: true };
 };
 
 const openEditModal = (user) => {
   isEditing.value = true;
+  Object.keys(errors).forEach(k => delete errors[k]); // Reset lỗi
   form.value = {
     userId: user.userId,
+    username: user.username || '',
     fullName: user.fullName || '',
     email: user.email || '',
     phoneNumber: user.phoneNumber || '',
@@ -276,28 +297,44 @@ const openEditModal = (user) => {
 };
 
 const saveCustomer = async () => {
-  // --- 1. VALIDATE FRONTEND ---
-  // Ràng buộc mật khẩu (Nếu đang thêm mới)
-  if (!isEditing.value && form.value.password.length < 6) {
-    alert("Mật khẩu phải có ít nhất 6 ký tự!");
-    return;
+  // --- 1. VALIDATE FRONTEND (Xác thực phía giao diện) ---
+  Object.keys(errors).forEach(k => delete errors[k]);
+  let isValid = true;
+
+  if (!isEditing.value && (!form.value.username || form.value.username.trim() === '')) {
+    errors.username = "Vui lòng nhập tên đăng nhập!";
+    isValid = false;
   }
 
-  // Validate Email (Phải có @ và . )
+  if (!isEditing.value && (!form.value.password || form.value.password.length < 6)) {
+    errors.password = "Mật khẩu phải có ít nhất 6 ký tự!";
+    isValid = false;
+  }
+
+  // Validate (Xác thực) Email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (form.value.email && !emailRegex.test(form.value.email)) {
-    alert("Email không đúng định dạng! (Ví dụ: nguyenvan@gmail.com)");
-    return;
+  if (form.value.email && form.value.email.trim() !== '' && !emailRegex.test(form.value.email)) {
+    errors.email = "Email không đúng định dạng! (Ví dụ: abc@gmail.com)";
+    isValid = false;
   }
 
-  // Validate SĐT Việt Nam (Bắt đầu bằng 03, 05, 07, 08, 09 và gồm 10 số)
+  // Validate (Xác thực) SĐT Việt Nam
   const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
-  if (form.value.phoneNumber && !phoneRegex.test(form.value.phoneNumber)) {
-    alert("Số điện thoại không hợp lệ! Vui lòng nhập SĐT Việt Nam gồm 10 số.");
-    return;
+  if (form.value.phoneNumber && form.value.phoneNumber.trim() !== '' && !phoneRegex.test(form.value.phoneNumber)) {
+    errors.phoneNumber = "SĐT không hợp lệ! Vui lòng nhập SĐT Việt Nam gồm 10 số.";
+    isValid = false;
   }
 
-  // --- 2. GỌI API & ĐỌC LỖI TỪ BACKEND ---
+  // Validate Contact (Xác thực liên hệ): Phải có ít nhất 1 trong 2
+  if ((!form.value.email || form.value.email.trim() === '') && 
+      (!form.value.phoneNumber || form.value.phoneNumber.trim() === '')) {
+    errors.contact = "Vui lòng nhập ít nhất Email hoặc Số điện thoại!";
+    isValid = false;
+  }
+
+  if (!isValid) return;
+
+  // --- 2. GỌI API (Giao diện lập trình ứng dụng) ---
   try {
     if (isEditing.value) {
       await axios.put(`${API_URL}/${form.value.userId}`, form.value, getAuthConfig());
@@ -317,10 +354,10 @@ const saveCustomer = async () => {
     
   } catch (error) {
     console.error('Lỗi khi lưu:', error);
-    // Nhận câu thông báo "Email đã tồn tại", "Username đã tồn tại"... từ Controller trả về
+    // Nhận câu thông báo lỗi từ backend (hệ thống máy chủ)
     const errorMsg = error.response?.data?.message || error.response?.data || 'Thao tác thất bại. Vui lòng kiểm tra lại!';
     if (typeof errorMsg === 'string') {
-      alert(errorMsg);
+      errors.general = errorMsg; // Gán lỗi chung để hiển thị đỏ trên form
     }
   }
 };
@@ -329,7 +366,6 @@ const filteredCustomers = computed(() => {
   return customers.value.filter(user => {
     const query = searchQuery.value.toLowerCase();
     
-    // ĐÃ SỬA TẠI ĐÂY: Thêm điều kiện tìm kiếm bằng user.username để search mượt hơn
     const matchSearch = !query || 
                         (user.fullName && user.fullName.toLowerCase().includes(query)) ||
                         (user.username && user.username.toLowerCase().includes(query)) ||

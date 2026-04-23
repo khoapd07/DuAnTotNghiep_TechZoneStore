@@ -131,13 +131,14 @@
 import { ref, computed, onMounted } from 'vue';
 import axios from 'axios'; 
 import { useRouter } from 'vue-router';
+import Swal from 'sweetalert2'; // THÊM IMPORT SWEETALERT
 
 const router = useRouter();
 const API_URL = 'http://localhost:8080/api/cart';
 
 const cartItems = ref([]);
 const selectAll = ref(false);
-const isCheckingOut = ref(false); // Biến chặn click nhiều lần lúc thanh toán
+const isCheckingOut = ref(false);
 let debounceTimer;
 
 const getCurrentUserId = () => {
@@ -244,18 +245,24 @@ const syncQuantityWithBackend = (item, newQuantity) => {
     } catch (error) {
       const errorMsg = error.response?.data || 'Cập nhật thất bại';
       
-      // THUẬT TOÁN MỚI: Trích xuất số tồn kho từ câu báo lỗi của Backend
-      // (Backend đang ném ra lỗi: "Kho chỉ còn 4 sản phẩm...")
       const match = errorMsg.match(/Kho chỉ còn (\d+)/i);
       
       if (match && match[1]) {
         const maxStock = parseInt(match[1], 10);
-        alert(`Sản phẩm này hiện chỉ còn tối đa ${maxStock} chiếc trong kho!`);
         
-        // Ép số lượng trong giỏ về giới hạn của kho
+        // THAY THẾ ALERT BẰNG SWEETALERT
+        Swal.fire({
+          title: 'Vượt quá số lượng!',
+          text: `Sản phẩm này hiện chỉ còn tối đa ${maxStock} chiếc trong kho!`,
+          icon: 'warning',
+          confirmButtonText: 'Đã hiểu',
+          confirmButtonColor: '#00FF33',
+          background: '#fff',
+          customClass: { confirmButton: 'text-dark fw-bold' }
+        });
+        
         item.quantity = maxStock;
 
-        // Gọi API ép lưu số lượng Max này xuống Database
         try {
           await axios.put(`${API_URL}/${userId}/update`, { 
             productId: item.productId,
@@ -268,14 +275,19 @@ const syncQuantityWithBackend = (item, newQuantity) => {
           await fetchCart();
         }
       } else {
-        alert(errorMsg);
+        Swal.fire({
+          title: 'Lỗi',
+          text: errorMsg,
+          icon: 'error',
+          confirmButtonText: 'Đóng',
+          confirmButtonColor: '#dc3545'
+        });
         await fetchCart(); 
       }
     }
   }, 600); 
 };
 
-// TRUYỀN CẢ OBJECT VÀO HÀM THAY VÌ CHỈ TRUYỀN ID
 const increaseQty = (item) => {
   item.quantity++; 
   syncQuantityWithBackend(item, item.quantity);
@@ -294,7 +306,19 @@ const updateQty = (item) => {
 };
 
 const removeItem = async (productId) => {
-  if (confirm('Bạn muốn xóa sản phẩm này khỏi giỏ hàng?')) {
+  // THAY THẾ CONFIRM BẰNG SWEETALERT
+  const result = await Swal.fire({
+    title: 'Xóa sản phẩm?',
+    text: "Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Xóa',
+    cancelButtonText: 'Hủy'
+  });
+
+  if (result.isConfirmed) {
     const userId = getCurrentUserId();
 
     if (!userId) {
@@ -315,7 +339,19 @@ const removeItem = async (productId) => {
 };
 
 const clearCart = async () => {
-  if (confirm('Làm trống toàn bộ giỏ hàng?')) {
+  // THAY THẾ CONFIRM BẰNG SWEETALERT
+  const result = await Swal.fire({
+    title: 'Làm trống giỏ hàng?',
+    text: "Toàn bộ sản phẩm sẽ bị xóa khỏi giỏ. Bạn có chắc không?",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Làm trống',
+    cancelButtonText: 'Hủy'
+  });
+
+  if (result.isConfirmed) {
     const userId = getCurrentUserId();
 
     if (!userId) {
@@ -351,25 +387,29 @@ const goToCheckout = async () => {
   isCheckingOut.value = true;
 
   try {
-    // Duyệt qua từng sản phẩm được tích chọn và đối chiếu tồn kho mới nhất
     for (const item of selectedItems) {
       const res = await axios.get(`http://localhost:8080/api/product/${item.productId}`);
       const productData = res.data;
 
-      // Tìm tồn kho thực tế của biến thể đó
       let maxStock = productData.totalStock;
       if (item.variantId && productData.variants) {
         const variant = productData.variants.find(v => v.variantId === item.variantId);
         if (variant) maxStock = variant.stockQuantity;
       }
 
-      // KẾT QUẢ DOUBLE-CHECK: Nếu mua lố
       if (item.quantity > maxStock) {
-        alert(`Sản phẩm "${item.name}" ${item.colorName ? '('+item.colorName+')' : ''} hiện chỉ còn ${maxStock} chiếc do vừa có khách hàng khác đặt mua.\n\nHệ thống sẽ tự động điều chỉnh số lượng!`);
+        // THAY THẾ ALERT BẰNG SWEETALERT CẢNH BÁO
+        Swal.fire({
+          title: 'Lỗi tồn kho!',
+          html: `Sản phẩm <b>"${item.name}" ${item.colorName ? '('+item.colorName+')' : ''}</b> hiện chỉ còn <b>${maxStock} chiếc</b> do vừa có khách hàng khác đặt mua.<br><br>Hệ thống đã tự động điều chỉnh lại số lượng trong giỏ của bạn.`,
+          icon: 'error',
+          confirmButtonText: 'Đã hiểu',
+          confirmButtonColor: '#00FF33',
+          customClass: { confirmButton: 'text-dark fw-bold' }
+        });
         
         item.quantity = maxStock;
 
-        // Lưu lại DB để khách confirm lại trên UI
         if (userId) {
            await axios.put(`${API_URL}/${userId}/update`, {
              productId: item.productId,
@@ -382,11 +422,10 @@ const goToCheckout = async () => {
         }
 
         isCheckingOut.value = false;
-        return; // BLOCK không cho sang Checkout, ép khách xem lại số lượng
+        return; 
       }
     }
 
-    // NẾU TẤT CẢ VƯỢT QUA BÀI TEST -> CHUYỂN SANG CHECKOUT BÌNH THƯỜNG
     const checkoutData = {
       items: selectedItems,
       subtotal: subtotal.value,
@@ -397,7 +436,7 @@ const goToCheckout = async () => {
 
   } catch (error) {
     console.error("Lỗi kiểm tra tồn kho:", error);
-    alert("Có lỗi xảy ra khi kiểm tra giỏ hàng. Vui lòng tải lại trang!");
+    Swal.fire('Lỗi', 'Có lỗi xảy ra khi kiểm tra giỏ hàng. Vui lòng tải lại trang!', 'error');
   } finally {
     isCheckingOut.value = false;
   }
