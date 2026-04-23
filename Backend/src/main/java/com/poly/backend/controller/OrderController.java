@@ -1,10 +1,11 @@
 package com.poly.backend.controller;
 
-import com.poly.backend.dao.OrderStatusDAO;
+//import com.poly.backend.dao.OrderStatusRepository;
 import com.poly.backend.dto.GuestOrderRequestDTO;
 import com.poly.backend.dto.OrderRequestDTO;
 import com.poly.backend.dto.OrderResponseDTO;
 import com.poly.backend.service.OrderService;
+import com.poly.backend.service.OrderStatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +21,10 @@ public class OrderController {
     @Autowired
     private OrderService orderService;
 
-    @Autowired
-    private OrderStatusDAO orderStatusDAO;
+//    @Autowired
+//    private OrderStatusRepository orderStatusRepository;
+
+    @Autowired private OrderStatusService orderStatusService;
 
     /**
      * API 1: Khách hàng tiến hành đặt hàng (Checkout)
@@ -149,7 +152,7 @@ public class OrderController {
     @GetMapping("/statuses")
     public ResponseEntity<?> getAllOrderStatuses() {
         try {
-            return ResponseEntity.ok(orderStatusDAO.findAll());
+            return ResponseEntity.ok(orderStatusService.findAll());
         } catch (Exception e) {
             return ResponseEntity.badRequest().body("Lỗi lấy trạng thái: " + e.getMessage());
         }

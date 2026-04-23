@@ -5,7 +5,7 @@ import org.springframework.stereotype.Repository;
 import com.poly.backend.entity.Customer;
 
 @Repository
-public interface CustomerDAO extends JpaRepository<Customer, Integer> {
+public interface CustomerRepository extends JpaRepository<Customer, Integer> {
 
     // Kiểm tra lúc tạo mới
     boolean existsByUsername(String username);

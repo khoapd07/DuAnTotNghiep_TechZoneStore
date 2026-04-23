@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface SupplierDAO extends JpaRepository<Supplier, Integer> {
+public interface SupplierRepository extends JpaRepository<Supplier, Integer> {
     List<Supplier> findBySupplierName(String supplierName);
     List<Supplier> findByPhoneNumber(String phoneNumber);
     List<Supplier> findByEmail(String email);

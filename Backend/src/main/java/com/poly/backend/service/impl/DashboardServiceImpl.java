@@ -1,8 +1,8 @@
 package com.poly.backend.service.impl;
 
 import com.poly.backend.dto.DashboardStatsDTO;
-import com.poly.backend.dao.OrderDAO;
-import com.poly.backend.dao.ProductDAO;
+import com.poly.backend.dao.OrderRepository;
+import com.poly.backend.dao.ProductRepository;
 import com.poly.backend.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,8 +19,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DashboardServiceImpl implements DashboardService {
 
-    private final OrderDAO orderDAO;
-    private final ProductDAO productDAO;
+    private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
 
     @Override
     public DashboardStatsDTO getStats() {
@@ -30,19 +30,19 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDateTime fourteenDaysAgo = now.minusDays(14);
 
         // --- TÍNH TOÁN DOANH THU (7 ngày qua vs 7 ngày trước đó) ---
-        BigDecimal revThisPeriod = orderDAO.sumTotalRevenueBetween(sevenDaysAgo, now);
-        BigDecimal revLastPeriod = orderDAO.sumTotalRevenueBetween(fourteenDaysAgo, sevenDaysAgo);
+        BigDecimal revThisPeriod = orderRepository.sumTotalRevenueBetween(sevenDaysAgo, now);
+        BigDecimal revLastPeriod = orderRepository.sumTotalRevenueBetween(fourteenDaysAgo, sevenDaysAgo);
 
         double revenueGrowth = calculateGrowth(revThisPeriod.doubleValue(), revLastPeriod.doubleValue());
 
         // --- TÍNH TOÁN ĐƠN HÀNG (7 ngày qua vs 7 ngày trước đó) ---
-        Long ordersThisPeriod = orderDAO.countOrdersBetween(sevenDaysAgo, now);
-        Long ordersLastPeriod = orderDAO.countOrdersBetween(fourteenDaysAgo, sevenDaysAgo);
+        Long ordersThisPeriod = orderRepository.countOrdersBetween(sevenDaysAgo, now);
+        Long ordersLastPeriod = orderRepository.countOrdersBetween(fourteenDaysAgo, sevenDaysAgo);
 
         double orderGrowth = calculateGrowth(ordersThisPeriod.doubleValue(), ordersLastPeriod.doubleValue());
 
         // --- TÍNH SẢN PHẨM HẾT HÀNG (Lấy ở hiện tại) ---
-        Long outOfStock = productDAO.countByTotalStockLessThan(16);
+        Long outOfStock = productRepository.countByTotalStockLessThan(16);
 
         return DashboardStatsDTO.builder()
                 .totalRevenue(revThisPeriod.doubleValue()) // Trả về doanh thu 7 ngày qua
@@ -80,11 +80,11 @@ public class DashboardServiceImpl implements DashboardService {
             LocalDateTime endOfDay = targetDate.with(LocalTime.MAX);
 
             // 1. Lấy doanh thu của ngày đó
-            BigDecimal dailyRevenue = orderDAO.sumTotalRevenueBetween(startOfDay, endOfDay);
+            BigDecimal dailyRevenue = orderRepository.sumTotalRevenueBetween(startOfDay, endOfDay);
             double revenueValue = (dailyRevenue != null) ? dailyRevenue.doubleValue() : 0.0;
 
             // 2. Lấy số đơn HOÀN THÀNH của ngày đó
-            Long dailyOrderCount = orderDAO.countOrdersBetween(startOfDay, endOfDay);
+            Long dailyOrderCount = orderRepository.countOrdersBetween(startOfDay, endOfDay);
 
             // 3. Tạo nhãn (Label) cho trục X.
             // Nếu muốn format kiểu "01/03", "02/03" thì dùng dòng này:

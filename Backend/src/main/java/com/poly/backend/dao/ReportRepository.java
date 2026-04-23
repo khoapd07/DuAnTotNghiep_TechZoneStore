@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @Repository
-public interface ReportDAO extends JpaRepository<Order, Integer> {
+public interface ReportRepository extends JpaRepository<Order, Integer> {
 
     // 1. Lấy ra Top 5 Shipper giao được nhiều đơn hàng thành công nhất
     // SELECT COUNT: Đếm số lượng đơn. GROUP BY: Gom nhóm theo tên shipper. ORDER BY DESC: Sắp xếp giảm dần.

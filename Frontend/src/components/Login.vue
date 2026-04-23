@@ -172,7 +172,13 @@ const handleLogin = async () => {
     // 4. Chuyển hướng người dùng dựa theo Role
     if (data.role === 'Admin' || data.role === 'Staff') {
       router.push('/admin/orders'); // Hoặc trang quản trị tương ứng
-    } else {
+
+    }
+    else if(data.role === 'Shipper') {
+      router.push('/shipping'); // Về trang chủ mua hàng
+    }
+    
+    else {
       router.push('/'); // Về trang chủ mua hàng
     }
 

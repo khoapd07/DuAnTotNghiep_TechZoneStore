@@ -25,22 +25,22 @@ import java.util.stream.Collectors;
 @Service
 public class OrderServiceImpl implements OrderService {
 
-    @Autowired private OrderDAO orderDAO;
-    @Autowired private OrderStatusDAO orderStatusDAO;
-    @Autowired private CartDAO cartDAO;
-    @Autowired private ProductDAO productDAO;
-    @Autowired private ProductVariantDAO variantDAO;
-    @Autowired private VoucherDAO voucherDAO;
-    @Autowired private UserDAO userDAO;
+    @Autowired private OrderRepository orderRepository;
+    @Autowired private OrderStatusRepository orderStatusRepository;
+    @Autowired private CartRepository cartRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private ProductVariantRepository variantDAO;
+    @Autowired private VoucherRepository voucherRepository;
+    @Autowired private UserRepository userRepository;
     @Autowired private EmailService emailService;
-    @Autowired private CartItemDAO cartItemDAO;
+    @Autowired private CartItemRepository cartItemRepository;
 
     @Override
     @Transactional
     public OrderResponseDTO placeOrder(Integer userId, OrderRequestDTO request) {
 
-        User customer = userDAO.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
-        Cart cart = cartDAO.findByUser_UserId(userId).orElse(null);
+        User customer = userRepository.findById(userId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy User"));
+        Cart cart = cartRepository.findByUser_UserId(userId).orElse(null);
 
         Order order = new Order();
         order.setCustomer(customer);
@@ -52,7 +52,7 @@ public class OrderServiceImpl implements OrderService {
         // Ép cứng KHÔNG CÓ DẤU GẠCH NGANG (VD: TZ20260324143045)
         order.setOrderCode("TZ" + dateStamp + String.format("%04d", (int)(Math.random() * 10000)));
 
-        OrderStatus status = orderStatusDAO.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống"));
+        OrderStatus status = orderStatusRepository.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống"));
         order.setStatus(status);
 
         BigDecimal totalMoney = BigDecimal.ZERO;
@@ -62,7 +62,7 @@ public class OrderServiceImpl implements OrderService {
             List<CartItem> itemsToRemove = new ArrayList<>();
 
             for (GuestCartItemDTO reqItem : request.getItems()) {
-                Product product = productDAO.findById(reqItem.getProductId())
+                Product product = productRepository.findById(reqItem.getProductId())
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Sản phẩm không tồn tại"));
 
                 ProductVariant variant = null;
@@ -109,7 +109,7 @@ public class OrderServiceImpl implements OrderService {
 
             if (cart != null && !itemsToRemove.isEmpty()) {
                 cart.getCartItems().removeAll(itemsToRemove);
-                cartItemDAO.deleteAll(itemsToRemove);
+                cartItemRepository.deleteAll(itemsToRemove);
             }
 
         } else {
@@ -122,13 +122,13 @@ public class OrderServiceImpl implements OrderService {
         // Voucher logic... (Giữ nguyên)
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
-            Voucher voucher = voucherDAO.findByCode(request.getVoucherCode()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
+            Voucher voucher = voucherRepository.findByCode(request.getVoucherCode()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
             if (!voucher.getStatus() || voucher.getQuantity() <= 0 || voucher.getEndDate().isBefore(LocalDateTime.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá hết hạn");
             if (totalMoney.compareTo(voucher.getMinOrderValue()) < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chưa đạt giá trị tối thiểu");
             discountAmount = voucher.getDiscountAmount();
             order.setVoucher(voucher);
             voucher.setQuantity(voucher.getQuantity() - 1);
-            voucherDAO.save(voucher);
+            voucherRepository.save(voucher);
         }
 
         order.setDiscountAmount(discountAmount);
@@ -137,7 +137,7 @@ public class OrderServiceImpl implements OrderService {
         order.setPaymentMethod(request.getPaymentMethod() != null ? request.getPaymentMethod() : "COD");
 //        order.setPaymentStatus(false);
         order.setPaymentStatus(request.getIsPaid() != null ? request.getIsPaid() : false);
-        Order savedOrder = orderDAO.save(order);
+        Order savedOrder = orderRepository.save(order);
         emailService.sendOrderConfirmation(request.getEmail() != null ? request.getEmail() : customer.getEmail(), savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
 
         return mapToDTO(savedOrder);
@@ -145,7 +145,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderResponseDTO> getOrderHistory(Integer userId) {
-        return orderDAO.findByCustomer_UserIdOrderByOrderDateDesc(userId).stream()
+        return orderRepository.findByCustomer_UserIdOrderByOrderDateDesc(userId).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -207,14 +207,14 @@ public class OrderServiceImpl implements OrderService {
 
         // Ép cứng KHÔNG CÓ DẤU GẠCH NGANG (VD: TZ20260324143045)
         order.setOrderCode("TZG" + dateStamp + String.format("%04d", (int)(Math.random() * 10000)));
-        OrderStatus status = orderStatusDAO.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái"));
+        OrderStatus status = orderStatusRepository.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi trạng thái"));
         order.setStatus(status);
 
         BigDecimal totalMoney = BigDecimal.ZERO;
         List<OrderDetail> orderDetails = new ArrayList<>();
 
         for (GuestCartItemDTO reqItem : request.getItems()) {
-            Product product = productDAO.findById(reqItem.getProductId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy SP"));
+            Product product = productRepository.findById(reqItem.getProductId()).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy SP"));
             ProductVariant variant = null;
             if (reqItem.getVariantId() != null) {
                 variant = variantDAO.findById(reqItem.getVariantId()).orElse(null);
@@ -246,13 +246,13 @@ public class OrderServiceImpl implements OrderService {
 
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
-            Voucher voucher = voucherDAO.findByCode(request.getVoucherCode()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
+            Voucher voucher = voucherRepository.findByCode(request.getVoucherCode()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));
             if (!voucher.getStatus() || voucher.getQuantity() <= 0 || voucher.getEndDate().isBefore(LocalDateTime.now())) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá đã hết hạn");
             if (totalMoney.compareTo(voucher.getMinOrderValue()) < 0) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Chưa đạt giá trị tối thiểu");
             discountAmount = voucher.getDiscountAmount();
             order.setVoucher(voucher);
             voucher.setQuantity(voucher.getQuantity() - 1);
-            voucherDAO.save(voucher);
+            voucherRepository.save(voucher);
         }
 
         order.setDiscountAmount(discountAmount);
@@ -263,7 +263,7 @@ public class OrderServiceImpl implements OrderService {
         // Nhận trạng thái "Đã thanh toán" từ Frontend truyền lên
         order.setPaymentStatus(request.getIsPaid() != null ? request.getIsPaid() : false);
 
-        Order savedOrder = orderDAO.save(order);
+        Order savedOrder = orderRepository.save(order);
         if (request.getGuestEmail() != null && !request.getGuestEmail().isEmpty()) {
             emailService.sendOrderConfirmation(request.getGuestEmail(), savedOrder.getOrderCode(), savedOrder.getFinalAmount().toString());
         }
@@ -273,7 +273,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDTO getOrderByCode(String orderCode) {
-        Order order = orderDAO.findByOrderCode(orderCode)
+        Order order = orderRepository.findByOrderCode(orderCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng: " + orderCode));
         return mapToDTO(order);
     }
@@ -285,7 +285,7 @@ public class OrderServiceImpl implements OrderService {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime sevenDaysAgo = now.minusDays(7);
 
-        List<Order> orders = orderDAO.findRecentOrdersBetween(sevenDaysAgo, now, pageable);
+        List<Order> orders = orderRepository.findRecentOrdersBetween(sevenDaysAgo, now, pageable);
 
         return orders.stream().map(order -> {
             OrderResponseDTO dto = new OrderResponseDTO();
@@ -311,7 +311,7 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public List<OrderResponseDTO> getAllOrdersForAdmin() {
-        return orderDAO.findAll(Sort.by(Sort.Direction.DESC, "orderDate")).stream()
+        return orderRepository.findAll(Sort.by(Sort.Direction.DESC, "orderDate")).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -319,11 +319,11 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDTO updateOrderStatus(Integer orderId, Integer newStatusId, Integer employeeId, Integer shipperId) {
-        Order order = orderDAO.findById(orderId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
-        OrderStatus status = orderStatusDAO.findById(newStatusId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trạng thái không hợp lệ"));
+        Order order = orderRepository.findById(orderId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
+        OrderStatus status = orderStatusRepository.findById(newStatusId).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trạng thái không hợp lệ"));
 
-        if (newStatusId == 1 && employeeId != null) order.setEmployee(userDAO.findById(employeeId).orElse(null));
-        if (newStatusId == 2 && shipperId != null) order.setShipper(userDAO.findById(shipperId).orElse(null));
+        if (newStatusId == 1 && employeeId != null) order.setEmployee(userRepository.findById(employeeId).orElse(null));
+        if (newStatusId == 2 && shipperId != null) order.setShipper(userRepository.findById(shipperId).orElse(null));
 
         // NẾU HỦY ĐƠN: HOÀN TRẢ TỒN KHO VÀO ĐÚNG BIẾN THỂ ĐÓ
         if (order.getStatus().getStatusId() != 4 && newStatusId == 4) {
@@ -337,12 +337,12 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setStatus(status);
-        return mapToDTO(orderDAO.save(order));
+        return mapToDTO(orderRepository.save(order));
     }
 
     @Override
     public List<OrderResponseDTO> getOrdersForShipper(Integer shipperId) {
-        List<Order> allRelevantOrders = orderDAO.findByStatus_StatusIdInOrderByOrderDateAsc(Arrays.asList(1, 2, 3));
+        List<Order> allRelevantOrders = orderRepository.findByStatus_StatusIdInOrderByOrderDateAsc(Arrays.asList(1, 2, 3));
 
         List<OrderResponseDTO> result = new ArrayList<>();
 
@@ -363,9 +363,9 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderResponseDTO updatePaymentStatus(Integer orderId, Boolean status) {
-        Order order = orderDAO.findById(orderId)
+        Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng"));
         order.setPaymentStatus(status);
-        return mapToDTO(orderDAO.save(order));
+        return mapToDTO(orderRepository.save(order));
     }
 }

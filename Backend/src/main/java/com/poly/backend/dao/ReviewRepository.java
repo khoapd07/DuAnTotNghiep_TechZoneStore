@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
 
-public interface ReviewDAO extends JpaRepository<Review, Integer> {
+public interface ReviewRepository extends JpaRepository<Review, Integer> {
 
     // ✅ Fix lỗi "No property 'id' found for type 'Product'"
     @Query("SELECT r FROM Review r WHERE r.product.productId = :productId ORDER BY r.reviewDate DESC")

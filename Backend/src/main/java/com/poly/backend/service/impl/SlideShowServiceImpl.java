@@ -1,6 +1,6 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.SlideShowDAO;
+import com.poly.backend.dao.SlideShowRepository;
 import com.poly.backend.dto.SlideShowDTO;
 import com.poly.backend.entity.SlideShow;
 import com.poly.backend.service.SlideShowService;
@@ -15,17 +15,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SlideShowServiceImpl implements SlideShowService {
 
-    private final SlideShowDAO slideShowDAO;
+    private final SlideShowRepository slideShowRepository;
 
     @Override
     public List<SlideShowDTO> getAllSlideShows() {
-        return slideShowDAO.findAllByOrderByDisplayOrderAsc().stream()
+        return slideShowRepository.findAllByOrderByDisplayOrderAsc().stream()
                 .map(this::mapToDTO).collect(Collectors.toList());
     }
 
     @Override
     public List<SlideShowDTO> getActiveSlideShows() {
-        return slideShowDAO.findByActiveTrueOrderByDisplayOrderAsc().stream()
+        return slideShowRepository.findByActiveTrueOrderByDisplayOrderAsc().stream()
                 .map(this::mapToDTO).collect(Collectors.toList());
     }
 
@@ -36,7 +36,7 @@ public class SlideShowServiceImpl implements SlideShowService {
         mapToEntity(dto, slide);
 
         // Lấy tất cả danh sách để chèn
-        List<SlideShow> allSlides = slideShowDAO.findAllByOrderByDisplayOrderAsc();
+        List<SlideShow> allSlides = slideShowRepository.findAllByOrderByDisplayOrderAsc();
 
         // Xác định vị trí chèn (Nếu người dùng nhập sai số âm hoặc số quá lớn thì tự động nắn lại)
         int targetOrder = dto.getDisplayOrder() != null ? dto.getDisplayOrder() : allSlides.size() + 1;
@@ -52,19 +52,19 @@ public class SlideShowServiceImpl implements SlideShowService {
         }
 
         // Lưu toàn bộ danh sách đã được sắp xếp lại xuống DB
-        slideShowDAO.saveAll(allSlides);
+        slideShowRepository.saveAll(allSlides);
         return mapToDTO(slide);
     }
 
     @Override
     @Transactional
     public SlideShowDTO updateSlideShow(Integer id, SlideShowDTO dto) {
-        SlideShow slide = slideShowDAO.findById(id)
+        SlideShow slide = slideShowRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy SlideShow"));
         mapToEntity(dto, slide);
 
         // 1. Lấy toàn bộ danh sách hiện tại
-        List<SlideShow> allSlides = slideShowDAO.findAllByOrderByDisplayOrderAsc();
+        List<SlideShow> allSlides = slideShowRepository.findAllByOrderByDisplayOrderAsc();
 
         // 2. Rút slide đang sửa ra khỏi danh sách
         allSlides.removeIf(s -> s.getSlideId().equals(id));
@@ -83,21 +83,21 @@ public class SlideShowServiceImpl implements SlideShowService {
         }
 
         // 6. Lưu lại cập nhật
-        slideShowDAO.saveAll(allSlides);
+        slideShowRepository.saveAll(allSlides);
         return mapToDTO(slide);
     }
 
     @Override
     @Transactional
     public void deleteSlideShow(Integer id) {
-        slideShowDAO.deleteById(id);
+        slideShowRepository.deleteById(id);
 
         // AUTO DỌN DẸP: Sau khi xóa 1 cái, các cái bên dưới tự động đôn lên cho khít
-        List<SlideShow> allSlides = slideShowDAO.findAllByOrderByDisplayOrderAsc();
+        List<SlideShow> allSlides = slideShowRepository.findAllByOrderByDisplayOrderAsc();
         for (int i = 0; i < allSlides.size(); i++) {
             allSlides.get(i).setDisplayOrder(i + 1);
         }
-        slideShowDAO.saveAll(allSlides);
+        slideShowRepository.saveAll(allSlides);
     }
 
     private SlideShowDTO mapToDTO(SlideShow entity) {

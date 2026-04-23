@@ -4,8 +4,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.EmployeeDAO;
-import com.poly.backend.dao.RoleDAO;
+import com.poly.backend.dao.EmployeeRepository;
+import com.poly.backend.dao.RoleRepository;
 import com.poly.backend.entity.Employee;
 import com.poly.backend.entity.Role;
 import com.poly.backend.dto.EmployeeDTO;
@@ -16,18 +16,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @RequiredArgsConstructor
 public class EmployeeServiceImpl implements EmployeeService {
 
-    private final EmployeeDAO employeeDAO;
-    private final RoleDAO roleDAO;
+    private final EmployeeRepository employeeRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
     public List<EmployeeDTO> findAll() {
-        return employeeDAO.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
+        return employeeRepository.findAll().stream().map(this::mapToDTO).collect(Collectors.toList());
     }
 
     @Override
     public EmployeeDTO findById(Integer id) {
-        Employee emp = employeeDAO.findById(id).orElse(null);
+        Employee emp = employeeRepository.findById(id).orElse(null);
         return emp != null ? mapToDTO(emp) : null;
     }
 
@@ -36,7 +36,7 @@ public class EmployeeServiceImpl implements EmployeeService {
         Employee employee;
 
         if (dto.getUserId() != null) {
-            employee = employeeDAO.findById(dto.getUserId()).orElse(null);
+            employee = employeeRepository.findById(dto.getUserId()).orElse(null);
             if (employee == null) return null;
         } else {
             employee = new Employee();
@@ -46,7 +46,7 @@ public class EmployeeServiceImpl implements EmployeeService {
 
         // Cập nhật Quyền (Role) dựa trên ID gửi từ Frontend
         if(dto.getRoleId() != null) {
-            Role role = roleDAO.findById(dto.getRoleId())
+            Role role = roleRepository.findById(dto.getRoleId())
                     .orElseThrow(() -> new RuntimeException("Quyền không tồn tại"));
             employee.setRole(role);
         }
@@ -63,21 +63,21 @@ public class EmployeeServiceImpl implements EmployeeService {
         // Cột department có thể bỏ hoặc để trống vì đã dùng Role
         employee.setDepartment(dto.getRoleName());
 
-        return mapToDTO(employeeDAO.save(employee));
+        return mapToDTO(employeeRepository.save(employee));
     }
 
     @Override
     public String toggleStatus(Integer id) {
-        Employee emp = employeeDAO.findById(id).orElse(null);
+        Employee emp = employeeRepository.findById(id).orElse(null);
         if (emp == null) return null;
         emp.setStatus(!emp.getStatus());
-        employeeDAO.save(emp);
+        employeeRepository.save(emp);
         return emp.getStatus() ? "Đã mở khóa" : "Đã khóa";
     }
 
     @Override
     public void deleteById(Integer id) {
-        employeeDAO.deleteById(id);
+        employeeRepository.deleteById(id);
     }
 
     // HÀM MAP: Lấy thêm RoleId và RoleName từ Entity sang DTO

@@ -15,9 +15,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
 
-import com.poly.backend.dao.ProductDAO;
-import com.poly.backend.dao.CategoryDAO;
-import com.poly.backend.dao.BrandDAO;
+import com.poly.backend.dao.ProductRepository;
+import com.poly.backend.dao.CategoryRepository;
+import com.poly.backend.dao.BrandRepository;
 import com.poly.backend.entity.Product;
 import com.poly.backend.entity.Category;
 import com.poly.backend.entity.Brand;
@@ -27,28 +27,28 @@ import com.poly.backend.service.ProductService;
 @RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
-    private final ProductDAO productDAO;
-    private final CategoryDAO categoryDAO;
-    private final BrandDAO brandDAO;
+    private final ProductRepository productRepository;
+    private final CategoryRepository categoryRepository;
+    private final BrandRepository brandRepository;
 
     @Override
     public List<Product> findAll() {
-        return productDAO.findAll();
+        return productRepository.findAll();
     }
 
     @Override
     public Product findById(Integer id) {
-        return productDAO.findById(id).orElse(null);
+        return productRepository.findById(id).orElse(null);
     }
 
     @Override
     public Product save(Product product) {
-        return productDAO.save(product);
+        return productRepository.save(product);
     }
 
     @Override
     public void deleteById(Integer id) {
-        productDAO.deleteById(id);
+        productRepository.deleteById(id);
     }
 
     @Override
@@ -56,20 +56,20 @@ public class ProductServiceImpl implements ProductService {
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<Product> productPage = productDAO.searchAndFilterProducts(keyword, categoryId, brandId, minPrice, maxPrice, pageable);
+        Page<Product> productPage = productRepository.searchAndFilterProducts(keyword, categoryId, brandId, minPrice, maxPrice, pageable);
         return productPage.map(this::mapToDTO);
     }
 
     @Override
     public ProductDTO getProductById(Integer id) {
-        Product product = productDAO.findById(id)
+        Product product = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + id));
         return mapToDTO(product);
     }
 
     @Override
     public ProductDTO createProduct(ProductDTO dto) {
-        if (productDAO.existsByName(dto.getName())) {
+        if (productRepository.existsByName(dto.getName())) {
             throw new IllegalArgumentException("Tên sản phẩm này đã tồn tại!");
         }
 
@@ -93,18 +93,18 @@ public class ProductServiceImpl implements ProductService {
             product.setVariants(variants);
         }
 
-        Product savedProduct = productDAO.save(product);
+        Product savedProduct = productRepository.save(product);
         return mapToDTO(savedProduct);
     }
 
     @Override
     public ProductDTO updateProduct(Integer id, ProductDTO dto) {
-        if (productDAO.existsByNameAndProductIdNot(dto.getName(), id)) {
+        if (productRepository.existsByNameAndProductIdNot(dto.getName(), id)) {
             throw new IllegalArgumentException("Tên sản phẩm này đã bị trùng với một sản phẩm khác!");
         }
 
         validateSalePrice(dto);
-        Product existingProduct = productDAO.findById(id)
+        Product existingProduct = productRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy sản phẩm với ID: " + id));
 
         mapToEntity(dto, existingProduct);
@@ -151,12 +151,12 @@ public class ProductServiceImpl implements ProductService {
             existingProduct.getVariants().clear();
         }
 
-        Product updatedProduct = productDAO.save(existingProduct);
+        Product updatedProduct = productRepository.save(existingProduct);
         return mapToDTO(updatedProduct);
     }
 
     public List<ProductDTO> getDiscountedProducts() {
-        return productDAO.findAll().stream()
+        return productRepository.findAll().stream()
                 .filter(p -> p.getSalePrice() != null && p.getSalePrice().compareTo(BigDecimal.ZERO) > 0)
                 .map(this::mapToDTO)
                 .toList();
@@ -164,7 +164,7 @@ public class ProductServiceImpl implements ProductService {
 
     public List<ProductDTO> getTop8NewestProducts() {
         Pageable top8 = PageRequest.of(0, 8, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return productDAO.findAll(top8).getContent().stream()
+        return productRepository.findAll(top8).getContent().stream()
                 .map(this::mapToDTO)
                 .toList();
     }
@@ -209,13 +209,13 @@ public class ProductServiceImpl implements ProductService {
         product.setAttributes(dto.getAttributes());
 
         if (dto.getCategoryId() != null) {
-            Category category = categoryDAO.findById(dto.getCategoryId())
+            Category category = categoryRepository.findById(dto.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục"));
             product.setCategory(category);
         }
 
         if (dto.getBrandId() != null) {
-            Brand brand = brandDAO.findById(dto.getBrandId())
+            Brand brand = brandRepository.findById(dto.getBrandId())
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy thương hiệu"));
             product.setBrand(brand);
         }
@@ -223,26 +223,26 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public long getTotalProductsCount() {
-        return productDAO.count();
+        return productRepository.count();
     }
 
     @Override
     public long getLowStockProductsCount() {
-        return productDAO.countByTotalStockLessThan(16);
+        return productRepository.countByTotalStockLessThan(16);
     }
 
     @Override
     public Long getTotalStockQuantity() {
-        Long total = productDAO.sumTotalStockQuantity();
+        Long total = productRepository.sumTotalStockQuantity();
         return total != null ? total : 0L;
     }
 
     @Override
     public List<ProductDTO> getFeaturedProducts() {
         Pageable top2 = PageRequest.of(0, 2);
-        List<Product> featured = productDAO.findBestSellingProducts(top2);
+        List<Product> featured = productRepository.findBestSellingProducts(top2);
         if (featured == null || featured.isEmpty()) {
-            featured = productDAO.findTop2ByOrderByPriceDesc();
+            featured = productRepository.findTop2ByOrderByPriceDesc();
         }
         return featured.stream()
                 .map(this::mapToDTO)
@@ -253,7 +253,7 @@ public class ProductServiceImpl implements ProductService {
     public Page<ProductDTO> getProducts(String keyword, Integer categoryId, Integer brandId, BigDecimal minPrice, BigDecimal maxPrice, Boolean isSale, int page, int size, String sortBy, String sortDir) {
         Sort sort = sortDir.equalsIgnoreCase(Sort.Direction.ASC.name()) ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<Product> productPage = productDAO.searchAndFilterProducts(keyword, categoryId, brandId, minPrice, maxPrice, isSale, pageable);
+        Page<Product> productPage = productRepository.searchAndFilterProducts(keyword, categoryId, brandId, minPrice, maxPrice, isSale, pageable);
         return productPage.map(this::mapToDTO);
     }
 }

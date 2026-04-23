@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface CartDAO extends JpaRepository<Cart, Integer> {
+public interface CartRepository extends JpaRepository<Cart, Integer> {
 
     Optional<Cart> findByUser_UserId(Integer userId);
 

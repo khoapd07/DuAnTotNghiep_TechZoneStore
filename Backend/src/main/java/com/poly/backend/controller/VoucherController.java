@@ -1,6 +1,5 @@
 package com.poly.backend.controller;
 
-import com.poly.backend.dao.VoucherDAO;
 import com.poly.backend.entity.Voucher;
 import com.poly.backend.service.VoucherService;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +15,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VoucherController {
 
-    private final VoucherDAO voucherDAO;
+
     private final VoucherService voucherService;
 
     @GetMapping
@@ -33,7 +32,6 @@ public class VoucherController {
         return ResponseEntity.notFound().build();
     }
 
-    // MỚI THÊM: API Lấy Voucher đang hiển thị ở trang chủ
     @GetMapping("/homepage")
     public ResponseEntity<Voucher> getHomepageVoucher() {
         Voucher homepageVoucher = voucherService.findAll().stream()
@@ -53,7 +51,6 @@ public class VoucherController {
             voucher.setCode(voucher.getCode().toUpperCase().trim());
         }
 
-        // Nếu set làm trang chủ, phải hủy các voucher trang chủ cũ
         if (Boolean.TRUE.equals(voucher.getIsHomepage())) {
             List<Voucher> allVouchers = voucherService.findAll();
             for (Voucher v : allVouchers) {
@@ -82,7 +79,6 @@ public class VoucherController {
             existingVoucher.setDescription(voucherDetails.getDescription());
             existingVoucher.setIsHomepage(voucherDetails.getIsHomepage());
 
-            // Nếu set làm trang chủ, phải hủy các voucher trang chủ cũ
             if (Boolean.TRUE.equals(voucherDetails.getIsHomepage())) {
                 List<Voucher> allVouchers = voucherService.findAll();
                 for (Voucher v : allVouchers) {
@@ -124,29 +120,31 @@ public class VoucherController {
         try {
             BigDecimal orderValue = new BigDecimal(orderValueStr.trim());
 
-            return voucherDAO.findByCode(code.trim())
-                    .map(v -> {
-                        LocalDateTime now = LocalDateTime.now();
 
-                        if (v.getStatus() == null || !v.getStatus()
-                                || now.isBefore(v.getStartDate())
-                                || now.isAfter(v.getEndDate())) {
-                            return ResponseEntity.badRequest().body("Mã giảm giá đã hết hạn hoặc không hoạt động.");
-                        }
+            Voucher v = voucherService.findByCode(code.trim());
 
-                        if (v.getQuantity() != null && v.getQuantity() <= 0) {
-                            return ResponseEntity.badRequest().body("Mã giảm giá đã hết lượt sử dụng.");
-                        }
+            // Kiểm tra Object (Đối tượng) trả về
+            if (v != null) {
+                LocalDateTime now = LocalDateTime.now();
 
-                        if (v.getMinOrderValue() != null && orderValue.compareTo(v.getMinOrderValue()) < 0) {
-                            return ResponseEntity.badRequest().body("Đơn hàng chưa đạt giá trị tối thiểu " + v.getMinOrderValue());
-                        }
+                if (v.getStatus() == null || !v.getStatus()
+                        || now.isBefore(v.getStartDate())
+                        || now.isAfter(v.getEndDate())) {
+                    return ResponseEntity.badRequest().body("Mã giảm giá đã hết hạn hoặc không hoạt động.");
+                }
 
-                        // ĐÃ XÓA LOGIC CHẶN NGÀY FLASHSALE THEO YÊU CẦU CỦA BẠN
+                if (v.getQuantity() != null && v.getQuantity() <= 0) {
+                    return ResponseEntity.badRequest().body("Mã giảm giá đã hết lượt sử dụng.");
+                }
 
-                        return ResponseEntity.ok(v.getDiscountAmount());
-                    })
-                    .orElse(ResponseEntity.status(404).body("Mã giảm giá không tồn tại."));
+                if (v.getMinOrderValue() != null && orderValue.compareTo(v.getMinOrderValue()) < 0) {
+                    return ResponseEntity.badRequest().body("Đơn hàng chưa đạt giá trị tối thiểu " + v.getMinOrderValue());
+                }
+
+                return ResponseEntity.ok(v.getDiscountAmount());
+            } else {
+                return ResponseEntity.status(404).body("Mã giảm giá không tồn tại.");
+            }
 
         } catch (NumberFormatException e) {
             return ResponseEntity.badRequest().body("Giá trị đơn hàng không hợp lệ (phải là số).");

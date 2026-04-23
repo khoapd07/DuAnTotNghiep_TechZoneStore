@@ -7,7 +7,7 @@ import com.poly.backend.entity.User;
 import java.util.Optional;
 
 @Repository
-public interface UserDAO extends JpaRepository<User, Integer> {
+public interface UserRepository extends JpaRepository<User, Integer> {
     Optional<User> findByUsername(String username);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
@@ -15,4 +15,6 @@ public interface UserDAO extends JpaRepository<User, Integer> {
     boolean existsByEmailAndUserIdNot(String email, Integer userId);
 
     Optional<User> findByEmail(String email);
+
+    Optional<User> findByResetPasswordToken(String resetPasswordToken);
 }

@@ -1,6 +1,6 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.BlogDAO;
+import com.poly.backend.dao.BlogRepository;
 import com.poly.backend.dto.BlogDTO;
 import com.poly.backend.entity.Blog;
 import com.poly.backend.service.BlogService;
@@ -13,15 +13,15 @@ import java.util.stream.Collectors;
 @Service
 public class BlogServiceImpl implements BlogService {
 
-    private final BlogDAO blogDAO;
+    private final BlogRepository blogRepository;
 
-    public BlogServiceImpl(BlogDAO blogDAO) {
-        this.blogDAO = blogDAO;
+    public BlogServiceImpl(BlogRepository blogDAO) {
+        this.blogRepository = blogDAO;
     }
 
     @Override
     public List<BlogDTO> getAllBlogs() {
-        return blogDAO.findAll()
+        return blogRepository.findAll()
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
@@ -29,7 +29,7 @@ public class BlogServiceImpl implements BlogService {
 
     @Override
     public BlogDTO getBlogById(Integer id) {
-        Blog blog = blogDAO.findById(id)
+        Blog blog = blogRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Blog not found with id: " + id));
         return convertToDTO(blog);
     }
@@ -49,13 +49,13 @@ public class BlogServiceImpl implements BlogService {
         blog.setCreatedAt(now);
         blog.setUpdatedAt(now);
 
-        Blog saved = blogDAO.save(blog);
+        Blog saved = blogRepository.save(blog);
         return convertToDTO(saved);
     }
 
     @Override
     public BlogDTO updateBlog(Integer id, BlogDTO dto) {
-        Blog blog = blogDAO.findById(id)
+        Blog blog = blogRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Blog not found with id: " + id));
 
         blog.setTitle(dto.getTitle());
@@ -69,19 +69,19 @@ public class BlogServiceImpl implements BlogService {
 
         blog.setUpdatedAt(new Date());
 
-        Blog saved = blogDAO.save(blog);
+        Blog saved = blogRepository.save(blog);
         return convertToDTO(saved);
     }
 
     @Override
     public void deleteBlog(Integer id) {
-        Blog blog = blogDAO.findById(id)
+        Blog blog = blogRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Blog not found with id: " + id));
-        blogDAO.delete(blog);
+        blogRepository.delete(blog);
     }
 
     public List<BlogDTO> getActiveBlogs() {
-        return blogDAO.findAll().stream()
+        return blogRepository.findAll().stream()
                 .filter(b -> Boolean.TRUE.equals(b.getActive()))
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
