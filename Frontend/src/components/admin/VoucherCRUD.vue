@@ -1,20 +1,13 @@
 <template>
   <div class="admin-layout d-flex bg-light-gray min-vh-100">
-    
     <main class="flex-grow-1 p-4 overflow-auto">
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h3 class="fw-black text-dark mb-1 fs-4 text-uppercase">Quản Lý Voucher</h3>
-        </div>
-        
+        <div><h3 class="fw-black text-dark mb-1 fs-4 text-uppercase">Quản Lý Voucher</h3></div>
         <div class="d-flex gap-3 align-items-center">
           <div class="input-group" style="width: 250px;">
-            <span class="input-group-text bg-white border-end-0 text-muted">
-              <i class="bi bi-search"></i>
-            </span>
+            <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
             <input type="text" v-model="searchQuery" class="form-control border-start-0 ps-0 bg-white shadow-none" placeholder="Tìm kiếm mã giảm giá...">
           </div>
-
           <button @click="openAddModal" class="btn btn-neon fw-bold fs-7 text-dark rounded-3 d-flex align-items-center gap-2 px-3 py-2 shadow-sm">
             <i class="bi bi-plus-lg"></i> TẠO VOUCHER MỚI
           </button>
@@ -44,41 +37,32 @@
                   <span class="badge bg-light text-dark border fs-7 px-2 py-1 text-uppercase">{{ voucher.code }}</span>
                   <span v-if="voucher.isHomepage" class="badge bg-warning ms-2" title="Đang hiển thị trên trang chủ"><i class="bi bi-house-door-fill"></i></span>
                 </td>
-                <td class="py-3 text-wrap" style="max-width: 150px;">
-                  <span class="fw-bold fs-8 text-dark">{{ voucher.name }}</span>
-                </td>
+                <td class="py-3 text-wrap" style="max-width: 150px;"><span class="fw-bold fs-8 text-dark">{{ voucher.name }}</span></td>
                 <td class="py-3 fw-bold fs-7 text-dark">{{ formatCurrency(voucher.discountAmount) }}</td>
                 <td class="py-3 text-muted fs-8">{{ formatCurrency(voucher.minOrderValue) }}</td>
-                <td class="py-3 fs-8 text-muted">
-                  {{ formatDate(voucher.startDate) }} <br/>
-                  - <br/>
-                  {{ formatDate(voucher.endDate) }}
-                </td>
+                <td class="py-3 fs-8 text-muted">{{ formatDate(voucher.startDate) }} <br/>- <br/>{{ formatDate(voucher.endDate) }}</td>
                 <td class="text-center py-3 fw-bold fs-7">{{ voucher.quantity }}</td>
                 <td class="text-center py-3">
-                  <span class="badge rounded-pill fs-8 px-3 py-2" :class="getStatusBadgeClass(voucher)">
-                    {{ getStatusText(voucher) }}
-                  </span>
+                  <span class="badge rounded-pill fs-8 px-3 py-2" :class="getStatusBadgeClass(voucher)">{{ getStatusText(voucher) }}</span>
                 </td>
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
-                    <button @click="openEditModal(voucher)" class="btn btn-link p-0 text-primary shadow-none">
-                      <i class="bi bi-pencil-square fs-6"></i>
-                    </button>
-                    <button @click="deleteVoucher(voucher.voucherId)" class="btn btn-link p-0 text-danger shadow-none">
-                      <i class="bi bi-trash fs-6"></i>
-                    </button>
+                    <button @click="openEditModal(voucher)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
+                    <button @click="deleteVoucher(voucher.voucherId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
-              <tr v-if="filteredVouchers.length === 0">
-                <td colspan="9" class="text-center py-4 text-muted fs-7">Không tìm thấy voucher nào.</td>
-              </tr>
+              <tr v-if="filteredVouchers.length === 0"><td colspan="9" class="text-center py-4 text-muted fs-7">Không tìm thấy voucher nào.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </main>
+
+    <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
+      <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-neon' : 'bi-exclamation-triangle-fill'"></i>
+      <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
 
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal d-block" tabindex="-1">
@@ -92,33 +76,39 @@
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Mã Voucher <span class="text-danger">*</span></label>
-                <input type="text" v-model="form.code" class="form-control fs-7 text-uppercase" placeholder="VD: SUMMER2024">
+                <input type="text" v-model="form.code" class="form-control fs-7 text-uppercase" :class="{'is-invalid': errors.code}" @input="errors.code = ''" placeholder="VD: SUMMER2024">
+                <span v-if="errors.code" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.code }}</span>
               </div>
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên chương trình <span class="text-danger">*</span></label>
-                <input type="text" v-model="form.name" class="form-control fs-7" placeholder="Nhập tên chương trình">
+                <input type="text" v-model="form.name" class="form-control fs-7" :class="{'is-invalid': errors.name}" @input="errors.name = ''" placeholder="Nhập tên chương trình">
+                <span v-if="errors.name" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.name }}</span>
               </div>
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giảm giá (VNĐ) <span class="text-danger">*</span></label>
-                <input type="number" v-model="form.discountAmount" class="form-control fs-7" placeholder="0" min="0">
+                <input type="number" v-model="form.discountAmount" class="form-control fs-7" :class="{'is-invalid': errors.discountAmount}" @input="errors.discountAmount = ''" placeholder="0" min="0">
+                <span v-if="errors.discountAmount" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.discountAmount }}</span>
               </div>
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Đơn hàng tối thiểu (VNĐ)</label>
-                <input type="number" v-model="form.minOrderValue" class="form-control fs-7" placeholder="0" min="0">
+                <input type="number" v-model="form.minOrderValue" class="form-control fs-7" :class="{'is-invalid': errors.minOrderValue}" @input="errors.minOrderValue = ''" placeholder="0" min="0">
+                <span v-if="errors.minOrderValue" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.minOrderValue }}</span>
               </div>
               <div class="col-md-4">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Số lượng <span class="text-danger">*</span></label>
-                <input type="number" v-model="form.quantity" class="form-control fs-7" placeholder="100" min="1">
+                <input type="number" v-model="form.quantity" class="form-control fs-7" :class="{'is-invalid': errors.quantity}" @input="errors.quantity = ''" placeholder="100" min="1">
+                <span v-if="errors.quantity" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.quantity }}</span>
               </div>
               <div class="col-md-4">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Ngày bắt đầu <span class="text-danger">*</span></label>
-                <input type="datetime-local" v-model="form.startDate" class="form-control fs-7">
+                <input type="datetime-local" v-model="form.startDate" class="form-control fs-7" :class="{'is-invalid': errors.dates}" @change="errors.dates = ''">
               </div>
               <div class="col-md-4">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Ngày kết thúc <span class="text-danger">*</span></label>
-                <input type="datetime-local" 
-                        v-model="form.endDate" 
-                        :min="form.startDate" class="form-control fs-7">
+                <input type="datetime-local" v-model="form.endDate" :min="form.startDate" class="form-control fs-7" :class="{'is-invalid': errors.dates}" @change="errors.dates = ''">
+              </div>
+              <div class="col-12" v-if="errors.dates">
+                <span class="text-danger fs-8 fw-bold mt-0 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.dates }}</span>
               </div>
               
               <div class="col-md-12 mt-3">
@@ -129,25 +119,18 @@
               <div class="col-md-12 mt-3 d-flex gap-4">
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" role="switch" id="statusSwitch" v-model="form.status">
-                  <label class="form-check-label fs-7 fw-bold" for="statusSwitch">
-                    Kích hoạt (Hoạt động)
-                  </label>
+                  <label class="form-check-label fs-7 fw-bold" for="statusSwitch">Kích hoạt (Hoạt động)</label>
                 </div>
                 <div class="form-check form-switch">
                   <input class="form-check-input" type="checkbox" role="switch" id="homepageSwitch" v-model="form.isHomepage">
-                  <label class="form-check-label fs-7 fw-bold text-primary" for="homepageSwitch">
-                    Hiển thị lên Trang chủ
-                  </label>
+                  <label class="form-check-label fs-7 fw-bold text-primary" for="homepageSwitch">Hiển thị lên Trang chủ</label>
                 </div>
               </div>
-
             </div>
           </div>
           <div class="modal-footer border-top p-3">
             <button type="button" class="btn btn-light fs-7 fw-bold px-4" @click="showModal = false">Hủy</button>
-            <button type="button" class="btn btn-neon fs-7 fw-bold px-4 text-dark" @click="saveVoucher">
-              {{ isEditing ? 'Cập Nhật' : 'Lưu Voucher' }}
-            </button>
+            <button type="button" class="btn btn-neon fs-7 fw-bold px-4 text-dark" @click="saveVoucher">{{ isEditing ? 'Cập Nhật' : 'Lưu Voucher' }}</button>
           </div>
         </div>
       </div>
@@ -164,19 +147,17 @@ const searchQuery = ref('');
 const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
+const errors = reactive({});
 
-// Thêm mô tả và trạng thái homepage vào form
+const toast = reactive({ show: false, message: '', type: 'success' });
+const showToast = (message, type = 'success') => {
+  toast.message = message; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
+
 const form = reactive({ 
-  code: '', 
-  name: '', 
-  discountAmount: 0, 
-  minOrderValue: 0, 
-  quantity: 1, 
-  startDate: '', 
-  endDate: '',
-  description: '',
-  isHomepage: false,
-  status: true 
+  code: '', name: '', discountAmount: 0, minOrderValue: 0, 
+  quantity: 1, startDate: '', endDate: '', description: '', isHomepage: false, status: true 
 });
 
 const getAuthHeader = () => {
@@ -188,18 +169,13 @@ const fetchVouchers = async () => {
   try {
     const res = await axios.get('http://localhost:8080/api/vouchers', { headers: getAuthHeader() });
     voucherList.value = res.data;
-  } catch (e) { 
-    console.error(e); 
-  }
+  } catch (e) { console.error(e); }
 };
 
 const filteredVouchers = computed(() => {
   if (!searchQuery.value) return voucherList.value;
   const lowerQuery = searchQuery.value.toLowerCase();
-  return voucherList.value.filter(v => 
-    v.code.toLowerCase().includes(lowerQuery) || 
-    v.name.toLowerCase().includes(lowerQuery)
-  );
+  return voucherList.value.filter(v => v.code.toLowerCase().includes(lowerQuery) || v.name.toLowerCase().includes(lowerQuery));
 });
 
 const formatCurrency = (value) => {
@@ -210,142 +186,85 @@ const formatCurrency = (value) => {
 const formatDate = (dateString) => {
   if (!dateString) return '';
   const date = new Date(dateString);
-  const day = String(date.getDate()).padStart(2, '0');
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const year = String(date.getFullYear()).slice(-2);
-  return `${day}/${month}/${year}`;
+  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getFullYear()).slice(-2)}`;
 };
 
 const getStatusText = (voucher) => {
-  const now = new Date();
-  const endDate = new Date(voucher.endDate);
-  
+  const now = new Date(); const endDate = new Date(voucher.endDate);
   if (voucher.status === false) return 'Ngừng hoạt động';
   if (now > endDate) return 'Hết hạn';
   if (voucher.quantity <= 0) return 'Hết số lượng';
   return 'Đang hoạt động';
 };
 
-const getStatusBadgeClass = (voucher) => {
-  const statusText = getStatusText(voucher);
-  if (statusText === 'Đang hoạt động') {
-    return 'bg-success-subtle text-success border border-success-subtle';
-  } else {
-    return 'bg-danger-subtle text-danger border border-danger-subtle'; 
-  }
-};
+const getStatusBadgeClass = (voucher) => getStatusText(voucher) === 'Đang hoạt động' ? 'bg-success-subtle text-success border border-success-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle';
 
-const toDatetimeLocal = (dateString) => {
-  if (!dateString) return '';
-  return new Date(dateString).toISOString().slice(0, 16);
-};
-
+const toDatetimeLocal = (dateString) => dateString ? new Date(dateString).toISOString().slice(0, 16) : '';
 const getCurrentDateTimeLocal = () => {
   const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000; 
-  const localTime = new Date(now.getTime() - offset);
-  return localTime.toISOString().slice(0, 16);
+  return new Date(now.getTime() - (now.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
 };
 
 const openAddModal = () => {
-  isEditing.value = false;
-  currentId.value = null;
+  isEditing.value = false; currentId.value = null;
+  Object.keys(errors).forEach(k => delete errors[k]);
   Object.assign(form, {
-    code: '', 
-    name: '', 
-    discountAmount: 0, 
-    minOrderValue: 0, 
-    quantity: 100, 
-    startDate: getCurrentDateTimeLocal(), 
-    endDate: '', 
-    description: '',
-    isHomepage: false,
-    status: true
+    code: '', name: '', discountAmount: 0, minOrderValue: 0, 
+    quantity: 100, startDate: getCurrentDateTimeLocal(), endDate: '', 
+    description: '', isHomepage: false, status: true
   });
   showModal.value = true;
 };
 
 const openEditModal = (voucher) => {
-  isEditing.value = true;
-  currentId.value = voucher.voucherId;
+  isEditing.value = true; currentId.value = voucher.voucherId;
+  Object.keys(errors).forEach(k => delete errors[k]);
   Object.assign(form, {
-    code: voucher.code,
-    name: voucher.name,
-    discountAmount: voucher.discountAmount,
-    minOrderValue: voucher.minOrderValue,
-    quantity: voucher.quantity,
-    startDate: toDatetimeLocal(voucher.startDate),
-    endDate: toDatetimeLocal(voucher.endDate),
-    description: voucher.description || '',
-    isHomepage: voucher.isHomepage || false,
-    status: voucher.status
+    code: voucher.code, name: voucher.name, discountAmount: voucher.discountAmount,
+    minOrderValue: voucher.minOrderValue, quantity: voucher.quantity,
+    startDate: toDatetimeLocal(voucher.startDate), endDate: toDatetimeLocal(voucher.endDate),
+    description: voucher.description || '', isHomepage: voucher.isHomepage || false, status: voucher.status
   });
   showModal.value = true;
 };
 
 const saveVoucher = async () => {
-  // Validation Mã Voucher
-  if (!form.code || form.code.trim() === '') {
-    alert("Vui lòng nhập Mã Voucher!");
-    return;
+  Object.keys(errors).forEach(k => delete errors[k]);
+  let isValid = true;
+
+  if (!form.code || form.code.trim() === '') { errors.code = "Vui lòng nhập Mã Voucher!"; isValid = false; }
+  if (!form.name || form.name.trim() === '') { errors.name = "Vui lòng nhập Tên chương trình!"; isValid = false; }
+  if (form.discountAmount === null || form.discountAmount < 0) { errors.discountAmount = "Giảm giá không được là số âm!"; isValid = false; }
+  if (form.minOrderValue === null || form.minOrderValue < 0) { errors.minOrderValue = "Đơn hàng tối thiểu không được âm!"; isValid = false; }
+  if (form.quantity === null || form.quantity < 1) { errors.quantity = "Số lượng phải từ 1 trở lên!"; isValid = false; }
+  if (!form.startDate || !form.endDate) { 
+    errors.dates = "Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc!"; isValid = false; 
+  } else if (new Date(form.endDate) <= new Date(form.startDate)) { 
+    errors.dates = "Ngày kết thúc phải lớn hơn ngày bắt đầu!"; isValid = false; 
   }
 
-  // Validation Tên chương trình
-  if (!form.name || form.name.trim() === '') {
-    alert("Vui lòng nhập Tên chương trình!");
-    return;
-  }
-
-  // ĐÃ THÊM: Validation số lượng, tiền nong không được âm
-  if (form.discountAmount === null || form.discountAmount < 0) {
-    alert("Lỗi: Giảm giá không được là số âm!");
-    return;
-  }
-
-  if (form.minOrderValue === null || form.minOrderValue < 0) {
-    alert("Lỗi: Đơn hàng tối thiểu không được là số âm!");
-    return;
-  }
-
-  if (form.quantity === null || form.quantity < 1) {
-    alert("Lỗi: Số lượng voucher phải từ 1 trở lên!");
-    return;
-  }
-
-  // Validation ngày tháng
-  if (!form.startDate || !form.endDate) {
-    alert("Vui lòng chọn đầy đủ ngày bắt đầu và ngày kết thúc!");
-    return;
-  }
-  
-  const start = new Date(form.startDate);
-  const end = new Date(form.endDate);
-  
-  if (end <= start) {
-    alert("Lỗi: Ngày kết thúc phải lớn hơn ngày bắt đầu!");
-    return; 
-  }
+  if (!isValid) return;
 
   try {
     const headers = getAuthHeader();
-    
-    // Tự động xóa dấu cách thừa và viết hoa Mã Voucher trước khi lưu
-    const payload = { 
-      ...form, 
-      code: form.code.trim().toUpperCase(),
-      name: form.name.trim()
-    };
+    const payload = { ...form, code: form.code.trim().toUpperCase(), name: form.name.trim() };
 
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/vouchers/${currentId.value}`, payload, { headers });
+      showToast("Cập nhật voucher thành công!");
     } else {
       await axios.post('http://localhost:8080/api/vouchers', payload, { headers });
+      showToast("Thêm voucher mới thành công!");
     }
     showModal.value = false;
     fetchVouchers();
-    alert("Lưu voucher thành công!");
   } catch (error) {
-    alert("Lỗi: " + (error.response?.data?.message || "Không thể thực hiện"));
+    const errorMsg = error.response?.data?.message || "Lỗi hệ thống!";
+    if (typeof errorMsg === 'string') {
+       errors.code = errorMsg; // Thường lỗi backend trả về là do trùng mã voucher
+    } else {
+       showToast("Không thể thực hiện!", "error");
+    }
   }
 };
 
@@ -354,9 +273,9 @@ const deleteVoucher = async (id) => {
     try {
       await axios.delete(`http://localhost:8080/api/vouchers/${id}`, { headers: getAuthHeader() });
       fetchVouchers();
-      alert("Xóa thành công!");
+      showToast("Xóa thành công!");
     } catch (error) {
-      alert("Lỗi khi xóa! Vui lòng thử lại sau.");
+      showToast("Lỗi khi xóa! Vui lòng thử lại sau.", "error");
     }
   }
 };
@@ -366,29 +285,17 @@ onMounted(() => fetchVouchers());
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-
-.admin-layout { 
-  font-family: 'Inter', system-ui, sans-serif; 
-}
+.admin-layout { font-family: 'Inter', system-ui, sans-serif; }
 .bg-light-gray { background-color: #F4F6F8; }
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
-
-/* Custom Colors */
 .text-neon { color: #00FF33 !important; }
 .bg-neon { background-color: #00FF33 !important; }
 .btn-neon { background-color: #00FF33; border: none; }
 .btn-neon:hover { background-color: #00e62e; }
-
-/* Bảng dữ liệu */
 .table th { letter-spacing: 0.5px; }
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
-.cursor-pointer { cursor: pointer; }
-
-/* Tránh giật UI khi hover dòng bảng */
-.table-hover tbody tr:hover td {
-  background-color: #f8f9fa;
-}
+.table-hover tbody tr:hover td { background-color: #f8f9fa; }
 </style>

@@ -19,37 +19,20 @@
       <div class="row g-4 mb-4">
         <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
-            <div>
-              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng danh mục</p>
-              <h2 class="fw-black text-dark m-0">{{ categoryList.length }}</h2>
-            </div>
-            <div class="bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-              <i class="bi bi-tags fs-4"></i>
-            </div>
+            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng danh mục</p><h2 class="fw-black text-dark m-0">{{ categoryList.length }}</h2></div>
+            <div class="bg-info-subtle text-info rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-tags fs-4"></i></div>
           </div>
         </div>
-        
         <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
-            <div>
-              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng sản phẩm</p>
-              <h2 class="fw-black text-dark m-0">{{ totalProducts }}</h2>
-            </div>
-            <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-              <i class="bi bi-box-seam fs-4"></i>
-            </div>
+            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng sản phẩm</p><h2 class="fw-black text-dark m-0">{{ totalProducts }}</h2></div>
+            <div class="bg-success-subtle text-success rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-box-seam fs-4"></i></div>
           </div>
         </div>
-
         <div class="col-md-4">
           <div class="card border-0 shadow-sm rounded-4 p-4 h-100 d-flex flex-row justify-content-between align-items-center">
-            <div>
-              <p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng tồn kho</p>
-              <h2 class="fw-black text-dark m-0">{{ totalStock }}</h2>
-            </div>
-            <div class="bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
-              <i class="bi bi-box2-fill fs-4"></i>
-            </div>
+            <div><p class="text-muted fs-8 fw-bold mb-1 text-uppercase">Tổng tồn kho</p><h2 class="fw-black text-dark m-0">{{ totalStock }}</h2></div>
+            <div class="bg-warning-subtle text-warning rounded-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;"><i class="bi bi-box2-fill fs-4"></i></div>
           </div>
         </div>
       </div>
@@ -67,14 +50,8 @@
             </thead>
             <tbody>
               <tr v-for="cat in categoryList" :key="cat.categoryId" class="border-bottom-dashed">
-                <td class="py-3 px-4">
-                  <span class="fw-bold fs-7 text-dark">{{ cat.categoryName }}</span>
-                </td>
-                <td class="text-center py-3">
-                  <span class="badge bg-light text-dark border fs-8 px-2 py-1">
-                    {{ getProductCount(cat) }}
-                  </span>
-                </td>
+                <td class="py-3 px-4"><span class="fw-bold fs-7 text-dark">{{ cat.categoryName }}</span></td>
+                <td class="text-center py-3"><span class="badge bg-light text-dark border fs-8 px-2 py-1">{{ getProductCount(cat) }}</span></td>
                 <td class="text-center py-3">
                   <span class="badge fs-8 px-2 py-1" :class="getStockCount(cat) > 10 ? 'bg-success-subtle text-success border border-success-subtle' : (getStockCount(cat) > 0 ? 'bg-warning-subtle text-warning border border-warning-subtle' : 'bg-danger-subtle text-danger border border-danger-subtle')">
                     {{ getStockCount(cat) }}
@@ -82,12 +59,8 @@
                 </td>
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
-                    <button @click="openEditModal(cat)" class="btn btn-link p-0 text-primary shadow-none">
-                      <i class="bi bi-pencil-square fs-6"></i>
-                    </button>
-                    <button @click="deleteCategory(cat.categoryId)" class="btn btn-link p-0 text-danger shadow-none">
-                      <i class="bi bi-trash fs-6"></i>
-                    </button>
+                    <button @click="openEditModal(cat)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
+                    <button @click="deleteCategory(cat.categoryId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
@@ -100,6 +73,11 @@
       </div>
     </main>
 
+    <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
+      <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-neon' : 'bi-exclamation-triangle-fill'"></i>
+      <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
+
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal d-block" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered">
@@ -111,7 +89,8 @@
           <div class="modal-body p-4">
             <div class="mb-3">
               <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên danh mục <span class="text-danger">*</span></label>
-              <input type="text" v-model="form.categoryName" class="form-control fs-7" placeholder="Nhập tên danh mục (Ví dụ: Laptop, Bàn phím...)">
+              <input type="text" v-model="form.categoryName" class="form-control fs-7" :class="{'is-invalid': errors.categoryName}" @input="errors.categoryName = ''" placeholder="Nhập tên danh mục (Ví dụ: Laptop...)">
+              <span v-if="errors.categoryName" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.categoryName }}</span>
             </div>
           </div>
           <div class="modal-footer border-top p-3">
@@ -133,28 +112,18 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const form = reactive({ categoryName: '' });
+const errors = reactive({});
 
-const getProductCount = (cat) => {
-  if (cat.productCount !== undefined) return cat.productCount;
-  if (cat.products && Array.isArray(cat.products)) return cat.products.length;
-  return 0;
+const toast = reactive({ show: false, message: '', type: 'success' });
+const showToast = (message, type = 'success') => {
+  toast.message = message; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
 };
 
-const getStockCount = (cat) => {
-  if (cat.totalStock !== undefined) return cat.totalStock; 
-  if (cat.products && Array.isArray(cat.products)) {
-    return cat.products.reduce((sum, p) => sum + (p.stockQuantity || 0), 0);
-  }
-  return 0;
-};
-
-const totalProducts = computed(() => {
-  return categoryList.value.reduce((total, cat) => total + getProductCount(cat), 0);
-});
-
-const totalStock = computed(() => {
-  return categoryList.value.reduce((total, cat) => total + getStockCount(cat), 0);
-});
+const getProductCount = (cat) => cat.productCount !== undefined ? cat.productCount : (cat.products?.length || 0);
+const getStockCount = (cat) => cat.totalStock !== undefined ? cat.totalStock : (cat.products?.reduce((sum, p) => sum + (p.stockQuantity || 0), 0) || 0);
+const totalProducts = computed(() => categoryList.value.reduce((total, cat) => total + getProductCount(cat), 0));
+const totalStock = computed(() => categoryList.value.reduce((total, cat) => total + getStockCount(cat), 0));
 
 const getAuthHeader = () => {
   const token = localStorage.getItem('jwt_token');
@@ -169,58 +138,56 @@ const fetchCategories = async () => {
 };
 
 const openAddModal = () => {
-  isEditing.value = false;
-  currentId.value = null;
-  form.categoryName = '';
+  isEditing.value = false; currentId.value = null; form.categoryName = '';
+  Object.keys(errors).forEach(k => delete errors[k]);
   showModal.value = true;
 };
 
 const openEditModal = (cat) => {
-  isEditing.value = true;
-  currentId.value = cat.categoryId;
-  form.categoryName = cat.categoryName;
+  isEditing.value = true; currentId.value = cat.categoryId; form.categoryName = cat.categoryName;
+  Object.keys(errors).forEach(k => delete errors[k]);
   showModal.value = true;
 };
 
 const saveCategory = async () => {
+  Object.keys(errors).forEach(k => delete errors[k]);
   if (!form.categoryName || form.categoryName.trim() === '') {
-    alert("Vui lòng nhập tên danh mục!");
-    return;
+    errors.categoryName = "Vui lòng nhập tên danh mục!"; return;
   }
 
   try {
     const headers = getAuthHeader();
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/categories/${currentId.value}`, form, { headers });
-      alert("Cập nhật thành công!");
+      showToast("Cập nhật danh mục thành công!");
     } else {
       await axios.post('http://localhost:8080/api/categories', form, { headers });
-      alert("Thêm mới thành công!");
+      showToast("Thêm danh mục mới thành công!");
     }
-    
     showModal.value = false;
     fetchCategories(); 
-    
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.response?.data || "Không thể thực hiện! Vui lòng thử lại.";
+    const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi hệ thống!";
     if (typeof errorMsg === 'string') {
-      alert(errorMsg);
+      errors.categoryName = errorMsg;
+    } else {
+      showToast("Không thể thực hiện! Vui lòng thử lại.", "error");
     }
   }
 };
 
 const deleteCategory = async (id) => {
-  if (confirm("Xóa danh mục này?")) {
+  if (confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) {
     try {
       await axios.delete(`http://localhost:8080/api/categories/${id}`, { headers: getAuthHeader() });
       fetchCategories();
-      alert("Xóa thành công!");
+      showToast("Xóa thành công!");
     } catch (error) {
       const errorMsg = error.response?.data?.message;
       if (errorMsg) {
-        alert(errorMsg); 
+        showToast(errorMsg, "error"); 
       } else {
-        alert("Lỗi khi xóa! Vui lòng thử lại sau."); 
+        showToast("Lỗi khi xóa! Vui lòng thử lại sau.", "error"); 
       }
     }
   }
@@ -231,26 +198,17 @@ onMounted(() => fetchCategories());
 
 <style scoped>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
-
-.admin-layout { 
-  font-family: 'Inter', system-ui, sans-serif; 
-}
+.admin-layout { font-family: 'Inter', system-ui, sans-serif; }
 .bg-light-gray { background-color: #F4F6F8; }
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }
-
 .text-neon { color: #00FF33 !important; }
 .bg-neon { background-color: #00FF33 !important; }
 .btn-neon { background-color: #00FF33; border: none; }
 .btn-neon:hover { background-color: #00e62e; }
-
 .table th { letter-spacing: 0.5px; }
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
-.cursor-pointer { cursor: pointer; }
-
-.table-hover tbody tr:hover td {
-  background-color: #f8f9fa;
-}
+.table-hover tbody tr:hover td { background-color: #f8f9fa; }
 </style>

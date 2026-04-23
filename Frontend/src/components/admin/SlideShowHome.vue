@@ -47,7 +47,7 @@
                   <span v-if="slide.badgeText" class="badge px-2 py-1 fs-9 text-dark" :style="{ backgroundColor: slide.badgeClass }">{{ slide.badgeText }}</span>
                   <span v-else class="text-muted fs-8">Không có</span>
                 </td>
-<td class="py-3 text-center fw-bold">{{ slide.displayOrder }}</td>
+                <td class="py-3 text-center fw-bold">{{ slide.displayOrder }}</td>
                 <td class="py-3 text-center">
                   <span v-if="slide.active" class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Đang hiện</span>
                   <span v-else class="badge bg-secondary-subtle text-secondary border border-secondary-subtle px-2 py-1">Đã ẩn</span>
@@ -59,14 +59,17 @@
                   </div>
                 </td>
               </tr>
-              <tr v-if="slideShows.length === 0">
-                <td colspan="6" class="text-center py-4 text-muted fs-7">Chưa có Slide nào.</td>
-              </tr>
+              <tr v-if="slideShows.length === 0"><td colspan="6" class="text-center py-4 text-muted fs-7">Chưa có Slide nào.</td></tr>
             </tbody>
           </table>
         </div>
       </div>
     </main>
+
+    <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
+      <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-neon' : 'bi-exclamation-triangle-fill'"></i>
+      <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
 
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal d-block" tabindex="-1">
@@ -84,6 +87,8 @@
                 <div class="d-flex gap-2 align-items-center">
                   <input type="file" @change="uploadImage" class="form-control fs-7" accept="image/*">
                 </div>
+                <span v-if="errors.imageUrl" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.imageUrl }}</span>
+
                 <div v-if="form.imageUrl" class="mt-2 bg-dark rounded-3 overflow-hidden text-center" style="height: 150px;">
                   <img :src="form.imageUrl" class="img-fluid h-100 object-fit-contain">
                 </div>
@@ -96,7 +101,7 @@
               
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Chữ Nổi Bật (Highlight)</label>
-<input type="text" v-model="form.titleHighlight" class="form-control fs-7" placeholder="VD: ESPORTS">
+                <input type="text" v-model="form.titleHighlight" class="form-control fs-7" placeholder="VD: ESPORTS">
               </div>
 
               <div class="col-md-6">
@@ -110,7 +115,6 @@
                     <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Màu nền Nhãn (Badge)</label>
                     <input type="color" v-model="form.badgeClass" class="form-control form-control-color w-100 p-1" title="Chọn màu nền">
                   </div>
-
                   <div class="col-6">
                     <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Màu chữ Nổi bật</label>
                     <input type="color" v-model="form.highlightClass" class="form-control form-control-color w-100 p-1" title="Chọn màu chữ">
@@ -155,17 +159,17 @@ const slideShows = ref([]);
 const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
+const errors = reactive({});
+
+const toast = reactive({ show: false, message: '', type: 'success' });
+const showToast = (message, type = 'success') => {
+  toast.message = message; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
 
 const form = reactive({
-  imageUrl: '',
-  title: '',
-  titleHighlight: '',
-  badgeText: '',
-  badgeClass: '#00FF33', // ĐÃ SỬA: Mặc định là mã màu xanh Neon thay vì class
-highlightClass: '#00FF33', 
-  description: '',
-  displayOrder: 1,
-  active: true
+  imageUrl: '', title: '', titleHighlight: '', badgeText: '',
+  badgeClass: '#00FF33', highlightClass: '#00FF33', description: '', displayOrder: 1, active: true
 });
 
 const getAuthHeader = () => {
@@ -177,12 +181,11 @@ const fetchSlides = async () => {
   try {
     const response = await axios.get('http://localhost:8080/api/slideshows', { headers: getAuthHeader() });
     slideShows.value = response.data;
-  } catch (error) {
-    console.error("Lỗi lấy slide:", error);
-  }
+  } catch (error) { console.error("Lỗi lấy slide:", error); }
 };
 
 const uploadImage = async (event) => {
+  errors.imageUrl = ''; // Xóa lỗi khi bắt đầu upload
   const file = event.target.files[0];
   if (!file) return;
 
@@ -195,79 +198,67 @@ const uploadImage = async (event) => {
     const response = await axios.post('http://localhost:8080/api/upload', formData, { headers });
     form.imageUrl = response.data; 
   } catch (error) {
-    alert("Upload ảnh thất bại!");
+    showToast("Upload ảnh thất bại!", "error");
   }
 };
 
 const openAddModal = () => {
-  isEditing.value = false;
-  currentId.value = null;
+  isEditing.value = false; currentId.value = null;
+  Object.keys(errors).forEach(k => delete errors[k]);
   Object.assign(form, {
     imageUrl: '', title: '', titleHighlight: '', badgeText: '', 
-    badgeClass: '#00FF33', highlightClass: '#00FF33', // ĐÃ SỬA
+    badgeClass: '#00FF33', highlightClass: '#00FF33', 
     description: '', displayOrder: slideShows.value.length + 1, active: true
   });
   showModal.value = true;
 };
 
 const openEditModal = (slide) => {
-  isEditing.value = true;
-  currentId.value = slide.slideId;
+  isEditing.value = true; currentId.value = slide.slideId;
+  Object.keys(errors).forEach(k => delete errors[k]);
   Object.assign(form, slide);
-  // Đảm bảo có màu mặc định nếu dữ liệu cũ đang rỗng hoặc null
   if (!form.badgeClass || !form.badgeClass.startsWith('#')) form.badgeClass = '#00FF33';
   if (!form.highlightClass || !form.highlightClass.startsWith('#')) form.highlightClass = '#00FF33';
   showModal.value = true;
 };
 
 const saveSlide = async () => {
+  Object.keys(errors).forEach(k => delete errors[k]);
+  
   if (!form.imageUrl) {
-    alert("Vui lòng tải lên hình ảnh!"); return;
+    errors.imageUrl = "Vui lòng tải lên hoặc dán link Hình ảnh Banner!"; return;
   }
 
-  // ĐÃ SỬA: Đẩy thẳng mã HEX lấy từ thẻ color xuống Backend, không cần check rườm rà
-  const payload = {
-    imageUrl: form.imageUrl,
-    title: form.title,
-    titleHighlight: form.titleHighlight,
-    badgeText: form.badgeText,
-    badgeClass: form.badgeClass, 
-    highlightClass: form.highlightClass, 
-    description: form.description,
-    displayOrder: form.displayOrder,
-    active: form.active
-  };
+  const payload = { ...form };
 
   try {
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/slideshows/${currentId.value}`, payload, { headers: getAuthHeader() });
-      alert("Cập nhật thành công!");
+      showToast("Cập nhật Slide thành công!");
     } else {
       await axios.post('http://localhost:8080/api/slideshows', payload, { headers: getAuthHeader() });
-      alert("Thêm mới thành công!");
+      showToast("Thêm Slide mới thành công!");
     }
     showModal.value = false;
     fetchSlides();
   } catch (error) {
-    alert("Lỗi lưu dữ liệu!");
+    showToast("Lỗi lưu dữ liệu!", "error");
   }
 };
 
 const deleteSlide = async (id) => {
-  if (confirm("Bạn có chắc muốn xóa slide này?")) {
+  if (confirm("Bạn có chắc chắn muốn xóa slide này?")) {
     try {
       await axios.delete(`http://localhost:8080/api/slideshows/${id}`, { headers: getAuthHeader() });
       fetchSlides();
-alert("Xóa thành công!");
+      showToast("Xóa thành công!");
     } catch (error) {
-      alert("Lỗi xóa slide!");
+      showToast("Lỗi xóa slide!", "error");
     }
   }
 };
 
-onMounted(() => {
-  fetchSlides();
-});
+onMounted(() => { fetchSlides(); });
 </script>
 
 <style scoped>
