@@ -115,6 +115,11 @@
       </div>
     </main>
 
+    <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
+      <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-neon' : 'bi-exclamation-triangle-fill'"></i>
+      <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
+
     <div v-if="showModal" class="modal-backdrop fade show"></div>
     <div v-if="showModal" class="modal d-block" tabindex="-1">
       <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -125,30 +130,43 @@
           </div>
           <div class="modal-body p-4" style="max-height: 75vh; overflow-y: auto;">
             <div class="row g-3">
-              <div class="col-12"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm (Cha) <span class="text-danger">*</span></label><input type="text" v-model="form.name" class="form-control fs-7"></div>
+              <div class="col-12">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Tên sản phẩm (Cha) <span class="text-danger">*</span></label>
+                <input type="text" v-model="form.name" class="form-control fs-7" :class="{'is-invalid': errors.name}" @input="errors.name = ''">
+                <span v-if="errors.name" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.name }}</span>
+              </div>
               
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Danh mục <span class="text-danger">*</span></label>
-                <select v-model="form.categoryId" class="form-select fs-7 shadow-none">               
+                <select v-model="form.categoryId" class="form-select fs-7 shadow-none" :class="{'is-invalid': errors.categoryId}" @change="errors.categoryId = ''">               
                   <option v-for="cat in categoryList" :key="cat.categoryId" :value="cat.categoryId">{{ cat.categoryName }}</option>
                 </select>
+                <span v-if="errors.categoryId" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.categoryId }}</span>
               </div>
 
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Thương hiệu <span class="text-danger">*</span></label>
-                <select v-model="form.brandId" class="form-select fs-7 shadow-none">
+                <select v-model="form.brandId" class="form-select fs-7 shadow-none" :class="{'is-invalid': errors.brandId}" @change="errors.brandId = ''">
                   <option v-for="b in brandList" :key="b.brandId" :value="b.brandId">{{ b.brandName }}</option>
                 </select>
+                <span v-if="errors.brandId" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.brandId }}</span>
               </div>
 
-              <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán Gốc (Hiển thị) <span class="text-danger">*</span></label><input type="number" v-model="form.price" class="form-control fs-7"></div>
-              <div class="col-md-6"><label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM Gốc (Hiển thị)</label><input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống..."></div>
+              <div class="col-md-6">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán Gốc (Hiển thị) <span class="text-danger">*</span></label>
+                <input type="number" v-model="form.price" class="form-control fs-7" :class="{'is-invalid': errors.price}" @input="errors.price = ''">
+                <span v-if="errors.price" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.price }}</span>
+              </div>
+
+              <div class="col-md-6">
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM Gốc (Hiển thị)</label>
+                <input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống...">
+              </div>
               
               <div class="col-12 mt-3">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Hình ảnh đại diện</label>
                 <div class="d-flex gap-2 align-items-center">
                   <input type="file" @change="uploadMainImage" class="form-control fs-7" accept="image/*">
-                  
                   <img v-if="form.imageUrl" :src="form.imageUrl" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
                 </div>
               </div>
@@ -186,8 +204,10 @@
                   <label class="fs-8 fw-bold text-dark text-uppercase mb-0">Danh sách Biến thể chi tiết ({{ form.variants.length }} SKU)</label>
                   <button type="button" @click="addSingleVariant" class="btn btn-sm btn-outline-dark fs-8 fw-bold"><i class="bi bi-plus"></i> Thêm 1 dòng thủ công</button>
                 </div>
+
+                <span v-if="errors.variants" class="text-danger fs-8 fw-bold mb-2 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.variants }}</span>
                 
-                <div v-if="form.variants.length === 0" class="text-center text-muted fs-8 py-4 border rounded bg-light">
+                <div v-if="form.variants.length === 0" class="text-center text-muted fs-8 py-4 border rounded bg-light" :class="{'border-danger': errors.variants}">
                   Chưa có biến thể nào. Sử dụng trình tạo ma trận ở trên.
                 </div>
                 
@@ -257,6 +277,7 @@ const isEditing = ref(false);
 const currentId = ref(null);
 
 const stats = reactive({ total: 0, lowStock: 0, totalStockQuantity: 0 });
+const errors = reactive({}); // Quản lý lỗi hiển thị
 
 const setupColors = ref('');
 const setupOption2s = ref('');
@@ -272,6 +293,13 @@ const form = reactive({
   variants: []
 });
 
+// Toast Notification
+const toast = reactive({ show: false, message: '', type: 'success' });
+const showToast = (message, type = 'success') => {
+  toast.message = message; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
+
 const calculateDiscount = (price, salePrice) => {
   if (!price || !salePrice || price <= 0 || salePrice >= price) return 0;
   const discount = ((price - salePrice) / price) * 100;
@@ -285,23 +313,18 @@ const getAuthHeader = () => {
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 
-// ====================================================================
-// TRỌNG TÂM: ĐÃ THÊM: LOGIC UPLOAD ẢNH (BẮN LÊN API VÀ LẤY LINK VỀ)
-// ====================================================================
+// Logic Upload
 const uploadImageFile = async (file) => {
   if (!file) return null;
   const formData = new FormData();
   formData.append('file', file);
-
   try {
     const headers = getAuthHeader();
-    headers['Content-Type'] = 'multipart/form-data'; // Bắt buộc cho upload file
-    
+    headers['Content-Type'] = 'multipart/form-data';
     const response = await axios.post('http://localhost:8080/api/upload', formData, { headers });
-    return response.data; // Backend trả về: http://localhost:8080/uploads/xyz.jpg
+    return response.data;
   } catch (error) {
-    console.error("Lỗi upload ảnh:", error);
-    alert("Upload ảnh thất bại! Vui lòng thử lại.");
+    showToast("Upload ảnh thất bại! Vui lòng thử lại.", "error");
     return null;
   }
 };
@@ -310,7 +333,7 @@ const uploadMainImage = async (event) => {
   const file = event.target.files[0];
   if (file) {
     const url = await uploadImageFile(file);
-    if (url) form.imageUrl = url; // Điền link localhost vào Database
+    if (url) form.imageUrl = url; 
   }
 };
 
@@ -318,10 +341,9 @@ const uploadVariantImage = async (event, index) => {
   const file = event.target.files[0];
   if (file) {
     const url = await uploadImageFile(file);
-    if (url) form.variants[index].imageUrl = url; // Điền link localhost vào Database SKU
+    if (url) form.variants[index].imageUrl = url; 
   }
 };
-// ====================================================================
 
 const fetchProducts = async () => {
   try {
@@ -361,72 +383,52 @@ const filteredProducts = computed(() => {
 });
 
 const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage));
-
 const paginatedProducts = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
   return filteredProducts.value.slice(start, start + itemsPerPage);
 });
 
-watch(searchQuery, () => {
-  currentPage.value = 1;
-});
+watch(searchQuery, () => { currentPage.value = 1; });
 
 const generateMatrix = () => {
+  errors.variants = ''; // Xóa lỗi khi người dùng tạo matrix
   let colors = setupColors.value.split(',').map(s => s.trim()).filter(Boolean);
   let opts = setupOption2s.value.split(',').map(s => s.trim()).filter(Boolean);
   
-  if (colors.length === 1 && colors[0] === 'Mới') {
-    return;
-  }
-
+  if (colors.length === 1 && colors[0] === 'Mới') return;
   if (colors.length === 0) colors = ['Tiêu chuẩn'];
   if (opts.length === 0) opts = ['']; 
 
   colors.forEach(c => {
     opts.forEach(o => {
       const exists = form.variants.some(v => v.colorName === c && (v.option2Value || '') === o);
-      
       if (!exists) {
-        form.variants.push({ 
-          colorName: c, 
-          option2Value: o, 
-          price: 0, 
-          salePrice: null, 
-          stockQuantity: 0, 
-          imageUrl: '' 
-        });
+        form.variants.push({ colorName: c, option2Value: o, price: 0, salePrice: null, stockQuantity: 0, imageUrl: '' });
       }
     });
   });
 };
 
 const addSingleVariant = () => {
+  errors.variants = '';
   form.variants.push({ colorName: 'Mới', option2Value: '', imageUrl: '', price: 0, salePrice: null, stockQuantity: 0 });
 };
 
-const removeVariant = (index) => {
-  form.variants.splice(index, 1);
-};
+const removeVariant = (index) => { form.variants.splice(index, 1); };
 
 const openAddModal = () => {
-  isEditing.value = false;
-  currentId.value = null;
-  setupColors.value = '';
-  setupOption2s.value = '';
-  Object.assign(form, { 
-    name: '', categoryId: null, brandId: null, price: 0, salePrice: null, 
-    imageUrl: '', description: '', variants: []
-  });
+  isEditing.value = false; currentId.value = null;
+  setupColors.value = ''; setupOption2s.value = '';
+  Object.keys(errors).forEach(k => delete errors[k]);
+  Object.assign(form, { name: '', categoryId: null, brandId: null, price: 0, salePrice: null, imageUrl: '', description: '', variants: [] });
   showModal.value = true;
 };
 
 const openEditModal = (p) => {
-  isEditing.value = true;
-  currentId.value = p.id || p.productId; 
+  isEditing.value = true; currentId.value = p.id || p.productId; 
+  Object.keys(errors).forEach(k => delete errors[k]);
   Object.assign(form, p); 
-  form.categoryId = p.categoryId; 
-  form.brandId = p.brandId; 
-  form.salePrice = p.salePrice || null; 
+  form.categoryId = p.categoryId; form.brandId = p.brandId; form.salePrice = p.salePrice || null; 
   
   if (p.variants && p.variants.length > 0) {
     form.variants = JSON.parse(JSON.stringify(p.variants));
@@ -435,30 +437,22 @@ const openEditModal = (p) => {
     setupColors.value = uniqueColors.join(', ');
     setupOption2s.value = uniqueOpts.join(', ');
   } else {
-    form.variants = [];
-    setupColors.value = '';
-    setupOption2s.value = '';
+    form.variants = []; setupColors.value = ''; setupOption2s.value = '';
   }
-
   showModal.value = true;
 };
 
 const saveProduct = async () => {
-  if (!form.name || form.name.trim() === '') {
-    alert("Vui lòng nhập tên sản phẩm!"); return;
-  }
-  if (!form.categoryId) {
-    alert("Vui lòng chọn danh mục!"); return;
-  }
-  if (!form.brandId) {
-    alert("Vui lòng chọn thương hiệu!"); return;
-  }
-  if (form.price === null || form.price === undefined || form.price < 0) {
-    alert("Vui lòng nhập giá bán lớn hơn hoặc bằng 0!"); return;
-  }
-  if (form.variants.length === 0) {
-    alert("Bạn phải tạo ít nhất 1 biến thể (Bấm nút Tạo tổ hợp)!"); return;
-  }
+  Object.keys(errors).forEach(k => delete errors[k]);
+  let isValid = true;
+
+  if (!form.name || form.name.trim() === '') { errors.name = "Vui lòng nhập tên sản phẩm!"; isValid = false; }
+  if (!form.categoryId) { errors.categoryId = "Vui lòng chọn danh mục!"; isValid = false; }
+  if (!form.brandId) { errors.brandId = "Vui lòng chọn thương hiệu!"; isValid = false; }
+  if (form.price === null || form.price === undefined || form.price < 0) { errors.price = "Giá bán phải lớn hơn hoặc bằng 0!"; isValid = false; }
+  if (form.variants.length === 0) { errors.variants = "Bạn phải tạo ít nhất 1 biến thể cho sản phẩm!"; isValid = false; }
+
+  if (!isValid) return;
 
   let finalVariants = form.variants.filter(v => v.colorName && v.colorName.trim() !== '').map(v => ({
       ...v,
@@ -471,55 +465,42 @@ const saveProduct = async () => {
   try {
     const headers = getAuthHeader();
     const payload = { 
-      name: form.name,
-      categoryId: form.categoryId,
-      brandId: form.brandId,
-      price: Number(form.price),
-      salePrice: form.salePrice ? Number(form.salePrice) : null,
-      imageUrl: form.imageUrl,
-      description: form.description,
-      variants: finalVariants,
-      attributes: null 
+      name: form.name, categoryId: form.categoryId, brandId: form.brandId,
+      price: Number(form.price), salePrice: form.salePrice ? Number(form.salePrice) : null,
+      imageUrl: form.imageUrl, description: form.description, variants: finalVariants, attributes: null 
     };
 
     if (isEditing.value) {
       await axios.put(`http://localhost:8080/api/product/${currentId.value}`, payload, { headers });
-      alert("Cập nhật thành công!");
+      showToast("Cập nhật sản phẩm thành công!");
     } else {
       await axios.post('http://localhost:8080/api/product', payload, { headers });
-      alert("Thêm mới thành công!");
+      showToast("Thêm mới sản phẩm thành công!");
     }
     showModal.value = false;
     fetchProducts();
     fetchStats(); 
-    
   } catch (error) {
-    const errorMsg = error.response?.data?.message || error.response?.data || "Không thể thực hiện. Vui lòng thử lại.";
-    if (typeof errorMsg === 'string') {
-      alert(errorMsg);
-    }
+    showToast("Không thể thực hiện. Vui lòng kiểm tra lại!", "error");
   }
 };
 
 const deleteProduct = async (id) => {
-  if (!id) { alert("Không tìm thấy ID sản phẩm!"); return; }
-  if (confirm("Xóa sản phẩm này?")) {
+  if (confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) {
     try {
       await axios.delete(`http://localhost:8080/api/product/${id}`, { headers: getAuthHeader() });
-      fetchProducts();
-      fetchStats(); 
-      alert("Xóa thành công!");
-    } catch (error) { alert("Lỗi khi xóa!"); }
+      fetchProducts(); fetchStats(); 
+      showToast("Xóa sản phẩm thành công!");
+    } catch (error) { 
+      showToast("Lỗi khi xóa sản phẩm!", "error"); 
+    }
   }
 };
 
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN').format(v || 0) + '₫';
 
 onMounted(() => { 
-  fetchProducts(); 
-  fetchCategories(); 
-  fetchBrands(); 
-  fetchStats(); 
+  fetchProducts(); fetchCategories(); fetchBrands(); fetchStats(); 
 });
 </script>
 
