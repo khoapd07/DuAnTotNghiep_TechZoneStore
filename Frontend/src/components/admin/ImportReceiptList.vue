@@ -192,6 +192,24 @@
         </div>
       </div>
     </div>
+
+    <!-- CUSTOM MODAL THÔNG BÁO -->
+    <div v-if="customModal.show" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg mx-3">
+        <div class="mb-3">
+          <i v-if="customModal.icon === 'success'" class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem;"></i>
+          <i v-else-if="customModal.icon === 'error'" class="bi bi-x-circle-fill text-danger" style="font-size: 3.5rem;"></i>
+          <i v-else-if="customModal.icon === 'warning'" class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2 text-dark">{{ customModal.title }}</h5>
+        <p class="text-muted small mb-4" v-html="customModal.message"></p>
+        <div class="d-flex justify-content-center">
+          <button @click="closeCustomModal" class="btn btn-dark fw-bold px-4 py-2 rounded-3 w-100 text-uppercase" style="font-size: 13px;">
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
     
   </div>
 </template>
@@ -213,6 +231,24 @@ const receipts = ref([]); // Danh sách phiếu nhập tải từ API
 const suppliers = ref([]); // Danh sách nhà cung cấp
 const products = ref([]); // Danh sách sản phẩm để chọn
 const showModal = ref(false); // Trạng thái Ẩn/Hiện Modal
+
+// --- CẤU HÌNH CUSTOM MODAL THÔNG BÁO ---
+const customModal = ref({
+  show: false,
+  icon: 'success', // 'success', 'error', 'warning'
+  title: '',
+  message: '',
+  onClose: null
+});
+
+const showNotification = (icon, title, message, onClose = null) => {
+  customModal.value = { show: true, icon, title, message, onClose };
+};
+
+const closeCustomModal = () => {
+  customModal.value.show = false;
+  if (customModal.value.onClose) customModal.value.onClose();
+};
 
 // Object chứa dữ liệu của Phiếu nhập mới đang được tạo
 const newReceipt = ref({
@@ -326,7 +362,7 @@ const fetchProducts = async () => {
 // Gửi dữ liệu phiếu nhập xuống Backend để lưu Database
 const saveReceipt = async () => {
   if (newReceipt.value.items.length === 0) {
-    alert("Vui lòng thêm ít nhất 1 mặt hàng vào phiếu!");
+    showNotification('warning', 'Thiếu mặt hàng', 'Vui lòng thêm ít nhất 1 mặt hàng vào phiếu!');
     return;
   }
 
@@ -353,13 +389,14 @@ const saveReceipt = async () => {
       headers: getAuthHeader() 
     });
     
-    alert("Tạo phiếu nhập kho thành công!");
-    closeModal(); // Đóng Modal mượt mà
-    fetchReceipts(); // Load lại bảng danh sách
+    showNotification('success', 'Thành công', 'Tạo phiếu nhập kho thành công!', () => {
+      closeModal(); // Đóng Modal mượt mà
+      fetchReceipts(); // Load lại bảng danh sách
+    });
   } catch (error) {
     console.error("Lỗi khi tạo phiếu:", error);
     const errorMsg = error.response?.data?.message || error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
-    alert(typeof errorMsg === 'string' ? errorMsg : "Lỗi không xác định từ máy chủ.");
+    showNotification('error', 'Lỗi hệ thống', typeof errorMsg === 'string' ? errorMsg : "Lỗi không xác định từ máy chủ.");
   }
 };
 
@@ -392,5 +429,28 @@ onMounted(() => {
 .form-control:focus, .form-select:focus {
   border-color: #00DF3A;
   box-shadow: 0 0 0 0.2rem rgba(0, 223, 58, 0.25);
+}
+
+/* --- CSS THÊM MỚI CHO MODAL THÔNG BÁO --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2000; /* Cao hơn Bootstrap modal mặc định (1050) */
+  backdrop-filter: blur(4px);
+}
+
+.custom-modal {
+  width: 100%;
+  max-width: 400px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 </style>
