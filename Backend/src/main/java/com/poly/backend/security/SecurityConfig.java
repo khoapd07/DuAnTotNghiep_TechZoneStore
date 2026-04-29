@@ -68,7 +68,8 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         // Cho phép frontend từ localhost:5173 truy cập
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173",
+                "https://techzonestore-rr8f.onrender.com"));
 
         // Cho phép các method: GET, POST, PUT, DELETE, v.v.
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
