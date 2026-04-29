@@ -227,7 +227,7 @@ const suppliers = ref([]);
 const products = ref([]); 
 const showModal = ref(false); 
 
-<<<<<<< HEAD
+
 // --- CẤU HÌNH CUSTOM MODAL THÔNG BÁO ---
 const customModal = ref({
   show: false,
@@ -247,8 +247,6 @@ const closeCustomModal = () => {
 };
 
 // Object chứa dữ liệu của Phiếu nhập mới đang được tạo
-=======
->>>>>>> abb82e8d46265d024f7e3b07359c6ece54ea9e50
 const newReceipt = ref({
   supplierId: '',
   note: '',
@@ -359,10 +357,15 @@ const saveReceipt = async () => {
     // Dùng api thay vì axios
     await api.post('/admin/import-receipts', payload);
     
+
     showNotification('success', 'Thành công', 'Tạo phiếu nhập kho thành công!', () => {
       closeModal(); // Đóng Modal mượt mà
       fetchReceipts(); // Load lại bảng danh sách
     });
+
+    alert("Tạo phiếu nhập kho thành công!");
+    closeModal(); 
+    fetchReceipts(); 
   } catch (error) {
     console.error("Lỗi khi tạo phiếu:", error);
     const errorMsg = error.response?.data?.message || error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
@@ -417,9 +420,6 @@ onMounted(() => {
 
 @keyframes slideUp {
   from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-</style>orm: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
 </style>
