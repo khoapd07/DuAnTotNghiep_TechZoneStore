@@ -140,7 +140,8 @@
 
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue';
-import axios from 'axios';
+// Xóa import axios mặc định, thay bằng instance api dùng chung
+import api from '../../utils/axios';
 
 const voucherList = ref([]);
 const searchQuery = ref('');
@@ -160,14 +161,12 @@ const form = reactive({
   quantity: 1, startDate: '', endDate: '', description: '', isHomepage: false, status: true 
 });
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('jwt_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm thông qua interceptors của api
 
 const fetchVouchers = async () => {
   try {
-    const res = await axios.get('http://localhost:8080/api/vouchers', { headers: getAuthHeader() });
+    // Thay đổi axios.get thành api.get và xóa bỏ base URL tĩnh
+    const res = await api.get('/vouchers');
     voucherList.value = res.data;
   } catch (e) { console.error(e); }
 };
@@ -246,14 +245,15 @@ const saveVoucher = async () => {
   if (!isValid) return;
 
   try {
-    const headers = getAuthHeader();
     const payload = { ...form, code: form.code.trim().toUpperCase(), name: form.name.trim() };
 
     if (isEditing.value) {
-      await axios.put(`http://localhost:8080/api/vouchers/${currentId.value}`, payload, { headers });
+      // Thay đổi axios thành api instance
+      await api.put(`/vouchers/${currentId.value}`, payload);
       showToast("Cập nhật voucher thành công!");
     } else {
-      await axios.post('http://localhost:8080/api/vouchers', payload, { headers });
+      // Thay đổi axios thành api instance
+      await api.post('/vouchers', payload);
       showToast("Thêm voucher mới thành công!");
     }
     showModal.value = false;
@@ -271,7 +271,8 @@ const saveVoucher = async () => {
 const deleteVoucher = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa voucher này không?")) {
     try {
-      await axios.delete(`http://localhost:8080/api/vouchers/${id}`, { headers: getAuthHeader() });
+      // Thay đổi axios.delete thành api.delete và loại bỏ getAuthHeader
+      await api.delete(`/vouchers/${id}`);
       fetchVouchers();
       showToast("Xóa thành công!");
     } catch (error) {

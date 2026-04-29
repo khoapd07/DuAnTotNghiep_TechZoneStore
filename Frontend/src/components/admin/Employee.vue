@@ -196,7 +196,8 @@
 
 <script setup>
 import { ref, onMounted, computed, reactive } from 'vue';
-import axios from 'axios';
+// Import api instance thay cho axios
+import api from '../../utils/axios';
 
 const employees = ref([]);
 const isLoading = ref(false);
@@ -220,17 +221,16 @@ const form = ref({
   status: true
 });
 
-const API_URL = 'http://localhost:8080/api/admin/employees';
+// Sửa lại API_URL thành đường dẫn tương đối
+const API_URL = '/admin/employees';
 
-const getAuthConfig = () => {
-  const token = localStorage.getItem('token');
-  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-};
+// Hàm getAuthConfig() đã được loại bỏ
 
 const fetchEmployees = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get(API_URL, getAuthConfig());
+    // Dùng api thay vì axios
+    const response = await api.get(API_URL);
     employees.value = response.data;
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu:', error);
@@ -242,7 +242,8 @@ const fetchEmployees = async () => {
 const toggleStatus = async (id) => {
   if(!confirm('Xác nhận thay đổi trạng thái làm việc của nhân viên này?')) return;
   try {
-    await axios.put(`${API_URL}/${id}/toggle-status`, {}, getAuthConfig());
+    // Dùng api thay vì axios
+    await api.put(`${API_URL}/${id}/toggle-status`);
     fetchEmployees();
   } catch (error) {
     alert('Có lỗi xảy ra!');
@@ -308,9 +309,11 @@ const saveEmployee = async () => {
 
   try {
     if (isEditMode.value) {
-      await axios.put(`${API_URL}/${form.value.userId}`, form.value, getAuthConfig());
+      // Dùng api thay vì axios
+      await api.put(`${API_URL}/${form.value.userId}`, form.value);
     } else {
-      await axios.post(API_URL, form.value, getAuthConfig());
+      // Dùng api thay vì axios
+      await api.post(API_URL, form.value);
     }
     alert(isEditMode.value ? 'Cập nhật thành công!' : 'Thêm mới thành công! (Mật khẩu mặc định: 123456)');
     fetchEmployees(); 

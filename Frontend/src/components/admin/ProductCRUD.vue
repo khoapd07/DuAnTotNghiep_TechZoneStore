@@ -262,7 +262,8 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from 'vue';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, sử dụng api instance
+import api from '../../utils/axios';
 
 const productList = ref([]);
 const categoryList = ref([]);
@@ -308,10 +309,7 @@ const calculateDiscount = (price, salePrice) => {
   return roundedDiscount;
 };
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('jwt_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm qua utils/axios
 
 // Logic Upload
 const uploadImageFile = async (file) => {
@@ -319,9 +317,10 @@ const uploadImageFile = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
   try {
-    const headers = getAuthHeader();
-    headers['Content-Type'] = 'multipart/form-data';
-    const response = await axios.post('http://localhost:8080/api/upload', formData, { headers });
+    // Dùng api thay vì axios, chỉ định Headers Upload
+    const response = await api.post('/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     return response.data;
   } catch (error) {
     showToast("Upload ảnh thất bại! Vui lòng thử lại.", "error");
@@ -347,7 +346,8 @@ const uploadVariantImage = async (event, index) => {
 
 const fetchProducts = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/product?size=1000', { headers: getAuthHeader() });
+    // Dùng api thay vì axios, bỏ url cứng
+    const response = await api.get('/product?size=1000');
     const data = response.data;
     productList.value = data.content || data.data || (Array.isArray(data) ? data : []);
   } catch (error) { console.error("Lỗi tải sản phẩm:", error); }
@@ -355,7 +355,8 @@ const fetchProducts = async () => {
 
 const fetchStats = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/product/stats', { headers: getAuthHeader() });
+    // Dùng api thay vì axios, bỏ url cứng
+    const response = await api.get('/product/stats');
     stats.total = response.data.total;
     stats.lowStock = response.data.lowStock;
     stats.totalStockQuantity = response.data.totalStockQuantity; 
@@ -364,14 +365,16 @@ const fetchStats = async () => {
 
 const fetchCategories = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/categories', { headers: getAuthHeader() });
+    // Dùng api thay vì axios, bỏ url cứng
+    const response = await api.get('/categories');
     categoryList.value = response.data;
   } catch (error) { console.error("Lỗi tải danh mục:", error); categoryList.value = []; }
 };
 
 const fetchBrands = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/brands', { headers: getAuthHeader() });
+    // Dùng api thay vì axios, bỏ url cứng
+    const response = await api.get('/brands');
     brandList.value = response.data;
   } catch (error) { console.error("Lỗi tải thương hiệu:", error); brandList.value = []; }
 };
@@ -463,7 +466,6 @@ const saveProduct = async () => {
   }));
 
   try {
-    const headers = getAuthHeader();
     const payload = { 
       name: form.name, categoryId: form.categoryId, brandId: form.brandId,
       price: Number(form.price), salePrice: form.salePrice ? Number(form.salePrice) : null,
@@ -471,10 +473,12 @@ const saveProduct = async () => {
     };
 
     if (isEditing.value) {
-      await axios.put(`http://localhost:8080/api/product/${currentId.value}`, payload, { headers });
+      // Dùng api thay vì axios
+      await api.put(`/product/${currentId.value}`, payload);
       showToast("Cập nhật sản phẩm thành công!");
     } else {
-      await axios.post('http://localhost:8080/api/product', payload, { headers });
+      // Dùng api thay vì axios
+      await api.post('/product', payload);
       showToast("Thêm mới sản phẩm thành công!");
     }
     showModal.value = false;
@@ -488,7 +492,8 @@ const saveProduct = async () => {
 const deleteProduct = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) {
     try {
-      await axios.delete(`http://localhost:8080/api/product/${id}`, { headers: getAuthHeader() });
+      // Dùng api thay vì axios
+      await api.delete(`/product/${id}`);
       fetchProducts(); fetchStats(); 
       showToast("Xóa sản phẩm thành công!");
     } catch (error) { 

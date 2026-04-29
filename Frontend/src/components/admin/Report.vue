@@ -379,8 +379,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import axios from 'axios';
 import * as XLSX from 'xlsx'; // Require: npm install xlsx
+// Thay thế axios bằng instance API dùng chung
+import api from '../../utils/axios';
 
 const activeTab = ref(1);
 
@@ -452,11 +453,12 @@ const mapOrder = (o) => ({ orderId: o.orderId || o.orderid, customerName: o.cust
 const fetchTab1Data = async () => {
   try {
     const params = getDateParams();
+    // Thay đổi axios.get thành api.get và sửa thành đường dẫn tương đối
     const [statsRes, prodRes, custRes, shipRes] = await Promise.all([
-      axios.get('http://localhost:8080/api/reports/general-stats', { params }),
-      axios.get('http://localhost:8080/api/reports/top-products-month', { params }),
-      axios.get('http://localhost:8080/api/reports/top-customers-month', { params }),
-      axios.get('http://localhost:8080/api/reports/top-shippers', { params })
+      api.get('/reports/general-stats', { params }),
+      api.get('/reports/top-products-month', { params }),
+      api.get('/reports/top-customers-month', { params }),
+      api.get('/reports/top-shippers', { params })
     ]);
 
     // Đã cập nhật hứng dữ liệu totalProfit từ API trả về
@@ -475,7 +477,8 @@ const fetchTab1Data = async () => {
 const goToTab2 = async () => {
   activeTab.value = 2;
   try {
-    const res = await axios.get('http://localhost:8080/api/reports/tab2-details', { params: getDateParams() });
+    // Thay đổi axios.get thành api.get và sửa thành đường dẫn tương đối
+    const res = await api.get('/reports/tab2-details', { params: getDateParams() });
     tab2Data.value = {
       totalMonthlyIncome: res.data.totalMonthlyIncome || res.data.totalmonthlyincome || 0,
       soldProducts: (res.data.soldProducts || res.data.soldproducts || []).map(mapProduct)
@@ -486,7 +489,8 @@ const goToTab2 = async () => {
 const goToAllProducts = async () => {
   activeTab.value = 3;
   try {
-    const res = await axios.get('http://localhost:8080/api/reports/all-products-month', { params: getDateParams() });
+    // Thay đổi axios.get thành api.get và sửa thành đường dẫn tương đối
+    const res = await api.get('/reports/all-products-month', { params: getDateParams() });
     allProducts.value = res.data.map(mapProduct);
   } catch (error) { console.error("Lỗi Tab 3:", error); }
 };
@@ -494,7 +498,8 @@ const goToAllProducts = async () => {
 const goToAllCustomers = async () => {
   activeTab.value = 4;
   try {
-    const res = await axios.get('http://localhost:8080/api/reports/all-customers-month', { params: getDateParams() });
+    // Thay đổi axios.get thành api.get và sửa thành đường dẫn tương đối
+    const res = await api.get('/reports/all-customers-month', { params: getDateParams() });
     allCustomers.value = res.data.map(mapCustomer);
   } catch (error) { console.error("Lỗi Tab 4:", error); }
 };
@@ -502,7 +507,8 @@ const goToAllCustomers = async () => {
 const goToAllShippers = async () => {
   activeTab.value = 5;
   try {
-    const res = await axios.get('http://localhost:8080/api/reports/all-shippers', { params: getDateParams() });
+    // Thay đổi axios.get thành api.get và sửa thành đường dẫn tương đối
+    const res = await api.get('/reports/all-shippers', { params: getDateParams() });
     allShippers.value = res.data.map(mapShipper);
   } catch (error) { console.error("Lỗi Tab 5:", error); }
 };
@@ -510,7 +516,8 @@ const goToAllShippers = async () => {
 const goToTab6 = async () => {
   activeTab.value = 6;
   try {
-    const res = await axios.get('http://localhost:8080/api/reports/successful-orders-month', { params: getDateParams() });
+    // Thay đổi axios.get thành api.get và sửa thành đường dẫn tương đối
+    const res = await api.get('/reports/successful-orders-month', { params: getDateParams() });
     successfulOrders.value = res.data.map(mapOrder);
   } catch (error) { console.error("Lỗi Tab 6:", error); }
 };

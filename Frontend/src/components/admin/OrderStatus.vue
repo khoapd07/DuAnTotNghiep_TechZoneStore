@@ -266,7 +266,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
+// Thay thế axios gốc bằng Instance api dùng chung
+import api from '../../utils/axios';
 
 const orderList = ref([]);
 const dbStatuses = ref([]);
@@ -275,7 +276,6 @@ const selectedOrder = ref(null);
 const selectedOrderEditStatus = ref(0);
 const isSaving = ref(false);
 
-// BIẾN LƯU TRỮ CHO BỘ LỌC & TÌM KIẾM
 const searchQuery = ref('');
 const filterStatus = ref('ALL');
 const filterPayment = ref('ALL');
@@ -285,15 +285,15 @@ const currentUser = ref({
   name: 'Admin TechZone'
 });
 
-const API_URL = 'http://localhost:8080/api/orders';
+// Chuyển API_URL sang đường dẫn tương đối
+const API_URL = '/orders';
 
-// --- CẤU HÌNH CUSTOM MODAL ---
 const customModal = ref({
   show: false,
-  icon: 'success', // 'success', 'error', 'warning'
+  icon: 'success', 
   title: '',
   message: '',
-  onClose: null // Function callback
+  onClose: null 
 });
 
 const showModal = (icon, title, message, onClose = null) => {
@@ -312,7 +312,6 @@ const closeCustomModal = () => {
     customModal.value.onClose();
   }
 };
-// -----------------------------
 
 onMounted(async () => {
   const userStr = localStorage.getItem('user_info');
@@ -328,7 +327,8 @@ onMounted(async () => {
 
 const fetchOrderStatuses = async () => {
   try {
-    const res = await axios.get(`${API_URL}/statuses`);
+    // Dùng api instance thay vì axios
+    const res = await api.get(`${API_URL}/statuses`);
     dbStatuses.value = res.data;
   } catch (error) {
     console.error("Lỗi tải trạng thái:", error);
@@ -338,7 +338,8 @@ const fetchOrderStatuses = async () => {
 const fetchOrders = async () => {
   loading.value = true;
   try {
-    const response = await axios.get(`${API_URL}/admin/all`);
+    // Dùng api instance thay vì axios
+    const response = await api.get(`${API_URL}/admin/all`);
     orderList.value = response.data;
   } catch (error) {
     console.error("Lỗi khi tải đơn hàng:", error);
@@ -347,22 +348,16 @@ const fetchOrders = async () => {
   }
 };
 
-// ==========================================
-// HÀM FILTER VÀ SEARCH
-// ==========================================
 const filteredOrders = computed(() => {
   return orderList.value.filter(order => {
-    // 1. Lọc theo trạng thái
     if (filterStatus.value !== 'ALL' && order.statusId !== filterStatus.value) {
       return false;
     }
     
-    // 2. Lọc theo phương thức thanh toán
     if (filterPayment.value !== 'ALL' && order.paymentMethod !== filterPayment.value) {
       return false;
     }
 
-    // 3. Tìm kiếm theo Text (Mã, Tên, SĐT)
     if (searchQuery.value) {
       const query = searchQuery.value.toLowerCase().trim();
       const code = (order.orderCode || '').toLowerCase();
@@ -375,7 +370,7 @@ const filteredOrders = computed(() => {
       }
     }
 
-    return true; // Thỏa mãn mọi điều kiện
+    return true; 
   });
 });
 
@@ -384,13 +379,9 @@ const viewOrderDetail = (order) => {
   selectedOrderEditStatus.value = order.statusId; 
 };
 
-// ==========================================
-// CẬP NHẬT TRẠNG THÁI
-// ==========================================
 const updateStatus = async () => {
   if (!selectedOrder.value) return;
 
-  // Validate thanh toán
   if (
     selectedOrder.value.paymentMethod === 'BANK' && 
     !selectedOrder.value.paymentStatus && 
@@ -413,14 +404,16 @@ const updateStatus = async () => {
   }
 
   try {
-    await axios.put(url);
+    // Dùng api instance thay vì axios
+    await api.put(url);
     showModal(
       'success', 
       'Thành công!', 
       'Cập nhật trạng thái đơn hàng thành công!', 
       () => {
         fetchOrders(); 
-        document.querySelector('.btn-close').click(); // Đóng offcanvas
+        const closeBtn = document.querySelector('#orderDetailOffcanvas .btn-close');
+        if (closeBtn) closeBtn.click();
       }
     );
   } catch (error) {
@@ -430,7 +423,6 @@ const updateStatus = async () => {
   }
 };
 
-// Thống kê dựa trên dữ liệu gốc (orderList)
 const stats = computed(() => {
   return {
     total: orderList.value.length,
@@ -480,28 +472,24 @@ const getStatusClass = (id) => {
   return 'bg-secondary text-white';
 };
 
-// ==========================================
-// CẬP NHẬT LOGIC LỰA CHỌN TRẠNG THÁI MỚI
-// ==========================================
 const availableStatuses = computed(() => {
   if (!selectedOrder.value) return [];
   const currentStatus = selectedOrder.value.statusId;
 
   return dbStatuses.value.filter(st => {
     const targetStatus = st.statusId;
-    // Luôn cho phép hiển thị trạng thái hiện tại (để select không bị trắng)
     if (targetStatus === currentStatus) return true;
 
     switch (currentStatus) {
-      case 0: // Từ Chờ xử lý -> Đã xác nhận HOẶC Hủy
+      case 0: 
         return targetStatus === 1 || targetStatus === 4;
-      case 1: // Từ Đã xác nhận -> Chỉ cho phép Hủy (việc giao cho shipper sẽ thực hiện ở màn hình shipper)
+      case 1: 
         return targetStatus === 4;
-      case 2: // Đang giao -> Không cho phép thay đổi tại đây
+      case 2: 
         return false;
-      case 3: // Hoàn thành -> Kết thúc
+      case 3: 
         return false; 
-      case 4: // Hủy -> Kết thúc
+      case 4: 
         return false;
       default: 
         return false;
@@ -525,15 +513,14 @@ const availableStatuses = computed(() => {
 .cursor-pointer { cursor: pointer; }
 .table-hover tbody tr:hover td { background-color: #f8f9fa; }
 
-/* --- CSS CHO CUSTOM MODAL --- */
 .custom-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5); /* Lớp nền đen mờ */
-  z-index: 1060; /* Đặt cao hơn offcanvas của bootstrap (thường là 1045) */
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1060;
   animation: fadeIn 0.2s ease-in-out;
 }
 

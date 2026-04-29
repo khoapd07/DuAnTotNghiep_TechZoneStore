@@ -167,7 +167,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+// Thay thế axios gốc bằng Instance api dùng chung
+import api from '../../utils/axios';
 
 const router = useRouter();
 const orders = ref([]);
@@ -176,7 +177,8 @@ const activeTab = ref(1); // 1 = Confirmed
 const shipperName = ref('Nhân Viên Giao Hàng');
 const shipperId = ref(null);
 
-const API_URL = 'http://localhost:8080/api/orders';
+// Sử dụng đường dẫn tương đối (Relative path)
+const API_URL = '/orders';
 
 const tabs = [
   { label: 'Tất cả', value: 'ALL' },
@@ -200,7 +202,8 @@ const fetchShipperTasks = async () => {
 
   loading.value = true;
   try {
-    const res = await axios.get(`${API_URL}/shipper/tasks?shipperId=${shipperId.value}`);
+    // Gọi API qua Axios Instance
+    const res = await api.get(`${API_URL}/shipper/tasks?shipperId=${shipperId.value}`);
     orders.value = res.data;
   } catch (error) {
     console.error('Lỗi lấy nhiệm vụ:', error);
@@ -221,12 +224,12 @@ const updateStatus = async (orderId, newStatusId) => {
       url += `&shipperId=${shipperId.value}`;
     }
 
-    // 1. Cập nhật trạng thái giao hàng
-    await axios.put(url);
+    // 1. Cập nhật trạng thái giao hàng thông qua api instance
+    await api.put(url);
 
     // 2. NẾU GIAO THÀNH CÔNG (3) -> TỰ ĐỘNG CHUYỂN TRẠNG THÁI THANH TOÁN SANG "ĐÃ THU TIỀN"
     if (newStatusId === 3) {
-      await axios.put(`${API_URL}/admin/${orderId}/payment?status=true`);
+      await api.put(`${API_URL}/admin/${orderId}/payment?status=true`);
     }
 
     // Tải lại danh sách sau khi cập nhật xong

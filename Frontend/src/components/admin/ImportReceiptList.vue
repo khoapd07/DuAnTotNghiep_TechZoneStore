@@ -197,41 +197,25 @@
 </template>
 
 <script setup>
-// ==========================================
-// 1. IMPORT CÁC THƯ VIỆN CẦN THIẾT
-// ==========================================
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+// Import api instance thay vì axios gốc
+import api from '../../utils/axios';
 
-// ==========================================
-// 2. KHAI BÁO BIẾN TRẠNG THÁI (STATE)
-// ==========================================
-const router = useRouter(); // Dùng để chuyển trang
-const searchQuery = ref(""); // Lưu từ khóa tìm kiếm
-const receipts = ref([]); // Danh sách phiếu nhập tải từ API
-const suppliers = ref([]); // Danh sách nhà cung cấp
-const products = ref([]); // Danh sách sản phẩm để chọn
-const showModal = ref(false); // Trạng thái Ẩn/Hiện Modal
+const router = useRouter(); 
+const searchQuery = ref(""); 
+const receipts = ref([]); 
+const suppliers = ref([]); 
+const products = ref([]); 
+const showModal = ref(false); 
 
-// Object chứa dữ liệu của Phiếu nhập mới đang được tạo
 const newReceipt = ref({
   supplierId: '',
   note: '',
   items: []
 });
 
-// Lấy Token xác thực (nếu cần thiết cho bảo mật)
-const getAuthHeader = () => {
-  const token = localStorage.getItem('jwt_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
-
-// ==========================================
-// 3. CÁC HÀM TÍNH TOÁN TỰ ĐỘNG (COMPUTED)
-// ==========================================
-
-// Tự động lọc danh sách phiếu dựa trên ô tìm kiếm
+// Computed properties
 const filteredReceipts = computed(() => {
   if (!searchQuery.value) return receipts.value;
   const lowerQuery = searchQuery.value.toLowerCase();
@@ -242,22 +226,16 @@ const filteredReceipts = computed(() => {
   );
 });
 
-// Tự động tính tổng tiền của cái Phiếu đang tạo (Số lượng * Đơn giá)
 const totalAmount = computed(() => {
   return newReceipt.value.items.reduce((total, item) => total + (item.quantity * item.price), 0);
 });
 
-// ==========================================
-// 4. CÁC HÀM FORMAT HIỂN THỊ (UI HELPERS)
-// ==========================================
-
-// Định dạng tiền tệ VNĐ
+// UI Helpers
 const formatCurrency = (value) => {
   if (!value) return "0 ₫";
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
 };
 
-// Ghép tên phân loại (Ví dụ: "Màu Đen - 256GB") để hiển thị đẹp trong dropdown
 const formatVariantName = (v) => {
   let opt1 = v.option1_value || v.option1Value || v.colorName || v.name || "";
   let opt2 = v.option2_value || v.option2Value || v.sizeName || "";
@@ -265,72 +243,62 @@ const formatVariantName = (v) => {
   return opt1 || opt2 || `Phân loại ${v.variantId || v.id}`;
 };
 
-// Lấy danh sách Biến thể (Variants) của 1 Sản phẩm khi người dùng chọn thẻ Select đầu tiên
 const getVariantsForProduct = (productId) => {
   if (!productId) return [];
   const product = products.value.find(p => p.productId === productId || p.id === productId);
   return product && product.variants ? product.variants : [];
 };
 
-// ==========================================
-// 5. LOGIC ĐÓNG/MỞ MODAL & FORM THÊM XÓA
-// ==========================================
-
-// Mở form thêm phiếu mới và clear sạch dữ liệu cũ
+// Modal Logic
 const openAddModal = () => {
   newReceipt.value = { supplierId: '', note: '', items: [] };
-  addItem(); // Thêm sẵn 1 dòng trống
+  addItem(); 
   showModal.value = true;
 };
 
-// Đóng form
 const closeModal = () => {
   showModal.value = false;
 };
 
-// Thêm 1 dòng mặt hàng trống vào bảng chi tiết
 const addItem = () => {
   newReceipt.value.items.push({ productId: '', variantId: '', quantity: 1, price: 0 });
 };
 
-// Xóa 1 dòng mặt hàng khỏi bảng
 const removeItem = (index) => {
   newReceipt.value.items.splice(index, 1);
 };
 
-// ==========================================
-// 6. CÁC HÀM GỌI API (BACKEND)
-// ==========================================
-
+// API Functions
 const fetchReceipts = async () => {
   try {
-    const response = await axios.get('/api/admin/import-receipts', { headers: getAuthHeader() });
+    // Dùng api thay vì axios
+    const response = await api.get('/admin/import-receipts');
     receipts.value = response.data;
   } catch (error) { console.error("Lỗi khi tải phiếu nhập:", error); }
 };
 
 const fetchSuppliers = async () => {
   try {
-    const response = await axios.get('/api/admin/suppliers', { headers: getAuthHeader() });
+    // Dùng api thay vì axios
+    const response = await api.get('/admin/suppliers');
     suppliers.value = response.data.filter(s => s.status === true);
   } catch (error) { console.error("Lỗi tải NCC:", error); }
 };
 
 const fetchProducts = async () => {
   try {
-    const response = await axios.get('/api/product?size=9999', { headers: getAuthHeader() });
+    // Dùng api thay vì axios
+    const response = await api.get('/product?size=9999');
     products.value = (response.data && response.data.content) ? response.data.content : response.data;
   } catch (error) { console.error("Lỗi tải Sản phẩm:", error); }
 };
 
-// Gửi dữ liệu phiếu nhập xuống Backend để lưu Database
 const saveReceipt = async () => {
   if (newReceipt.value.items.length === 0) {
     alert("Vui lòng thêm ít nhất 1 mặt hàng vào phiếu!");
     return;
   }
 
-  // Đóng gói Payload theo cấu trúc Entity Java
   const payload = {
     supplier: { supplierId: newReceipt.value.supplierId },
     note: newReceipt.value.note,
@@ -342,20 +310,18 @@ const saveReceipt = async () => {
         importPrice: item.price,
         lineTotal: item.quantity * item.price
       };
-      // Gắn thêm variantId nếu có
       if (item.variantId) detail.variant = { variantId: item.variantId };
       return detail;
     })
   };
 
   try {
-    await axios.post(`http://localhost:8080/api/admin/import-receipts`, payload, { 
-      headers: getAuthHeader() 
-    });
+    // Dùng api thay vì axios
+    await api.post('/admin/import-receipts', payload);
     
     alert("Tạo phiếu nhập kho thành công!");
-    closeModal(); // Đóng Modal mượt mà
-    fetchReceipts(); // Load lại bảng danh sách
+    closeModal(); 
+    fetchReceipts(); 
   } catch (error) {
     console.error("Lỗi khi tạo phiếu:", error);
     const errorMsg = error.response?.data?.message || error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
@@ -363,14 +329,11 @@ const saveReceipt = async () => {
   }
 };
 
-// Chuyển hướng sang trang Chi tiết phiếu nhập
 const viewDetail = (id) => {
   router.push({ name: 'ImportReceiptDetail', params: { id: id } });
 };
 
-// ==========================================
-// 7. LIFECYCLE (CHẠY KHI MỞ TRANG)
-// ==========================================
+// Lifecycle
 onMounted(() => {
   fetchReceipts();
   fetchSuppliers();
@@ -388,7 +351,6 @@ onMounted(() => {
 .fw-black { font-weight: 900; }
 .border-bottom-dashed { border-bottom: 1px dashed #dee2e6; }
 
-/* Focus Styling */
 .form-control:focus, .form-select:focus {
   border-color: #00DF3A;
   box-shadow: 0 0 0 0.2rem rgba(0, 223, 58, 0.25);

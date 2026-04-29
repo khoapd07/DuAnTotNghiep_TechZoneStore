@@ -193,7 +193,8 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
 const router = useRouter();
 const route = useRoute();
@@ -267,7 +268,8 @@ const formatCurrency = (value) => {
 const fetchProducts = async () => {
   loading.value = true;
   try {
-    const response = await axios.get('http://localhost:8080/api/product', { params: filters });
+    // Thay đổi axios.get thành api.get
+    const response = await api.get('/product', { params: filters });
     products.value = response.data.content;
     totalPages.value = response.data.totalPages;
     totalElements.value = response.data.totalElements;
@@ -291,14 +293,16 @@ const setPriceRange = (range) => {
 
 const fetchCategories = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/categories');
+    // Thay đổi axios.get thành api.get
+    const response = await api.get('/categories');
     categories.value = response.data;
   } catch (error) { console.error("Lỗi tải danh mục:", error); }
 };
 
 const fetchBrands = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/brands');
+    // Thay đổi axios.get thành api.get
+    const response = await api.get('/brands');
     brands.value = response.data;
   } catch (error) { console.error("Lỗi tải thương hiệu:", error); }
 };
@@ -344,7 +348,8 @@ const addToCart = async (productId, showNotification = true) => {
 
   if (userId) {
     try {
-      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, {
+      // Thay đổi axios.post thành api.post
+      await api.post(`/cart/${userId}/add`, {
         productId: productId,
         variantId: vId, 
         quantity: 1 

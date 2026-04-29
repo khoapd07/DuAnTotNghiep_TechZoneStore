@@ -178,9 +178,11 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from "vue";
-import axios from "axios";
+// Xóa import axios từ thư viện gốc, thay bằng api instance của bạn
+import api from "../../utils/axios";
 
-const API_BLOG = "http://localhost:8080/api/blogs";
+// Thay đổi API_BLOG thành dạng relative path
+const API_BLOG = "/blogs";
 
 const blogList = ref([]);
 const searchQuery = ref("");
@@ -203,10 +205,7 @@ const showToast = (message, type = 'success') => {
 
 const form = reactive({ title: "", summary: "", content: "", thumbnailUrl: "", authorId: null, views: 0, active: true });
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem("jwt_token") || localStorage.getItem("token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Hàm getAuthHeader() đã bị loại bỏ vì interceptor xử lý việc gắn Token tự động.
 
 const uploadImage = async (event) => {
   errors.thumbnailUrl = '';
@@ -214,8 +213,10 @@ const uploadImage = async (event) => {
   if (!file) return;
   const formData = new FormData(); formData.append('file', file);
   try {
-    const headers = getAuthHeader(); headers['Content-Type'] = 'multipart/form-data';
-    const response = await axios.post('http://localhost:8080/api/upload', formData, { headers });
+    // Thay axios thành api và cấu hình Header cho Upload
+    const response = await api.post('/upload', formData, { 
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
     form.thumbnailUrl = response.data; 
   } catch (error) {
     showToast("Upload ảnh thất bại!", "error");
@@ -236,7 +237,8 @@ const calcStats = () => {
 
 const fetchBlogs = async () => {
   try {
-    const response = await axios.get(API_BLOG, { headers: getAuthHeader() });
+    // Thay axios thành api, loại bỏ header thủ công
+    const response = await api.get(API_BLOG);
     const data = response.data;
     const arr = Array.isArray(data) ? data : (data.content || data.data || []);
     blogList.value = arr.map(normalizeBlog);
@@ -285,7 +287,7 @@ const saveBlog = async () => {
 
   try {
     saving.value = true;
-    const headers = getAuthHeader();
+    
     const payload = {
       title: form.title.trim(), summary: form.summary?.trim() || "", content: form.content.trim(),
       thumbnailUrl: form.thumbnailUrl.trim(), authorId: form.authorId ? Number(form.authorId) : null,
@@ -293,10 +295,12 @@ const saveBlog = async () => {
     };
 
     if (isEditing.value) {
-      await axios.put(`${API_BLOG}/${currentId.value}`, payload, { headers });
+      // Thay axios thành api
+      await api.put(`${API_BLOG}/${currentId.value}`, payload);
       showToast("Cập nhật bài viết thành công!");
     } else {
-      await axios.post(API_BLOG, payload, { headers });
+      // Thay axios thành api
+      await api.post(API_BLOG, payload);
       showToast("Thêm bài viết thành công!");
     }
 
@@ -312,7 +316,8 @@ const saveBlog = async () => {
 const deleteBlog = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa bài viết này?")) {
     try {
-      await axios.delete(`${API_BLOG}/${id}`, { headers: getAuthHeader() });
+      // Thay axios thành api, loại bỏ header thủ công
+      await api.delete(`${API_BLOG}/${id}`);
       await fetchBlogs();
       showToast("Xóa bài viết thành công!");
     } catch (error) {

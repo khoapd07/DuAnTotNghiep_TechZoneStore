@@ -153,7 +153,8 @@
 </template>
 
 <script>
-import axios from 'axios';
+// Thay thế import axios từ thư viện gốc bằng instance api đã cấu hình
+import api from '../../utils/axios';
 
 export default {
   name: "ImportReceiptDetail",
@@ -185,7 +186,8 @@ export default {
         return;
       }
       try {
-        const response = await axios.get(`/api/admin/import-receipts/${receiptId}`);
+        // Sử dụng api.get và xóa /api phía trước
+        const response = await api.get(`/admin/import-receipts/${receiptId}`);
         this.receiptData = response.data;
       } catch (error) {
         console.error("Lỗi khi tải chi tiết phiếu nhập:", error);
@@ -199,9 +201,9 @@ export default {
       if (confirm('Bạn có chắc chắn muốn hủy phiếu nhập này không? Hành động này không thể hoàn tác!')) {
         try {
           const receiptId = this.$route.params.id;
-          const response = await axios.delete(`/api/admin/import-receipts/${receiptId}`);
+          // Sử dụng api.delete và xóa /api phía trước
+          const response = await api.delete(`/admin/import-receipts/${receiptId}`);
           
-          // Lấy message từ Controller trả về
           alert(response.data || 'Đã hủy phiếu nhập thành công!');
           this.goBack(); 
         } catch (error) {
@@ -223,12 +225,12 @@ export default {
         try {
           const receiptId = this.$route.params.id;
           
-          // Clone lại data hiện tại và ghi đè note mới
           const payload = { ...this.receiptData, note: newNote };
           
-          await axios.put(`/api/admin/import-receipts/${receiptId}`, payload);
+          // Sử dụng api.put và xóa /api phía trước
+          await api.put(`/admin/import-receipts/${receiptId}`, payload);
           alert('Cập nhật ghi chú thành công!');
-          this.receiptData.note = newNote; // Cập nhật UI
+          this.receiptData.note = newNote; 
         } catch (error) {
           console.error("Lỗi khi cập nhật phiếu:", error);
           if (error.response && error.response.data) {

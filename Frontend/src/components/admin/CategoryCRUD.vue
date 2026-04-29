@@ -105,7 +105,8 @@
 
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue';
-import axios from 'axios';
+// Sử dụng Axios Instance đã cấu hình dùng chung
+import api from '../../utils/axios';
 
 const categoryList = ref([]);
 const showModal = ref(false);
@@ -125,14 +126,12 @@ const getStockCount = (cat) => cat.totalStock !== undefined ? cat.totalStock : (
 const totalProducts = computed(() => categoryList.value.reduce((total, cat) => total + getProductCount(cat), 0));
 const totalStock = computed(() => categoryList.value.reduce((total, cat) => total + getStockCount(cat), 0));
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('jwt_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm qua utils/axios
 
 const fetchCategories = async () => {
   try {
-    const res = await axios.get('http://localhost:8080/api/categories', { headers: getAuthHeader() });
+    // Đã thay thế axios bằng api và đổi sang đường dẫn tương đối
+    const res = await api.get('/categories');
     categoryList.value = res.data;
   } catch (e) { console.error(e); }
 };
@@ -156,12 +155,13 @@ const saveCategory = async () => {
   }
 
   try {
-    const headers = getAuthHeader();
     if (isEditing.value) {
-      await axios.put(`http://localhost:8080/api/categories/${currentId.value}`, form, { headers });
+      // Sử dụng api instance, không cần header thủ công
+      await api.put(`/categories/${currentId.value}`, form);
       showToast("Cập nhật danh mục thành công!");
     } else {
-      await axios.post('http://localhost:8080/api/categories', form, { headers });
+      // Sử dụng api instance, không cần header thủ công
+      await api.post('/categories', form);
       showToast("Thêm danh mục mới thành công!");
     }
     showModal.value = false;
@@ -179,7 +179,8 @@ const saveCategory = async () => {
 const deleteCategory = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) {
     try {
-      await axios.delete(`http://localhost:8080/api/categories/${id}`, { headers: getAuthHeader() });
+      // Sử dụng api instance, không cần header thủ công
+      await api.delete(`/categories/${id}`);
       fetchCategories();
       showToast("Xóa thành công!");
     } catch (error) {

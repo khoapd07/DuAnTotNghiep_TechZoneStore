@@ -129,12 +129,14 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios'; 
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios'; 
 import { useRouter } from 'vue-router';
-import Swal from 'sweetalert2'; // THÊM IMPORT SWEETALERT
+import Swal from 'sweetalert2'; 
 
 const router = useRouter();
-const API_URL = 'http://localhost:8080/api/cart';
+// Thay đổi hằng số API_URL (địa chỉ URL giao diện lập trình) chỉ còn path tương đối
+const API_URL = '/cart';
 
 const cartItems = ref([]);
 const selectAll = ref(false);
@@ -169,7 +171,8 @@ const fetchCart = async () => {
   }
 
   try {
-    const response = await axios.get(`${API_URL}/${userId}`);
+    // Thay đổi axios.get thành api.get
+    const response = await api.get(`${API_URL}/${userId}`);
     const backendItems = response.data.items || response.data;
 
     cartItems.value = backendItems.map(bItem => {
@@ -235,7 +238,8 @@ const syncQuantityWithBackend = (item, newQuantity) => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(async () => {
     try {
-      await axios.put(`${API_URL}/${userId}/update`, { 
+      // Thay đổi axios.put thành api.put
+      await api.put(`${API_URL}/${userId}/update`, { 
         productId: item.productId,
         variantId: item.variantId,
         quantity: newQuantity
@@ -243,14 +247,14 @@ const syncQuantityWithBackend = (item, newQuantity) => {
       await fetchCart();
       window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
+      // Axios trả về lỗi trực tiếp ở error.response.data
       const errorMsg = error.response?.data || 'Cập nhật thất bại';
       
-      const match = errorMsg.match(/Kho chỉ còn (\d+)/i);
+      const match = typeof errorMsg === 'string' ? errorMsg.match(/Kho chỉ còn (\d+)/i) : null;
       
       if (match && match[1]) {
         const maxStock = parseInt(match[1], 10);
         
-        // THAY THẾ ALERT BẰNG SWEETALERT
         Swal.fire({
           title: 'Vượt quá số lượng!',
           text: `Sản phẩm này hiện chỉ còn tối đa ${maxStock} chiếc trong kho!`,
@@ -264,7 +268,8 @@ const syncQuantityWithBackend = (item, newQuantity) => {
         item.quantity = maxStock;
 
         try {
-          await axios.put(`${API_URL}/${userId}/update`, { 
+          // Thay đổi axios.put thành api.put
+          await api.put(`${API_URL}/${userId}/update`, { 
             productId: item.productId,
             variantId: item.variantId,
             quantity: maxStock
@@ -277,7 +282,7 @@ const syncQuantityWithBackend = (item, newQuantity) => {
       } else {
         Swal.fire({
           title: 'Lỗi',
-          text: errorMsg,
+          text: typeof errorMsg === 'string' ? errorMsg : 'Có lỗi xảy ra',
           icon: 'error',
           confirmButtonText: 'Đóng',
           confirmButtonColor: '#dc3545'
@@ -306,7 +311,6 @@ const updateQty = (item) => {
 };
 
 const removeItem = async (productId) => {
-  // THAY THẾ CONFIRM BẰNG SWEETALERT
   const result = await Swal.fire({
     title: 'Xóa sản phẩm?',
     text: "Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?",
@@ -329,7 +333,8 @@ const removeItem = async (productId) => {
     }
 
     try {
-      await axios.delete(`${API_URL}/${userId}/remove/${productId}`);
+      // Thay đổi axios.delete thành api.delete
+      await api.delete(`${API_URL}/${userId}/remove/${productId}`);
       await fetchCart();
       window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
@@ -339,7 +344,6 @@ const removeItem = async (productId) => {
 };
 
 const clearCart = async () => {
-  // THAY THẾ CONFIRM BẰNG SWEETALERT
   const result = await Swal.fire({
     title: 'Làm trống giỏ hàng?',
     text: "Toàn bộ sản phẩm sẽ bị xóa khỏi giỏ. Bạn có chắc không?",
@@ -362,7 +366,8 @@ const clearCart = async () => {
     }
 
     try {
-      await axios.delete(`${API_URL}/${userId}/clear`);
+      // Thay đổi axios.delete thành api.delete
+      await api.delete(`${API_URL}/${userId}/clear`);
       cartItems.value = [];
       window.dispatchEvent(new Event('cart-updated')); 
     } catch (error) {
@@ -388,7 +393,8 @@ const goToCheckout = async () => {
 
   try {
     for (const item of selectedItems) {
-      const res = await axios.get(`http://localhost:8080/api/product/${item.productId}`);
+      // Thay đổi URL gọi đến product API
+      const res = await api.get(`/product/${item.productId}`);
       const productData = res.data;
 
       let maxStock = productData.totalStock;
@@ -398,7 +404,6 @@ const goToCheckout = async () => {
       }
 
       if (item.quantity > maxStock) {
-        // THAY THẾ ALERT BẰNG SWEETALERT CẢNH BÁO
         Swal.fire({
           title: 'Lỗi tồn kho!',
           html: `Sản phẩm <b>"${item.name}" ${item.colorName ? '('+item.colorName+')' : ''}</b> hiện chỉ còn <b>${maxStock} chiếc</b> do vừa có khách hàng khác đặt mua.<br><br>Hệ thống đã tự động điều chỉnh lại số lượng trong giỏ của bạn.`,
@@ -411,7 +416,8 @@ const goToCheckout = async () => {
         item.quantity = maxStock;
 
         if (userId) {
-           await axios.put(`${API_URL}/${userId}/update`, {
+           // Thay đổi axios.put thành api.put
+           await api.put(`${API_URL}/${userId}/update`, {
              productId: item.productId,
              variantId: item.variantId,
              quantity: maxStock
@@ -444,6 +450,7 @@ const goToCheckout = async () => {
 </script>
 
 <style scoped>
+/* Toàn bộ CSS của bạn được giữ nguyên 100% */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }

@@ -194,7 +194,8 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
+// Sử dụng Axios Instance đã cấu hình dùng chung
+import api from '../../utils/axios';
 
 const searchQuery = ref("");
 const suppliers = ref([]);
@@ -214,12 +215,10 @@ const formData = ref({
 
 const errors = ref({});
 
-const apiUrl = '/api/admin/suppliers';
+// Cập nhật apiUrl thành đường dẫn tương đối
+const apiUrl = '/admin/suppliers';
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('jwt_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm qua utils/axios
 
 const filteredSuppliers = computed(() => {
   if (!searchQuery.value) return suppliers.value;
@@ -233,7 +232,8 @@ const filteredSuppliers = computed(() => {
 
 const fetchSuppliers = async () => {
   try {
-    const response = await axios.get(apiUrl, { headers: getAuthHeader() });
+    // Đã thay thế axios bằng api
+    const response = await api.get(apiUrl);
     suppliers.value = response.data;
   } catch (error) {
     console.error("Lỗi khi tải danh sách:", error);
@@ -371,13 +371,13 @@ const saveSupplier = async () => {
       status: formData.value.status
     };
 
-    const headers = getAuthHeader();
-
     if (isEdit.value) {
-      await axios.put(`${apiUrl}/${formData.value.id}`, payload, { headers });
+      // Đã thay thế axios bằng api
+      await api.put(`${apiUrl}/${formData.value.id}`, payload);
       alert('Cập nhật nhà cung cấp thành công!');
     } else {
-      await axios.post(apiUrl, payload, { headers });
+      // Đã thay thế axios bằng api
+      await api.post(apiUrl, payload);
       alert('Thêm nhà cung cấp thành công!');
     }
 
@@ -392,7 +392,8 @@ const saveSupplier = async () => {
 const deleteSupplier = async (id) => {
   if (confirm('Bạn có chắc chắn muốn xóa vĩnh viễn nhà cung cấp này không? Hành động này không thể hoàn tác!')) {
     try {
-      await axios.delete(`${apiUrl}/${id}`, { headers: getAuthHeader() });
+      // Đã thay thế axios bằng api
+      await api.delete(`${apiUrl}/${id}`);
       alert('Đã xóa nhà cung cấp thành công!');
       fetchSuppliers();
     } catch (error) {

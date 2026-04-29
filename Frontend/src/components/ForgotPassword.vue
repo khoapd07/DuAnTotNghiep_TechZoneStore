@@ -62,7 +62,8 @@
 
 <script setup>
 import { ref } from 'vue';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
 const email = ref('');
 const isLoading = ref(false);
@@ -80,7 +81,8 @@ const handleResetPassword = async () => {
   successMessage.value = '';
   
   try {
-    const response = await axios.post('http://localhost:8080/api/auth/forgot-password', {
+    // Thay đổi axios.post thành api.post
+    const response = await api.post('/auth/forgot-password', {
       email: email.value
     });
     
