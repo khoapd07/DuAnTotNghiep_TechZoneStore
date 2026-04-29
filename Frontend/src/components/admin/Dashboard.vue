@@ -47,20 +47,7 @@
           </div>
         </div>
 
-        <!-- <div class="col-md-4">
-          <div class="card border-0 shadow-sm rounded-4 p-3 h-100">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div
-                class="icon-box bg-warning-subtle text-warning rounded-3 d-flex justify-content-center align-items-center"
-                style="width: 40px; height: 40px;">
-                <i class="bi bi-exclamation-triangle fs-5"></i>
-              </div>
-            </div>
-            <p class="text-muted fs-8 fw-bold text-uppercase m-0">Sản phẩm hết hàng</p>
-            <h4 class="fw-black text-dark m-0 mt-1">{{ stats.outOfStockCount }} Sản Phẩm</h4>
-          </div>
-        </div> -->
-      </div>
+        </div>
 
       <div class="row g-3 mb-3">
         <div class="col-lg-7">
@@ -165,8 +152,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'; // Đã xóa computed vì không dùng đến nữa
-import axios from 'axios';
+import { ref, onMounted } from 'vue';
+// Xóa import axios từ thư viện gốc, thay bằng api instance của bạn
+import api from '../../utils/axios';
 
 // 1. Biến chứa dữ liệu
 const stats = ref({});
@@ -215,11 +203,11 @@ const fetchDashboardData = async () => {
   try {
     loading.value = true;
 
-    // Gọi đồng thời 3 API
+    // Thay thế axios.get bằng api.get và xóa bỏ base URL cứng
     const [statsRes, ordersRes, chartRes] = await Promise.all([
-      axios.get('http://localhost:8080/api/admin/dashboard/stats'),
-      axios.get('http://localhost:8080/api/admin/dashboard/recent-orders'),
-      axios.get('http://localhost:8080/api/admin/dashboard/chart-data')
+      api.get('/admin/dashboard/stats'),
+      api.get('/admin/dashboard/recent-orders'),
+      api.get('/admin/dashboard/chart-data')
     ]);
 
     stats.value = statsRes.data;

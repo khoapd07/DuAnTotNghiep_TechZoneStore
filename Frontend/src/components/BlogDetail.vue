@@ -72,7 +72,8 @@
 <script setup>
 import { ref, onMounted, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import axios from "axios" // Thêm thư viện axios
+// Xóa import axios, thay bằng file axios.js tự custom (tùy chỉnh) của bạn
+import api from '../utils/axios';
 
 const route = useRoute()
 const router = useRouter()
@@ -83,8 +84,8 @@ const relatedPosts = ref([])
 const loadBlogDetail = async () => {
   const blogId = Number(route.params.id)
   try {
-    // Gọi API chi tiết blog mà bạn đã định nghĩa ở Backend
-    const res = await axios.get(`http://localhost:8080/api/blogs/${blogId}`)
+    // Thay đổi axios.get thành api.get và xóa Base URL (địa chỉ URL cơ sở)
+    const res = await api.get(`/blogs/${blogId}`)
     blog.value = res.data
     window.scrollTo(0, 0)
     
@@ -100,7 +101,8 @@ const loadBlogDetail = async () => {
 // Lấy danh sách bài viết khác để hiển thị ở sidebar
 const loadRelatedPosts = async (currentBlogId) => {
   try {
-    const res = await axios.get("http://localhost:8080/api/blogs")
+    // Thay đổi axios.get thành api.get
+    const res = await api.get("/blogs")
     
     const activePosts = (Array.isArray(res.data) ? res.data : []).filter(
       // Chú ý: dùng đúng tên biến ID (thường là blogId theo như bên Blog.vue)

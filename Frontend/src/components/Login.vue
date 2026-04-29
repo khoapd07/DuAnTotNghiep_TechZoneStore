@@ -95,7 +95,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios'; 
 
 const router = useRouter();
 
@@ -116,26 +117,15 @@ const handleLogin = async () => {
   isLoading.value = true;
 
   try {
-    // Thay đổi URL theo cấu hình server Backend của bạn (thường là http://localhost:8080)
-    const response = await fetch('http://localhost:8080/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
+    // Thay fetch bằng api.post, Axios sẽ tự động nối Base URL (địa chỉ URL cơ sở)
+    const response = await api.post('/auth/login', {
+      username: username.value,
+      password: password.value
     });
 
-    // Nếu Backend trả về lỗi (400 Bad Request, 401 Unauthorized, v.v.)
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Sai tài khoản hoặc mật khẩu. Vui lòng thử lại!');
-    }
-
-    // Nếu thành công (200 OK)
-    const data = await response.json();
+    // Bỏ qua bước kiểm tra !response.ok vì Axios tự động ném ra Exception (ngoại lệ) nếu lỗi
+    // Axios tự động Parse (phân tích) JSON, nên lấy trực tiếp từ response.data
+    const data = response.data;
 
     // 1. Lưu JWT token vào localStorage
     localStorage.setItem('jwt_token', data.token);
@@ -160,8 +150,9 @@ const handleLogin = async () => {
             variantId: item.variantId,
             quantity: item.quantity
         }));
-        // Gọi API merge của bạn
-        await axios.post(`http://localhost:8080/api/cart/${userInfo.userId}/merge`, mergeData);
+        
+        // Thay axios.post bằng api.post
+        await api.post(`/cart/${userInfo.userId}/merge`, mergeData);
         // Xóa giỏ hàng local đi sau khi đã gộp thành công
         localStorage.removeItem('guest_cart'); 
     }
@@ -183,8 +174,15 @@ const handleLogin = async () => {
     }
 
   } catch (error) {
-    // Hiển thị lỗi ra UI
-    errorMessage.value = error.message;
+    // Xử lý lỗi (Error Handling) riêng biệt của Axios
+    if (error.response && error.response.data) {
+       // Xử lý trường hợp Backend trả về chuỗi text hoặc Object
+       errorMessage.value = typeof error.response.data === 'string' 
+                            ? error.response.data 
+                            : (error.response.data.message || 'Sai tài khoản hoặc mật khẩu. Vui lòng thử lại!');
+    } else {
+       errorMessage.value = error.message;
+    }
   } finally {
     // Tắt trạng thái loading
     isLoading.value = false;
@@ -197,8 +195,8 @@ const handleGoogleLogin = async (response) => {
   errorMessage.value = '';
 
   try {
-    // Gửi token do Google cấp xuống Backend
-    const res = await axios.post('http://localhost:8080/api/auth/google', {
+    // Thay axios.post bằng api.post
+    const res = await api.post('/auth/google', {
       token: response.credential
     });
 
@@ -224,7 +222,9 @@ const handleGoogleLogin = async (response) => {
             variantId: item.variantId,
             quantity: item.quantity
         }));
-        await axios.post(`http://localhost:8080/api/cart/${userInfo.userId}/merge`, mergeData);
+        
+        // Thay axios.post bằng api.post
+        await api.post(`/cart/${userInfo.userId}/merge`, mergeData);
         localStorage.removeItem('guest_cart'); 
     }
 
@@ -250,7 +250,7 @@ const handleGoogleLogin = async (response) => {
 </script>
 
 <style scoped>
-/* Reset & Typography */
+/* TOÀN BỘ PHẦN STYLE BẠN GIỮ NGUYÊN */
 .login-page {
   font-family: 'Inter', sans-serif;
   background: radial-gradient(circle at top left, #f1f8f3, #ffffff 40%, #f4f6f8 100%);
@@ -262,10 +262,8 @@ const handleGoogleLogin = async (response) => {
 .fs-8 { font-size: 0.75rem; }
 .cursor-pointer { cursor: pointer; }
 
-/* Biến màu thương hiệu */
 .text-neon { color: #00FF33 !important; }
 
-/* Thẻ Form (Card) */
 .login-card {
   width: 100%;
   max-width: 420px;
@@ -273,7 +271,6 @@ const handleGoogleLogin = async (response) => {
   backdrop-filter: blur(10px);
 }
 
-/* Custom Input Box */
 .custom-input-group {
   background-color: #F4F5F7; 
   border: 1px solid transparent;
@@ -291,7 +288,6 @@ const handleGoogleLogin = async (response) => {
   background-color: #e9ecef !important;
 }
 
-/* Custom Checkbox */
 .custom-checkbox .form-check-input {
   border-radius: 4px;
   border-color: #CCC;
@@ -308,7 +304,6 @@ const handleGoogleLogin = async (response) => {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
 }
 
-/* Nút Neon Đăng nhập */
 .btn-neon {
   background-color: #00FF33;
   color: #000;
@@ -325,7 +320,6 @@ const handleGoogleLogin = async (response) => {
   cursor: not-allowed;
 }
 
-/* Nút Google */
 .btn-outline-light.border {
   border-color: #EAEAEA !important;
   transition: all 0.2s;
@@ -335,7 +329,6 @@ const handleGoogleLogin = async (response) => {
   border-color: #CCC !important;
 }
 
-/* Hover text */
 .hover-neon {
   transition: color 0.2s;
 }

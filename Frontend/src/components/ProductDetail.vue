@@ -218,7 +218,8 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
 const route = useRoute();
 const router = useRouter();
@@ -313,6 +314,7 @@ const calculateDiscount = (price, salePrice) => {
 const getImageUrl = (url) => {
   if (!url) return 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image';
   if (url.startsWith('http')) return url;
+  // Vẫn giữ lại Base URL này vì nó dùng để fetch file ảnh tĩnh từ Backend thay vì gọi REST API
   return `http://localhost:8080${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
@@ -344,7 +346,8 @@ const selectColor = (color) => {
 
 const fetchProductDetail = async (id) => {
   try {
-    const res = await axios.get(`http://localhost:8080/api/product/${id}`);
+    // Thay đổi axios.get thành api.get
+    const res = await api.get(`/product/${id}`);
     product.value = res.data;
     
     currentImage.value = getImageUrl(product.value.imageUrl);
@@ -359,7 +362,8 @@ const fetchProductDetail = async (id) => {
 
 const fetchSimilarProducts = async () => {
   try {
-    const res = await axios.get(`http://localhost:8080/api/product`, { params: { categoryId: product.value.categoryId, page: 0, size: 4 } });
+    // Thay đổi axios.get thành api.get
+    const res = await api.get(`/product`, { params: { categoryId: product.value.categoryId, page: 0, size: 4 } });
     const all = res.data.content || res.data;
     similarProducts.value = all.filter(item => (item.productId || item.id) !== (product.value.productId || product.value.id));
   } catch (e) {}
@@ -367,7 +371,8 @@ const fetchSimilarProducts = async () => {
 
 const fetchReviews = async () => {
   try {
-    const res = await axios.get(`http://localhost:8080/api/reviews/product/${product.value.productId || product.value.id}`);
+    // Thay đổi axios.get thành api.get
+    const res = await api.get(`/reviews/product/${product.value.productId || product.value.id}`);
     reviews.value = res.data;
   } catch (e) { reviews.value = []; }
 };
@@ -413,7 +418,8 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
 
   if (userId) {
     try {
-      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, { 
+      // Thay đổi axios.post thành api.post
+      await api.post(`/cart/${userId}/add`, { 
           productId: pId, 
           variantId: vId, 
           quantity: qtyToAdd 

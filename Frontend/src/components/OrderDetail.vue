@@ -151,7 +151,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
 const route = useRoute();
 const router = useRouter();
@@ -174,7 +175,8 @@ const orderData = ref({
 // Nhận orderCode làm tham số để linh hoạt khi theo dõi
 const fetchOrderDetail = async (orderCode) => {
   try {
-    const response = await axios.get(`http://localhost:8080/api/orders/code/${orderCode}`);
+    // Thay đổi axios.get thành api.get
+    const response = await api.get(`/orders/code/${orderCode}`);
     const data = response.data;
     
     let extName = 'Khách hàng';

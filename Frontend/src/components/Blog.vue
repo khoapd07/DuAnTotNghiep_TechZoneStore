@@ -7,7 +7,6 @@
         <h4 class="fw-black m-0 text-dark">Bài viết nổi bật</h4>
       </div>
 
-      <!-- HERO BLOG -->
       <div v-if="heroPost" class="hero-post-card rounded-4 overflow-hidden position-relative mb-5 shadow-sm">
         <img :src="heroPost.thumbnailUrl" class="w-100 h-100 object-fit-cover absolute-img">
 
@@ -36,7 +35,6 @@
         </div>
       </div>
 
-      <!-- LIST BLOG -->
       <div class="row g-4 mb-5">
 
         <div
@@ -100,7 +98,8 @@
 <script setup>
 import { useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
-import axios from "axios";
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios'; 
 
 const router = useRouter();
 
@@ -113,7 +112,8 @@ const goToBlog = (id) => {
 
 const loadBlogs = async () => {
   try {
-    const res = await axios.get("http://localhost:8080/api/blogs");
+    // Thay đổi axios.get thành api.get và xóa bỏ Base URL (địa chỉ URL cơ sở)
+    const res = await api.get("/blogs");
 
     // ✅ CHỈ HIỂN THỊ BÀI active = true
     const activePosts = (Array.isArray(res.data) ? res.data : []).filter(

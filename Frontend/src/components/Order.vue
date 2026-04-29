@@ -189,8 +189,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router'; 
-import axios from 'axios';
-import Swal from 'sweetalert2'; // <-- THÊM IMPORT SWEETALERT
+// Xóa import axios từ thư viện gốc, thay bằng api instance của bạn
+import api from '../utils/axios'; 
+import Swal from 'sweetalert2'; 
 
 const router = useRouter();
 const activeTab = ref('Tất cả');
@@ -212,10 +213,7 @@ const getCurrentUserId = () => {
   return null;
 };
 
-const getAuthConfig = () => {
-  const token = localStorage.getItem('jwt_token'); 
-  return { headers: { Authorization: `Bearer ${token}` } };
-};
+// Hàm getAuthConfig đã được xóa vì Interceptors tự động thêm JWT Token
 
 const fetchOrders = async () => {
   const userId = getCurrentUserId();
@@ -233,10 +231,12 @@ const fetchOrders = async () => {
 
   loading.value = true;
   try {
-    const orderRes = await axios.get(`http://localhost:8080/api/orders/${userId}/history`);
+    // Thay đổi axios.get thành api.get
+    const orderRes = await api.get(`/orders/${userId}/history`);
     orders.value = orderRes.data;
 
-    const reviewRes = await axios.get(`http://localhost:8080/api/reviews/user/${userId}`);
+    // Thay đổi axios.get thành api.get
+    const reviewRes = await api.get(`/reviews/user/${userId}`);
     userReviewedProductIds.value = reviewRes.data.map(r => r.productId);
 
   } catch (error) {
@@ -287,7 +287,8 @@ const cancelOrder = async (order) => {
   const userId = getCurrentUserId();
 
   try {
-    await axios.put(`http://localhost:8080/api/orders/admin/${order.orderId}/status?statusId=4&employeeId=${userId}`, null, getAuthConfig());
+    // Thay đổi axios.put thành api.put và không cần truyền getAuthConfig()
+    await api.put(`/orders/admin/${order.orderId}/status?statusId=4&employeeId=${userId}`);
     
     Swal.fire({
       title: 'Thành công!',
@@ -401,7 +402,8 @@ const submitReviews = async () => {
         comment: formData.comment
       };
 
-      await axios.post('http://localhost:8080/api/reviews/send', payload);
+      // Thay đổi axios.post thành api.post
+      await api.post('/reviews/send', payload);
       userReviewedProductIds.value.push(item.productId);
       successCount++;
     }
@@ -458,7 +460,8 @@ const reOrder = async (order) => {
       return;
     }
 
-    const productsRes = await axios.get('http://localhost:8080/api/product?size=1000');
+    // Thay đổi axios.get thành api.get
+    const productsRes = await api.get('/product?size=1000');
     const allProducts = productsRes.data.content || [];
 
     let outOfStockItems = [];
@@ -524,7 +527,8 @@ const reOrder = async (order) => {
     }
 
     for (const item of itemsToAdd) {
-      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, item);
+      // Thay đổi axios.post thành api.post
+      await api.post(`/cart/${userId}/add`, item);
     }
 
     // THÀNH CÔNG -> HIỂN THỊ ALERT RỒI CHUYỂN TRANG

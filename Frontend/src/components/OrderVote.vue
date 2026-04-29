@@ -122,11 +122,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
 // --- 1. CONFIG & STATE ---
 const CURRENT_USER_ID = 1; 
-const API_URL = 'http://localhost:8080/api/reviews';
+// Thay đổi API_URL thành path tương đối
+const API_URL = '/reviews';
 const reviews = ref([]);
 const loading = ref(true);
 const filterRating = ref('Tất cả');
@@ -149,7 +151,8 @@ const fetchUserReviews = async () => {
 
   loading.value = true;
   try {
-    const response = await axios.get(`${API_URL}/user/${userId}`);
+    // Thay đổi axios.get thành api.get
+    const response = await api.get(`${API_URL}/user/${userId}`);
     reviews.value = response.data;
   } catch (error) {
     console.error("Lỗi khi tải lịch sử đánh giá:", error);

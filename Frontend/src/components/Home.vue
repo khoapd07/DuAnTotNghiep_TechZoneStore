@@ -248,10 +248,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router'; // ĐÃ THÊM: Import router
-import axios from 'axios';
+import { useRouter } from 'vue-router'; 
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
-const router = useRouter(); // ĐÃ THÊM: Khởi tạo router
+const router = useRouter(); 
 
 const slideShows = ref([]);
 const featuredProducts = ref([]);
@@ -283,11 +284,11 @@ const scrollToTop = () => {
   window.scrollTo({ top: 0, behavior: 'instant' });
 };
 
-// ĐÃ THÊM: Hàm điều hướng sang trang chi tiết sản phẩm
+// Hàm điều hướng sang trang chi tiết sản phẩm
 const goToProduct = (productId) => {
   if (!productId) return;
   router.push(`/product/${productId}`);
-  window.scrollTo(0, 0); // Tự động cuộn lên đầu trang khi chuyển trang
+  window.scrollTo(0, 0); 
 };
 
 const scrollSale = (direction) => {
@@ -328,12 +329,13 @@ const closeModal = () => {
 
 const fetchData = async () => {
   try {
+    // Thay đổi axios.get thành api.get và xóa bỏ base URL
     const [slidesRes, featuredRes, latestRes, discountedRes, flashSaleRes] = await Promise.all([
-      axios.get('http://localhost:8080/api/slideshows/active'), 
-      axios.get('http://localhost:8080/api/product/featured'),
-      axios.get('http://localhost:8080/api/product/latest'),
-      axios.get('http://localhost:8080/api/product/discounted'),
-      axios.get('http://localhost:8080/api/vouchers/homepage').catch(() => null)
+      api.get('/slideshows/active'), 
+      api.get('/product/featured'),
+      api.get('/product/latest'),
+      api.get('/product/discounted'),
+      api.get('/vouchers/homepage').catch(() => null)
     ]);
     
     if (slidesRes && slidesRes.data && slidesRes.data.length > 0) {
@@ -376,7 +378,8 @@ const addToCart = async (productToAdd, showNotification = true) => {
 
   if (userId) {
     try {
-      await axios.post(`http://localhost:8080/api/cart/${userId}/add`, {
+      // Thay đổi axios.post thành api.post
+      await api.post(`/cart/${userId}/add`, {
         productId: productToAdd.productId,
         variantId: vId,
         quantity: 1 

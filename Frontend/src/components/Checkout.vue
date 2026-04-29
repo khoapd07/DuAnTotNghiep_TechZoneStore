@@ -207,7 +207,7 @@
                   <span class="material-symbols-outlined fs-6">bolt</span> VietQR
                 </span>
                 <span class="badge bg-dark border border-secondary text-light px-3 py-2 rounded-pill d-flex align-items-center gap-1">
-                  Napas 247
+                  <span class="material-symbols-outlined fs-6">nfc</span> Napas 247
                 </span>
               </div>
             </div>
@@ -249,11 +249,11 @@
 <script setup>
 import { ref, onMounted, computed, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios'; 
 import Swal from 'sweetalert2';
 
 const router = useRouter();
-const API_BASE = 'http://localhost:8080/api';
 
 const cartData = ref({ items: [], cartTotal: 0 });
 const loading = ref(false);
@@ -327,10 +327,9 @@ const getCurrentUserId = () => {
   return null;
 };
 
-const getAuthConfig = () => {
-  const token = localStorage.getItem('jwt_token'); 
-  return { headers: { Authorization: `Bearer ${token}` } };
-};
+// Hàm getAuthConfig không còn thực sự cần thiết vì axios.js đã tự gắn token. 
+// Tuy nhiên để code hoạt động trơn tru không thay đổi nhiều, ta vẫn giữ lại hoặc xóa nó tùy ý.
+// Ở đây tôi đã loại bỏ việc gọi hàm này trong api.get và api.post bên dưới để code sạch hơn.
 
 const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
@@ -340,7 +339,8 @@ const fetchUserProfile = async () => {
   const userId = getCurrentUserId();
   if (!userId) return;
   try {
-    const response = await axios.get(`${API_BASE}/profile/${userId}`, getAuthConfig());
+    // Thay đổi axios.get thành api.get
+    const response = await api.get(`/profile/${userId}`);
     const user = response.data;
     shippingInfo.value.fullName = user.fullName || '';
     shippingInfo.value.phone = user.phoneNumber || '';
@@ -390,7 +390,8 @@ const applyVoucher = async () => {
   }
   isCheckingVoucher.value = true;
   try {
-    const response = await axios.get(`${API_BASE}/vouchers/check`, {
+    // Thay đổi axios.get thành api.get
+    const response = await api.get('/vouchers/check', {
       params: { code: voucherCode.value.trim(), orderValue: subtotal.value }
     });
     discountAmount.value = response.data;
@@ -427,7 +428,8 @@ const handlePlaceOrder = async () => {
       const tempTxnCode = Math.floor(Date.now() / 1000); 
       successOrderCode.value = tempTxnCode.toString();
 
-      const payRes = await axios.post(`${API_BASE}/payment/create`, {
+      // Thay đổi axios.post thành api.post
+      const payRes = await api.post('/payment/create', {
         orderCode: tempTxnCode, 
         productName: "Thanh toán đơn hàng",
         description: "TZ " + tempTxnCode,
@@ -481,9 +483,11 @@ const executeCreateOrder = async (isAlreadyPaid) => {
 
     let response;
     if (userId) {
-      response = await axios.post(`${API_BASE}/orders/${userId}/place`, { ...basePayload, email: shippingInfo.value.email }, getAuthConfig());
+      // Thay đổi axios.post thành api.post
+      response = await api.post(`/orders/${userId}/place`, { ...basePayload, email: shippingInfo.value.email });
     } else {
-      response = await axios.post(`${API_BASE}/orders/guest/place`, {
+      // Thay đổi axios.post thành api.post
+      response = await api.post('/orders/guest/place', {
         ...basePayload,
         guestFullName: shippingInfo.value.fullName,
         guestPhone: shippingInfo.value.phone,
@@ -546,7 +550,8 @@ const startQrTimer = () => {
 
   checkPaymentInterval = setInterval(async () => {
     try {
-      const res = await axios.get(`${API_BASE}/payment/check-status/${successOrderCode.value}`);
+      // Thay đổi axios.get thành api.get
+      const res = await api.get(`/payment/check-status/${successOrderCode.value}`);
       if (res.data.data === true) { 
         clearInterval(checkPaymentInterval);
         clearInterval(timerInterval);

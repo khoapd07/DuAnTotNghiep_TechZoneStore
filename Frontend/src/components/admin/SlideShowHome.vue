@@ -153,7 +153,8 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import axios from 'axios';
+// Xóa import axios, sử dụng api đã được thiết lập sẵn
+import api from '../../utils/axios';
 
 const slideShows = ref([]);
 const showModal = ref(false);
@@ -172,14 +173,12 @@ const form = reactive({
   badgeClass: '#00FF33', highlightClass: '#00FF33', description: '', displayOrder: 1, active: true
 });
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('jwt_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Hàm getAuthHeader() không còn cần thiết
 
 const fetchSlides = async () => {
   try {
-    const response = await axios.get('http://localhost:8080/api/slideshows', { headers: getAuthHeader() });
+    // Gọi API thông qua instance 'api'
+    const response = await api.get('/slideshows');
     slideShows.value = response.data;
   } catch (error) { console.error("Lỗi lấy slide:", error); }
 };
@@ -193,9 +192,10 @@ const uploadImage = async (event) => {
   formData.append('file', file);
 
   try {
-    const headers = getAuthHeader();
-    headers['Content-Type'] = 'multipart/form-data';
-    const response = await axios.post('http://localhost:8080/api/upload', formData, { headers });
+    // Gọi API thông qua instance 'api' và bổ sung Header
+    const response = await api.post('/upload', formData, { 
+      headers: { 'Content-Type': 'multipart/form-data' } 
+    });
     form.imageUrl = response.data; 
   } catch (error) {
     showToast("Upload ảnh thất bại!", "error");
@@ -233,10 +233,12 @@ const saveSlide = async () => {
 
   try {
     if (isEditing.value) {
-      await axios.put(`http://localhost:8080/api/slideshows/${currentId.value}`, payload, { headers: getAuthHeader() });
+      // Gọi API thông qua instance 'api'
+      await api.put(`/slideshows/${currentId.value}`, payload);
       showToast("Cập nhật Slide thành công!");
     } else {
-      await axios.post('http://localhost:8080/api/slideshows', payload, { headers: getAuthHeader() });
+      // Gọi API thông qua instance 'api'
+      await api.post('/slideshows', payload);
       showToast("Thêm Slide mới thành công!");
     }
     showModal.value = false;
@@ -249,7 +251,8 @@ const saveSlide = async () => {
 const deleteSlide = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa slide này?")) {
     try {
-      await axios.delete(`http://localhost:8080/api/slideshows/${id}`, { headers: getAuthHeader() });
+      // Gọi API thông qua instance 'api'
+      await api.delete(`/slideshows/${id}`);
       fetchSlides();
       showToast("Xóa thành công!");
     } catch (error) {

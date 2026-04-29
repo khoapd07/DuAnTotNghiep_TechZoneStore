@@ -203,7 +203,8 @@
 
 <script setup>
 import { ref, onMounted, computed, reactive } from 'vue';
-import axios from 'axios';
+// Sử dụng Axios Instance đã cấu hình dùng chung
+import api from '../../utils/axios';
 
 const customers = ref([]);
 const isLoading = ref(false);
@@ -224,17 +225,16 @@ const form = ref({
   status: true 
 });
 
-const API_URL = 'http://localhost:8080/api/admin/customers';
+// Thay đổi API_URL thành dạng relative path (đường dẫn tương đối)
+const API_URL = '/admin/customers';
 
-const getAuthConfig = () => {
-  const token = localStorage.getItem('token');
-  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-};
+// Hàm getAuthConfig() đã được loại bỏ vì interceptor xử lý tự động
 
 const fetchCustomers = async () => {
   isLoading.value = true;
   try {
-    const response = await axios.get(API_URL, getAuthConfig());
+    // Sử dụng api instance, không truyền auth config thủ công
+    const response = await api.get(API_URL);
     customers.value = response.data;
   } catch (error) {
     console.error('Lỗi khi tải dữ liệu:', error);
@@ -262,7 +262,8 @@ const newCustomersThisMonth = computed(() => {
 const toggleStatus = async (id) => {
   if(!confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản này?')) return;
   try {
-    await axios.put(`${API_URL}/${id}/toggle-status`, {}, getAuthConfig());
+    // Sử dụng api instance
+    await api.put(`${API_URL}/${id}/toggle-status`);
     fetchCustomers();
   } catch (error) { alert('Có lỗi xảy ra!'); }
 };
@@ -270,7 +271,8 @@ const toggleStatus = async (id) => {
 const deleteCustomer = async (id) => {
   if(!confirm('Cảnh báo: Hành động này sẽ xóa vĩnh viễn khách hàng. Bạn có chắc chắn?')) return;
   try {
-    await axios.delete(`${API_URL}/${id}`, getAuthConfig());
+    // Sử dụng api instance
+    await api.delete(`${API_URL}/${id}`);
     alert('Đã xóa thành công!');
     fetchCustomers();
   } catch (error) { alert('Không thể xóa! Có thể tài khoản này đang dính khóa ngoại tới đơn hàng.'); }
@@ -337,10 +339,12 @@ const saveCustomer = async () => {
   // --- 2. GỌI API (Giao diện lập trình ứng dụng) ---
   try {
     if (isEditing.value) {
-      await axios.put(`${API_URL}/${form.value.userId}`, form.value, getAuthConfig());
+      // Sử dụng api instance
+      await api.put(`${API_URL}/${form.value.userId}`, form.value);
       alert('Cập nhật thành công!');
     } else {
-      await axios.post(API_URL, form.value, getAuthConfig());
+      // Sử dụng api instance
+      await api.post(API_URL, form.value);
       alert('Tạo khách hàng thành công!');
     }
     

@@ -61,7 +61,6 @@ const routes = [
   { path: '/order/:id', name: 'OrderDetail', component: OrderDetail },
   { path: '/blog', name: 'Blog', component: Blog },
   { path: '/blog/:id', name: 'BlogDetail', component: BlogDetail },
-  // { path: '/Blogdetail', name: 'Blogdetail', component: Blogdetail },
   { path: '/ForgotPassword', name: 'ForgotPassword', component: ForgotPassword },
   { path: '/Historyproduct', name: 'Historyproduct', component: Historyproduct},
   { path: '/OrderVote', name: 'OrderVote', component: OrderVote},

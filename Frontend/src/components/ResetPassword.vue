@@ -60,7 +60,8 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import axios from 'axios';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
 const route = useRoute();   // Dùng để lấy tham số trên URL
 const router = useRouter(); // Dùng để chuyển trang
@@ -98,9 +99,9 @@ const handleReset = async () => {
   errorMessage.value = '';
 
   try {
-    // 3. Gọi API Backend
+    // 3. Gọi API Backend thông qua api instance
     // Gửi đúng object khớp với ResetPasswordRequest trong Java
-    await axios.post('http://localhost:8080/api/auth/reset-password', {
+    await api.post('/auth/reset-password', {
       token: token,
       newPassword: password.value
     });
@@ -115,8 +116,11 @@ const handleReset = async () => {
 
   } catch (error) {
     console.error(error);
+    // Xử lý lỗi với axios instance
     if (error.response && error.response.data) {
-      errorMessage.value = error.response.data; // Lỗi server trả về (Token hết hạn, v.v...)
+      errorMessage.value = typeof error.response.data === 'string' 
+                            ? error.response.data 
+                            : 'Lỗi khi đặt lại mật khẩu.'; // Lỗi server trả về (Token hết hạn, v.v...)
     } else {
       errorMessage.value = "Lỗi kết nối server. Vui lòng thử lại.";
     }

@@ -211,8 +211,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
-import Swal from 'sweetalert2'; // THÊM IMPORT SWEETALERT
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios'; 
+import Swal from 'sweetalert2'; 
 
 const router = useRouter();
 
@@ -231,10 +232,7 @@ const isChangingPwd = ref(false);
 const profileForm = ref({ fullName: '', phoneNumber: '', email: '', address: '' });
 const pwdForm = ref({ currentPassword: '', newPassword: '', confirmPassword: '' });
 
-const getAuthConfig = () => {
-  const token = localStorage.getItem('jwt_token'); 
-  return { headers: { Authorization: `Bearer ${token}` } };
-};
+// Đã loại bỏ hàm getAuthConfig() vì Interceptor của api đã tự động chèn JWT token.
 
 const getUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
@@ -259,7 +257,8 @@ const fetchProfile = async () => {
   }
 
   try {
-    const response = await axios.get(`http://localhost:8080/api/profile/${userId}`, getAuthConfig());
+    // Thay đổi axios.get thành api.get, xóa bỏ Base URL và config chứa Header.
+    const response = await api.get(`/profile/${userId}`);
     profileForm.value = response.data;
   } catch (error) {
     if (error.response?.status === 401) {
@@ -275,7 +274,8 @@ const saveProfile = async () => {
   
   isSavingProfile.value = true;
   try {
-    const response = await axios.put(`http://localhost:8080/api/profile/${userId}`, profileForm.value, getAuthConfig());
+    // Thay đổi axios.put thành api.put
+    const response = await api.put(`/profile/${userId}`, profileForm.value);
     
     // Cập nhật lại localStorage để header cập nhật tên
     const userInfo = JSON.parse(localStorage.getItem('user_info'));
@@ -286,7 +286,7 @@ const saveProfile = async () => {
     // HIỂN THỊ MODAL THÀNH CÔNG
     Swal.fire({
       title: 'Thành công!',
-      text: response.data || 'Cập nhật thông tin cá nhân thành công.',
+      text: typeof response.data === 'string' ? response.data : 'Cập nhật thông tin cá nhân thành công.',
       icon: 'success',
       confirmButtonText: 'Đóng',
       confirmButtonColor: '#00FF33',
@@ -294,7 +294,7 @@ const saveProfile = async () => {
     });
 
   } catch (error) {
-    Swal.fire('Lỗi', error.response?.data || 'Đã xảy ra lỗi khi lưu thông tin!', 'error');
+    Swal.fire('Lỗi', typeof error.response?.data === 'string' ? error.response?.data : 'Đã xảy ra lỗi khi lưu thông tin!', 'error');
   } finally {
     isSavingProfile.value = false;
   }
@@ -308,11 +308,12 @@ const updatePassword = async () => {
   
   isChangingPwd.value = true;
   try {
-    const response = await axios.put(`http://localhost:8080/api/profile/${getUserId()}/password`, pwdForm.value, getAuthConfig());
+    // Thay đổi axios.put thành api.put
+    const response = await api.put(`/profile/${getUserId()}/password`, pwdForm.value);
     
     Swal.fire({
       title: 'Thành công!',
-      text: response.data || 'Đổi mật khẩu thành công.',
+      text: typeof response.data === 'string' ? response.data : 'Đổi mật khẩu thành công.',
       icon: 'success',
       confirmButtonText: 'Đóng',
       confirmButtonColor: '#00FF33',
@@ -321,7 +322,7 @@ const updatePassword = async () => {
 
     pwdForm.value = { currentPassword: '', newPassword: '', confirmPassword: '' };
   } catch (error) {
-    Swal.fire('Lỗi', error.response?.data || 'Lỗi đổi mật khẩu!', 'error');
+    Swal.fire('Lỗi', typeof error.response?.data === 'string' ? error.response?.data : 'Lỗi đổi mật khẩu!', 'error');
   } finally {
     isChangingPwd.value = false;
   }
@@ -349,7 +350,6 @@ const handleLogout = async () => {
 // ==========================================
 // LOGIC TAB 2: LỊCH SỬ ĐÁNH GIÁ
 // ==========================================
-const API_REVIEW_URL = 'http://localhost:8080/api/reviews';
 const reviews = ref([]);
 const loadingReviews = ref(false);
 const filterRating = ref('Tất cả');
@@ -359,7 +359,8 @@ const fetchUserReviews = async () => {
   if (!userId) return;
   loadingReviews.value = true;
   try {
-    const response = await axios.get(`${API_REVIEW_URL}/user/${userId}`);
+    // Thay đổi axios.get thành api.get
+    const response = await api.get(`/reviews/user/${userId}`);
     reviews.value = response.data;
   } catch (error) {
     console.error("Lỗi tải đánh giá:", error);

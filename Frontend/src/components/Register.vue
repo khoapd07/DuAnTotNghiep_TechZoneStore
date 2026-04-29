@@ -108,6 +108,8 @@
 <script setup>
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
+import api from '../utils/axios';
 
 const router = useRouter();
 
@@ -141,21 +143,11 @@ const handleRegister = async () => {
   isLoading.value = true;
 
   try {
-    const response = await fetch('http://localhost:8080/api/auth/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        username: username.value,
-        password: password.value
-      })
+    // Thay đổi fetch thành api.post
+    await api.post('/auth/register', {
+      username: username.value,
+      password: password.value
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Đăng ký thất bại. Vui lòng thử lại!');
-    }
 
     // Thành công
     successMessage.value = 'Đăng ký thành công! Đang chuyển hướng sang trang đăng nhập...';
@@ -166,7 +158,14 @@ const handleRegister = async () => {
     }, 2000);
 
   } catch (error) {
-    errorMessage.value = error.message;
+    // Xử lý lỗi với axios
+    if (error.response && error.response.data) {
+       errorMessage.value = typeof error.response.data === 'string' 
+                            ? error.response.data 
+                            : 'Đăng ký thất bại. Vui lòng thử lại!';
+    } else {
+       errorMessage.value = error.message;
+    }
   } finally {
     isLoading.value = false;
   }
@@ -179,8 +178,8 @@ const handleGoogleLogin = async (response) => {
   successMessage.value = '';
 
   try {
-    // Gọi chung API google giống như bên Login
-    const res = await axios.post('http://localhost:8080/api/auth/google', {
+    // Thay đổi axios.post thành api.post
+    const res = await api.post('/auth/google', {
       token: response.credential
     });
 
@@ -206,7 +205,8 @@ const handleGoogleLogin = async (response) => {
             variantId: item.variantId,
             quantity: item.quantity
         }));
-        await axios.post(`http://localhost:8080/api/cart/${userInfo.userId}/merge`, mergeData);
+        // Thay đổi axios.post thành api.post
+        await api.post(`/cart/${userInfo.userId}/merge`, mergeData);
         localStorage.removeItem('guest_cart'); 
     }
 

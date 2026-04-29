@@ -100,6 +100,8 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+// Xóa import axios từ thư viện gốc nếu có (file cũ dùng fetch), thay bằng api của bạn
+import api from '../../utils/axios';
 
 const sessions = ref([]);
 const selectedSession = ref(null);
@@ -118,8 +120,9 @@ const formatCustomerName = (sessionId) => {
 // Hàm lấy danh sách phiên chat
 const fetchSessions = async () => {
   try {
-    const res = await fetch('http://localhost:8080/api/chat/sessions');
-    if (res.ok) sessions.value = await res.json();
+    // Đổi fetch thành api.get
+    const res = await api.get('/chat/sessions');
+    sessions.value = res.data;
   } catch (error) { console.error(error); }
 };
 
@@ -133,14 +136,13 @@ const selectSession = async (session) => {
 // Tải lịch sử tin nhắn của 1 phiên chat
 const loadMessages = async (sessionId) => {
   try {
-    const res = await fetch(`http://localhost:8080/api/chat/session/${sessionId}/messages`);
-    if (res.ok) {
-      const data = await res.json();
-      // FIX LỖI CUỘN TRANG: Chỉ cập nhật nếu có tin nhắn mới
-      if (messages.value.length < data.length) {
-        messages.value = data;
-        scrollToBottom();
-      }
+    // Đổi fetch thành api.get
+    const res = await api.get(`/chat/session/${sessionId}/messages`);
+    const data = res.data;
+    // FIX LỖI CUỘN TRANG: Chỉ cập nhật nếu có tin nhắn mới
+    if (messages.value.length < data.length) {
+      messages.value = data;
+      scrollToBottom();
     }
   } catch (error) { console.error(error); }
 };
@@ -148,15 +150,10 @@ const loadMessages = async (sessionId) => {
 // Đổi trạng thái (AI_HANDLING <-> STAFF_HANDLING)
 const changeStatus = async (newStatus) => {
   try {
-    const res = await fetch(`http://localhost:8080/api/chat/session/${selectedSession.value.sessionId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
-    });
-    if (res.ok) {
-      selectedSession.value.status = newStatus;
-      fetchSessions();
-    }
+    // Đổi fetch thành api.put
+    await api.put(`/chat/session/${selectedSession.value.sessionId}/status`, { status: newStatus });
+    selectedSession.value.status = newStatus;
+    fetchSessions();
   } catch (error) { console.error(error); }
 };
 
@@ -167,21 +164,18 @@ const deleteChat = async () => {
   if (!confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử chat của khách hàng này không? Dữ liệu sẽ không thể khôi phục!')) return;
   
   try {
-    const res = await fetch(`http://localhost:8080/api/chat/session/${selectedSession.value.sessionId}`, {
-      method: 'DELETE'
-    });
-    if (res.ok) {
-      // Xóa thành công thì reset lại màn hình bên phải
-      selectedSession.value = null; 
-      messages.value = [];
-      // Tải lại danh sách khách hàng bên trái
-      fetchSessions(); 
-      alert('Đã xóa thành công!');
-    } else {
-      alert('Có lỗi xảy ra khi xóa chat.');
-    }
+    // Đổi fetch thành api.delete
+    await api.delete(`/chat/session/${selectedSession.value.sessionId}`);
+    
+    // Xóa thành công thì reset lại màn hình bên phải
+    selectedSession.value = null; 
+    messages.value = [];
+    // Tải lại danh sách khách hàng bên trái
+    fetchSessions(); 
+    alert('Đã xóa thành công!');
   } catch (error) { 
     console.error('Lỗi xóa chat:', error); 
+    alert('Có lỗi xảy ra khi xóa chat.');
   }
 };
 
@@ -195,14 +189,11 @@ const sendReply = async () => {
   scrollToBottom();
 
   try {
-    await fetch('http://localhost:8080/api/chat/message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: selectedSession.value.sessionId,
-        senderType: 'STAFF',
-        content: content
-      })
+    // Đổi fetch thành api.post
+    await api.post('/chat/message', {
+      sessionId: selectedSession.value.sessionId,
+      senderType: 'STAFF',
+      content: content
     });
   } catch (error) { console.error(error); }
 };

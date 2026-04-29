@@ -114,7 +114,8 @@
 
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue';
-import axios from 'axios';
+// Sử dụng Axios Instance đã cấu hình dùng chung
+import api from '../../utils/axios';
 
 const brandList = ref([]);
 const showModal = ref(false);
@@ -135,14 +136,12 @@ const getStockCount = (brand) => brand.totalStock !== undefined ? brand.totalSto
 const totalProducts = computed(() => brandList.value.reduce((total, brand) => total + getProductCount(brand), 0));
 const totalStock = computed(() => brandList.value.reduce((total, brand) => total + getStockCount(brand), 0));
 
-const getAuthHeader = () => {
-  const token = localStorage.getItem('jwt_token');
-  return token ? { Authorization: `Bearer ${token}` } : {};
-};
+// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm qua utils/axios
 
 const fetchBrands = async () => {
   try {
-    const res = await axios.get('http://localhost:8080/api/brands', { headers: getAuthHeader() });
+    // Đã thay thế axios bằng api và đổi sang đường dẫn tương đối
+    const res = await api.get('/brands');
     brandList.value = res.data;
   } catch (e) { console.error(e); }
 };
@@ -167,12 +166,13 @@ const saveBrand = async () => {
   }
 
   try {
-    const headers = getAuthHeader();
     if (isEditing.value) {
-      await axios.put(`http://localhost:8080/api/brands/${currentId.value}`, form, { headers });
+      // Sử dụng api instance, không cần header thủ công
+      await api.put(`/brands/${currentId.value}`, form);
       showToast("Cập nhật thương hiệu thành công!");
     } else {
-      await axios.post('http://localhost:8080/api/brands', form, { headers });
+      // Sử dụng api instance, không cần header thủ công
+      await api.post('/brands', form);
       showToast("Thêm thương hiệu mới thành công!");
     }
     showModal.value = false;
@@ -190,7 +190,8 @@ const saveBrand = async () => {
 const deleteBrand = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa thương hiệu này không?")) {
     try {
-      await axios.delete(`http://localhost:8080/api/brands/${id}`, { headers: getAuthHeader() });
+      // Sử dụng api instance, không cần header thủ công
+      await api.delete(`/brands/${id}`);
       fetchBrands();
       showToast("Xóa thành công!");
     } catch (error) {

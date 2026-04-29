@@ -69,6 +69,8 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
+// Thêm import API từ cấu hình axios dùng chung của bạn
+import api from '../utils/axios';
 
 const isBotOpen = ref(false); 
 const userMsg = ref('');
@@ -80,7 +82,7 @@ let pollingInterval = null;
 // Danh sách tin nhắn
 const messages = ref([]);
 
-// ĐÃ THÊM HÀM NÀY: Hàm chuyển đổi văn bản thường thành HTML (Click được link, in đậm, xuống dòng...)
+// Hàm chuyển đổi văn bản thường thành HTML (Click được link, in đậm, xuống dòng...)
 const formatMessage = (text) => {
   if (!text) return '';
   
@@ -115,26 +117,24 @@ const scrollToBottom = () => {
 const loadChatHistory = async () => {
   if (!sessionId.value) return;
   try {
-    const res = await fetch(`http://localhost:8080/api/chat/session/${sessionId.value}/messages`);
-    if (res.ok) {
-      const data = await res.json();
-      
-      if (data.length > 0) {
-        // Chỉ gán lại mảng messages và cuộn xuống nếu số lượng tin nhắn thực sự tăng lên
-        // (Tránh việc gán lại mảng liên tục gây giật lag scroll)
-        if (messages.value.length < data.length) {
-           messages.value = data;
-           // Tắt hiệu ứng đang gõ nếu có tin trả lời
-           if (data[data.length - 1].senderType !== 'CUSTOMER') {
-              isTyping.value = false;
-           }
-           scrollToBottom();
-        }
-      } else {
-        // Nếu DB rỗng, hiển thị câu chào mặc định (chỉ tạo ở UI, không lưu DB)
-        if (messages.value.length === 0) {
-            messages.value = [{ senderType: 'AI', content: 'Xin chào! 👋 Mình là trợ lý AI của TechZone. Mình có thể hỗ trợ gì cho bạn hôm nay?' }];
-        }
+    // Đổi fetch thành api.get
+    const res = await api.get(`/chat/session/${sessionId.value}/messages`);
+    const data = res.data; // Axios tự động parse JSON (phân tích JSON)
+    
+    if (data.length > 0) {
+      // Chỉ gán lại mảng messages và cuộn xuống nếu số lượng tin nhắn thực sự tăng lên
+      if (messages.value.length < data.length) {
+          messages.value = data;
+          // Tắt hiệu ứng đang gõ nếu có tin trả lời
+          if (data[data.length - 1].senderType !== 'CUSTOMER') {
+            isTyping.value = false;
+          }
+          scrollToBottom();
+      }
+    } else {
+      // Nếu DB rỗng, hiển thị câu chào mặc định (chỉ tạo ở UI, không lưu DB)
+      if (messages.value.length === 0) {
+          messages.value = [{ senderType: 'AI', content: 'Xin chào! 👋 Mình là trợ lý AI của TechZone. Mình có thể hỗ trợ gì cho bạn hôm nay?' }];
       }
     }
   } catch (error) {
@@ -144,7 +144,7 @@ const loadChatHistory = async () => {
 
 // Khởi tạo khi load trang
 onMounted(async () => {
-  // Lấy thông tin user đăng nhập dựa theo hình F12 của bạn
+  // Lấy thông tin user đăng nhập
   let loggedInUser = null;
   try {
       const userInfoStr = localStorage.getItem('user_info');
@@ -167,14 +167,10 @@ onMounted(async () => {
     
     // Khởi tạo phiên dưới Backend
     try {
-      await fetch('http://localhost:8080/api/chat/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          sessionId: storedSession,
-          // Truyền chính xác id theo cấu trúc user_info của bạn (userId)
-          customerId: loggedInUser ? loggedInUser.userId : null 
-        })
+      // Đổi fetch thành api.post
+      await api.post('/chat/session', { 
+        sessionId: storedSession,
+        customerId: loggedInUser ? loggedInUser.userId : null 
       });
     } catch (e) { console.error("Lỗi tạo session:", e); }
   }
@@ -211,14 +207,11 @@ const sendMsg = async () => {
 
   // Gửi API
   try {
-    await fetch('http://localhost:8080/api/chat/message', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: sessionId.value,
-        senderType: 'CUSTOMER',
-        content: content
-      })
+    // Đổi fetch thành api.post
+    await api.post('/chat/message', {
+      sessionId: sessionId.value,
+      senderType: 'CUSTOMER',
+      content: content
     });
     
     // Cập nhật lại list sau khi gửi

@@ -126,8 +126,8 @@
 //commit (thêm phần tra cứu đơn hàng vào Header.vue) - 20/03/2026
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
-
+// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể)
+import api from '../utils/axios';
 const router = useRouter();
 const isLoggedIn = ref(false);
 const userInfo = ref('');
@@ -224,9 +224,8 @@ const fetchMiniCart = async () => {
 
       if (!customerId) return;
 
-      const response = await axios.get(`http://localhost:8080/api/cart/${customerId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      // Thay đổi axios.get thành api.get, xóa phần base URL và bỏ headers Authorization (vì đã có interceptor)
+      const response = await api.get(`/cart/${customerId}`);
       
       const backendItems = response.data.items || response.data; 
       
