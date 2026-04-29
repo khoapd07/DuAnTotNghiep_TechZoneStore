@@ -4,7 +4,7 @@ import axios from 'axios';
 const api = axios.create({
   // Sử dụng Environment Variable (biến môi trường) trong Vite. Nếu không có sẽ lấy localhost mặc định
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
-  timeout: 10000, // Timeout (thời gian chờ tối đa) 10 giây
+  timeout: 60000, // Timeout (thời gian chờ tối đa) 10 giây
 });
 
 // Thêm Request Interceptor (bộ đánh chặn yêu cầu)
