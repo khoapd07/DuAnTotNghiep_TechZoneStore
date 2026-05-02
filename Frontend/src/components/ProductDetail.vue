@@ -332,10 +332,12 @@ const calculateDiscount = (price, salePrice) => {
   return Math.round(((price - salePrice) / price) * 100);
 };
 
+// ĐÃ SỬA: SỬ DỤNG BIẾN MÔI TRƯỜNG THAY VÌ LOCALHOST CỨNG
 const getImageUrl = (url) => {
   if (!url) return 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image';
   if (url.startsWith('http')) return url;
-  return `http://localhost:8080${url.startsWith('/') ? '' : '/'}${url}`;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const handleImageError = (e) => { e.target.src = 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image'; };
