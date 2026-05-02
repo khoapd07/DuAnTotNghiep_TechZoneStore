@@ -132,6 +132,12 @@ public class ProductServiceImpl implements ProductService {
                                 existingV.setColorName(newV.getColorName());
                                 existingV.setOption2Value(newV.getOption2Value());
                                 existingV.setImageUrl(newV.getImageUrl());
+
+                                existingV.getImageUrls().clear();
+                                if (newV.getImageUrls() != null && !newV.getImageUrls().isEmpty()) {
+                                    existingV.getImageUrls().addAll(newV.getImageUrls());
+                                }
+
                                 existingV.setPrice(newV.getPrice());
                                 existingV.setSalePrice(newV.getSalePrice());
                                 // TUYỆT ĐỐI KHÔNG CẬP NHẬT TỒN KHO ĐỂ BẢO TOÀN DỮ LIỆU

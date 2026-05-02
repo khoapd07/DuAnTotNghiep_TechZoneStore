@@ -218,7 +218,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
 import api from '../utils/axios';
 
 const route = useRoute();
@@ -233,24 +232,11 @@ const selectedColor = ref('');
 const selectedOption2 = ref('');
 const lastClicked = ref('none');
 
-// State (trạng thái) để quản lý hiển thị Modal
 const showSuccessModal = ref(false);
 
 const closeSuccessModal = () => {
   showSuccessModal.value = false;
 };
-
-const uniqueThumbnails = computed(() => {
-  if (!product.value) return [];
-  const urls = new Set();
-  if (product.value.imageUrl) urls.add(product.value.imageUrl);
-  if (product.value.variants) {
-    product.value.variants.forEach(v => {
-      if (v.imageUrl) urls.add(v.imageUrl);
-    });
-  }
-  return Array.from(urls);
-});
 
 const uniqueColors = computed(() => {
   if (!product.value || !product.value.variants) return [];
@@ -268,6 +254,31 @@ const selectedVariantData = computed(() => {
     v.colorName === selectedColor.value && 
     ((!v.option2Value && !selectedOption2.value) || v.option2Value === selectedOption2.value)
   );
+});
+
+// FIX LOGIC: THUMBNAIL CHỈ PHỤ THUỘC VÀO MÀU SẮC, BỎ QUA OPTION 2
+const uniqueThumbnails = computed(() => {
+  if (!product.value || !selectedColor.value) return [];
+  const urls = new Set();
+  
+  // Tìm variant ĐẦU TIÊN khớp với MÀU đang chọn (Không quan tâm là 64GB hay 128GB)
+  const colorVariant = product.value.variants.find(v => v.colorName === selectedColor.value);
+  
+  if (colorVariant) {
+    if (colorVariant.imageUrl) {
+      urls.add(colorVariant.imageUrl);
+    }
+    if (colorVariant.imageUrls && colorVariant.imageUrls.length > 0) {
+      colorVariant.imageUrls.forEach(img => urls.add(img));
+    }
+  }
+  
+  // Nếu lỡ màu đó không có tấm ảnh nào thì show tạm ảnh gốc
+  if (urls.size === 0 && product.value.imageUrl) {
+    urls.add(product.value.imageUrl);
+  }
+  
+  return Array.from(urls);
 });
 
 const displayName = computed(() => {
@@ -314,7 +325,6 @@ const calculateDiscount = (price, salePrice) => {
 const getImageUrl = (url) => {
   if (!url) return 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image';
   if (url.startsWith('http')) return url;
-  // Vẫn giữ lại Base URL này vì nó dùng để fetch file ảnh tĩnh từ Backend thay vì gọi REST API
   return `http://localhost:8080${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
@@ -336,25 +346,51 @@ const setMainImage = (url) => {
   currentImage.value = url;
 };
 
+// FIX LOGIC: ẢNH CHÍNH CHỈ ĐỔI KHI ĐỔI MÀU
 const selectColor = (color) => {
   selectedColor.value = color;
   lastClicked.value = 'color';
-  const img = getColorImage(color);
-  if (img) currentImage.value = getImageUrl(img);
-  else currentImage.value = getImageUrl(product.value.imageUrl);
+  
+  // Tìm variant ĐẦU TIÊN khớp với MÀU đang chọn
+  const colorVariant = product.value.variants.find(v => v.colorName === color);
+  
+  if (colorVariant) {
+      if (colorVariant.imageUrl) {
+          currentImage.value = getImageUrl(colorVariant.imageUrl);
+      } else if (colorVariant.imageUrls && colorVariant.imageUrls.length > 0) {
+          currentImage.value = getImageUrl(colorVariant.imageUrls[0]);
+      } else {
+          currentImage.value = getImageUrl(product.value.imageUrl);
+      }
+  } else {
+      currentImage.value = getImageUrl(product.value.imageUrl);
+  }
 };
 
 const fetchProductDetail = async (id) => {
   try {
-    // Thay đổi axios.get thành api.get
     const res = await api.get(`/product/${id}`);
     product.value = res.data;
     
-    currentImage.value = getImageUrl(product.value.imageUrl);
     lastClicked.value = 'none';
 
     if (uniqueColors.value.length > 0) selectedColor.value = uniqueColors.value[0];
     if (uniqueOption2s.value.length > 0) selectedOption2.value = uniqueOption2s.value[0];
+
+    // GÁN ẢNH CHÍNH LÚC VỪA LOAD TRANG DỰA VÀO MÀU SẮC ĐẦU TIÊN
+    const firstColorVariant = product.value.variants.find(v => v.colorName === selectedColor.value);
+    
+    if (firstColorVariant) {
+        if (firstColorVariant.imageUrl) {
+            currentImage.value = getImageUrl(firstColorVariant.imageUrl);
+        } else if (firstColorVariant.imageUrls && firstColorVariant.imageUrls.length > 0) {
+            currentImage.value = getImageUrl(firstColorVariant.imageUrls[0]);
+        } else {
+            currentImage.value = getImageUrl(product.value.imageUrl);
+        }
+    } else {
+        currentImage.value = getImageUrl(product.value.imageUrl);
+    }
 
     await Promise.all([fetchSimilarProducts(), fetchReviews()]);
   } catch (e) { console.error(e); }
@@ -362,7 +398,6 @@ const fetchProductDetail = async (id) => {
 
 const fetchSimilarProducts = async () => {
   try {
-    // Thay đổi axios.get thành api.get
     const res = await api.get(`/product`, { params: { categoryId: product.value.categoryId, page: 0, size: 4 } });
     const all = res.data.content || res.data;
     similarProducts.value = all.filter(item => (item.productId || item.id) !== (product.value.productId || product.value.id));
@@ -371,7 +406,6 @@ const fetchSimilarProducts = async () => {
 
 const fetchReviews = async () => {
   try {
-    // Thay đổi axios.get thành api.get
     const res = await api.get(`/reviews/product/${product.value.productId || product.value.id}`);
     reviews.value = res.data;
   } catch (e) { reviews.value = []; }
@@ -387,9 +421,6 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// ==========================================
-// CẬP NHẬT: THÊM parameter (tham số) showNotification
-// ==========================================
 const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, showNotification = true) => {
   if (!productObj) return;
   const pId = productObj.productId || productObj.id;
@@ -418,7 +449,6 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
 
   if (userId) {
     try {
-      // Thay đổi axios.post thành api.post
       await api.post(`/cart/${userId}/add`, { 
           productId: pId, 
           variantId: vId, 
@@ -453,7 +483,6 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
   }
 };
 
-// Cập nhật lại các hàm gọi: Thêm argument (đối số) tương ứng
 const addToCartMain = () => handleAddToCart(product.value, quantity.value, false, true);
 
 const buyNowMain = async () => { 
@@ -467,8 +496,6 @@ const buyNowSimilar = async (item) => {
   await handleAddToCart(item, 1, true, false); 
   router.push('/cart'); 
 };
-
-//////////////////////////////////////
 
 watch(() => route.params.id, (newId) => { if (newId) fetchProductDetail(newId); });
 onMounted(() => fetchProductDetail(route.params.id));
