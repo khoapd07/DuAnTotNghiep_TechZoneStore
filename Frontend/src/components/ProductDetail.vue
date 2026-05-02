@@ -23,6 +23,7 @@
           
           <div class="d-flex gap-2 thumbnail-list flex-wrap">
             <div v-for="(imgUrl, index) in uniqueThumbnails" :key="'thumb-'+index"
+                 @mouseover="setMainImage(getImageUrl(imgUrl))"
                  @click="setMainImage(getImageUrl(imgUrl))" 
                  class="thumb-item border rounded-2 cursor-pointer overflow-hidden" 
                  :class="{'border-dark border-2': currentImage === getImageUrl(imgUrl)}">
@@ -165,22 +166,31 @@
         
         <div class="row g-3">
           <div class="col-md-6 col-lg-3" v-for="item in similarProducts" :key="item.productId || item.id">
-            <div class="card h-100 border-0 product-card rounded-3 overflow-hidden shadow-sm">
+            <div class="card h-100 border product-card rounded-3 overflow-hidden shadow-sm">
               <router-link :to="'/product/' + (item.productId || item.id)" class="text-decoration-none">
                 <div class="img-wrapper position-relative d-flex justify-content-center align-items-center p-3" style="background-color:#F8F9FA;height:180px;">
                   <span v-if="item.salePrice" class="badge bg-danger text-white position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">GIẢM GIÁ</span>
                   <img :src="getImageUrl(item.imageUrl)" class="img-fluid object-fit-contain" style="height:140px; mix-blend-mode: multiply;" :alt="item.name" @error="handleImageError">
                 </div>
               </router-link>
-              <div class="info-wrapper p-3 d-flex flex-column flex-grow-1" style="background-color:#111111;">
+              <div class="info-wrapper p-3 d-flex flex-column flex-grow-1 bg-white border-top">
                 <router-link :to="'/product/' + (item.productId || item.id)" class="text-decoration-none">
-                  <h6 class="fw-bold mb-1 text-uppercase fs-8 text-white line-clamp-1">{{ item.name }}</h6>
+                  <h6 class="fw-bold mb-1 text-uppercase fs-8 text-dark line-clamp-1">{{ item.name }}</h6>
                 </router-link>
                 <div class="mt-auto mb-3">
-                  <h6 class="fw-black m-0 d-inline-block fs-6 text-white">{{ formatCurrency(item.salePrice || item.price) }}</h6>
+                  <h6 class="fw-black m-0 text-primary fs-6">{{ formatCurrency(item.salePrice || item.price) }}</h6>
+                  
+                  <div v-if="item.salePrice && item.salePrice < item.price" class="d-flex align-items-center gap-2 mt-1">
+                    <span class="text-muted text-decoration-line-through" style="font-size: 0.75rem;">{{ formatCurrency(item.price) }}</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-1 py-0" style="font-size: 0.65rem;">
+                      -{{ calculateDiscount(item.price, item.salePrice) }}%
+                    </span>
+                  </div>
+                  
+                  <div v-else class="mt-1" style="height: 19px;"></div>
                 </div>
                 <div class="d-flex gap-2">
-                  <button @click="addToCartSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-outline-light btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1" style="width: 40px;">
+                  <button @click="addToCartSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-outline-dark btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1" style="width: 40px;">
                     <i class="bi bi-cart-plus fs-6"></i>
                   </button>
                   <button @click="buyNowSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-neon fw-bold flex-grow-1 fs-8 p-2 rounded-2 text-dark">
@@ -398,10 +408,32 @@ const fetchProductDetail = async (id) => {
 
 const fetchSimilarProducts = async () => {
   try {
-    const res = await api.get(`/product`, { params: { categoryId: product.value.categoryId, page: 0, size: 4 } });
-    const all = res.data.content || res.data;
-    similarProducts.value = all.filter(item => (item.productId || item.id) !== (product.value.productId || product.value.id));
-  } catch (e) {}
+    // 1. Gọi lấy dư ra (VD: 10 cái) để trừ hao cái đang xem và có đủ data để lọc thương hiệu
+    const res = await api.get(`/product`, { 
+      params: { categoryId: product.value.categoryId, page: 0, size: 10 } 
+    });
+    
+    let all = res.data.content || res.data;
+
+    // 2. Loại bỏ sản phẩm ĐANG XEM ra khỏi danh sách
+    let filtered = all.filter(item => 
+      (item.productId || item.id) !== (product.value.productId || product.value.id)
+    );
+
+    // 3. SẮP XẾP: Cùng Thương hiệu (Brand) thì đẩy lên đầu
+    filtered.sort((a, b) => {
+      const isSameBrandA = a.brandId === product.value.brandId ? 1 : 0;
+      const isSameBrandB = b.brandId === product.value.brandId ? 1 : 0;
+      // Trả về số âm thì xếp trước, số dương thì xếp sau
+      return isSameBrandB - isSameBrandA; 
+    });
+
+    // 4. Cắt đúng 4 cái trên cùng (đã được ưu tiên) để hiển thị
+    similarProducts.value = filtered.slice(0, 4);
+
+  } catch (e) {
+    console.error("Lỗi tải sản phẩm tương tự:", e);
+  }
 };
 
 const fetchReviews = async () => {
