@@ -7,6 +7,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -49,4 +51,9 @@ public class ProductVariant {
     // ĐÃ THÊM: Số lượng tồn kho theo biến thể
     @Column(name = "stock_quantity", nullable = false)
     private Integer stockQuantity;
+
+    @ElementCollection
+    @CollectionTable(name = "variant_images", joinColumns = @JoinColumn(name = "variant_id"))
+    @Column(name = "image_url") // SỬA LẠI THÀNH image_url NHƯ THẾ NÀY
+    private List<String> imageUrls = new ArrayList<>();
 }

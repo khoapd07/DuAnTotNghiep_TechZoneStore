@@ -84,8 +84,9 @@
                 <td class="py-3"><span class="fs-7 fw-bold" :class="product.stockQuantity < 15 ? 'text-danger' : 'text-dark'">{{ product.stockQuantity }}</span></td>
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
-                    <button @click="openEditModal(product)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
-                    <button @click="deleteProduct(product.id || product.productId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
+                    <button @click="openEditModal(product)" title="Sửa" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
+                    <button @click="duplicateProduct(product)" title="Tạo bản sao" class="btn btn-link p-0 text-success shadow-none"><i class="bi bi-copy fs-6"></i></button>
+                    <button @click="deleteProduct(product.id || product.productId)" title="Xóa" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
@@ -154,17 +155,17 @@
 
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá bán Gốc (Hiển thị) <span class="text-danger">*</span></label>
-                <input type="number" v-model="form.price" class="form-control fs-7" :class="{'is-invalid': errors.price}" @input="errors.price = ''">
+                <input type="number" v-model="form.price" class="form-control fs-7" :class="{'is-invalid': errors.price}" @input="errors.price = ''" placeholder="Nhập giá bán gốc...">
                 <span v-if="errors.price" class="text-danger fs-8 fw-bold mt-1 d-block"><i class="bi bi-exclamation-circle"></i> {{ errors.price }}</span>
               </div>
 
               <div class="col-md-6">
                 <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Giá KM Gốc (Hiển thị)</label>
-                <input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống...">
+                <input type="number" v-model="form.salePrice" class="form-control fs-7" placeholder="Để trống nếu không có KM...">
               </div>
               
               <div class="col-12 mt-3">
-                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Hình ảnh đại diện</label>
+                <label class="fs-8 fw-bold text-muted text-uppercase mb-1">Hình ảnh đại diện (Chỉ 1 ảnh)</label>
                 <div class="d-flex gap-2 align-items-center">
                   <input type="file" @change="uploadMainImage" class="form-control fs-7" accept="image/*">
                   <img v-if="form.imageUrl" :src="form.imageUrl" class="rounded border" style="width: 40px; height: 40px; object-fit: cover;">
@@ -217,11 +218,11 @@
                       <tr class="text-center text-muted text-uppercase">
                         <th style="width: 15%">Màu Sắc <span class="text-danger">*</span></th>
                         <th style="width: 15%">Phân loại 2 (ROM/Size)</th>
-                        <th style="width: 25%">Link Hình Ảnh</th>
-                        <th style="width: 15%">Giá Bán</th>
-                        <th style="width: 15%">Giá KM</th>
+                        <th style="width: 30%">Thư viện Hình Ảnh (Nhiều ảnh)</th>
+                        <th style="width: 12%">Giá Bán</th>
+                        <th style="width: 12%">Giá KM</th>
                         <th style="width: 10%">Kho (Đọc)</th>
-                        <th style="width: 5%">Xóa</th>
+                        <th style="width: 6%">Xóa</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -230,14 +231,22 @@
                         <td><input type="text" v-model="v.option2Value" class="form-control form-control-sm fs-8" placeholder="VD: 64GB"></td>
                         
                         <td>
-                          <div class="d-flex gap-1 align-items-center">
-                            <input type="file" @change="uploadVariantImage($event, index)" class="form-control form-control-sm mb-1" style="font-size: 0.65rem;" accept="image/*">
-                            <img v-if="v.imageUrl" :src="v.imageUrl" class="rounded border" style="width: 30px; height: 30px; object-fit: cover;">
+                          <div class="d-flex flex-column gap-1">
+                            <input type="file" multiple @change="uploadVariantImages($event, index)" class="form-control form-control-sm mb-1" style="font-size: 0.65rem;" accept="image/*">
+                            
+                            <div class="d-flex flex-wrap gap-2 mt-1" v-if="v.imageUrls && v.imageUrls.length > 0">
+                              <div v-for="(img, imgIdx) in v.imageUrls" :key="imgIdx" class="position-relative">
+                                <img :src="img" class="rounded border" style="width: 35px; height: 35px; object-fit: cover;">
+                                <button type="button" @click="removeVariantImage(index, imgIdx)" class="btn btn-danger position-absolute top-0 start-100 translate-middle d-flex align-items-center justify-content-center" style="width: 14px; height: 14px; padding: 0; font-size: 10px; border-radius: 50%; border: 1px solid white;">
+                                  <i class="bi bi-x"></i>
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </td>
                         
-                        <td><input type="number" v-model="v.price" class="form-control form-control-sm fs-8 text-end" placeholder="0"></td>
-                        <td><input type="number" v-model="v.salePrice" class="form-control form-control-sm fs-8 text-end" placeholder="KM"></td>
+                        <td><input type="number" v-model="v.price" class="form-control form-control-sm fs-8 text-end" placeholder="Nhập giá..."></td>
+                        <td><input type="number" v-model="v.salePrice" class="form-control form-control-sm fs-8 text-end" placeholder="Giá KM..."></td>
                         <td><input type="number" :value="v.stockQuantity" class="form-control form-control-sm fs-8 text-center text-danger fw-bold bg-white" disabled></td>
                         <td class="text-center">
                           <button type="button" @click="removeVariant(index)" class="btn btn-sm btn-link text-danger p-0 shadow-none"><i class="bi bi-trash"></i></button>
@@ -262,7 +271,6 @@
 
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from 'vue';
-// Xóa import axios từ thư viện gốc, sử dụng api instance
 import api from '../../utils/axios';
 
 const productList = ref([]);
@@ -278,23 +286,23 @@ const isEditing = ref(false);
 const currentId = ref(null);
 
 const stats = reactive({ total: 0, lowStock: 0, totalStockQuantity: 0 });
-const errors = reactive({}); // Quản lý lỗi hiển thị
+const errors = reactive({}); 
 
 const setupColors = ref('');
 const setupOption2s = ref('');
 
+// Đổi 0 thành chuỗi rỗng '' để ô input tự hiện placeholder
 const form = reactive({ 
   name: '', 
   categoryId: null,
   brandId: null,
-  price: 0, 
-  salePrice: null, 
+  price: '', 
+  salePrice: '', 
   imageUrl: '', 
   description: '',
-  variants: []
+  variants: [] 
 });
 
-// Toast Notification
 const toast = reactive({ show: false, message: '', type: 'success' });
 const showToast = (message, type = 'success') => {
   toast.message = message; toast.type = type; toast.show = true;
@@ -309,15 +317,12 @@ const calculateDiscount = (price, salePrice) => {
   return roundedDiscount;
 };
 
-// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm qua utils/axios
-
-// Logic Upload
+// =================== LOGIC UPLOAD ===================
 const uploadImageFile = async (file) => {
   if (!file) return null;
   const formData = new FormData();
   formData.append('file', file);
   try {
-    // Dùng api thay vì axios, chỉ định Headers Upload
     const response = await api.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
@@ -336,17 +341,40 @@ const uploadMainImage = async (event) => {
   }
 };
 
-const uploadVariantImage = async (event, index) => {
-  const file = event.target.files[0];
-  if (file) {
-    const url = await uploadImageFile(file);
-    if (url) form.variants[index].imageUrl = url; 
+const uploadVariantImages = async (event, index) => {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
+
+  if (!form.variants[index].imageUrls) {
+      form.variants[index].imageUrls = [];
   }
+
+  for (let i = 0; i < files.length; i++) {
+    const url = await uploadImageFile(files[i]);
+    if (url) {
+       form.variants[index].imageUrls.push(url);
+       if (!form.variants[index].imageUrl) {
+           form.variants[index].imageUrl = url;
+       }
+    }
+  }
+  
+  event.target.value = '';
 };
+
+const removeVariantImage = (variantIndex, imgIndex) => {
+    form.variants[variantIndex].imageUrls.splice(imgIndex, 1);
+    
+    if (form.variants[variantIndex].imageUrls.length === 0) {
+        form.variants[variantIndex].imageUrl = ''; 
+    } else {
+        form.variants[variantIndex].imageUrl = form.variants[variantIndex].imageUrls[0];
+    }
+};
+// ====================================================
 
 const fetchProducts = async () => {
   try {
-    // Dùng api thay vì axios, bỏ url cứng
     const response = await api.get('/product?size=1000');
     const data = response.data;
     productList.value = data.content || data.data || (Array.isArray(data) ? data : []);
@@ -355,7 +383,6 @@ const fetchProducts = async () => {
 
 const fetchStats = async () => {
   try {
-    // Dùng api thay vì axios, bỏ url cứng
     const response = await api.get('/product/stats');
     stats.total = response.data.total;
     stats.lowStock = response.data.lowStock;
@@ -365,7 +392,6 @@ const fetchStats = async () => {
 
 const fetchCategories = async () => {
   try {
-    // Dùng api thay vì axios, bỏ url cứng
     const response = await api.get('/categories');
     categoryList.value = response.data;
   } catch (error) { console.error("Lỗi tải danh mục:", error); categoryList.value = []; }
@@ -373,7 +399,6 @@ const fetchCategories = async () => {
 
 const fetchBrands = async () => {
   try {
-    // Dùng api thay vì axios, bỏ url cứng
     const response = await api.get('/brands');
     brandList.value = response.data;
   } catch (error) { console.error("Lỗi tải thương hiệu:", error); brandList.value = []; }
@@ -394,7 +419,7 @@ const paginatedProducts = computed(() => {
 watch(searchQuery, () => { currentPage.value = 1; });
 
 const generateMatrix = () => {
-  errors.variants = ''; // Xóa lỗi khi người dùng tạo matrix
+  errors.variants = ''; 
   let colors = setupColors.value.split(',').map(s => s.trim()).filter(Boolean);
   let opts = setupOption2s.value.split(',').map(s => s.trim()).filter(Boolean);
   
@@ -406,7 +431,11 @@ const generateMatrix = () => {
     opts.forEach(o => {
       const exists = form.variants.some(v => v.colorName === c && (v.option2Value || '') === o);
       if (!exists) {
-        form.variants.push({ colorName: c, option2Value: o, price: 0, salePrice: null, stockQuantity: 0, imageUrl: '' });
+        form.variants.push({ 
+           // Đổi price thành ''
+           colorName: c, option2Value: o, price: '', salePrice: '', stockQuantity: 0, 
+           imageUrl: '', imageUrls: [] 
+        });
       }
     });
   });
@@ -414,7 +443,11 @@ const generateMatrix = () => {
 
 const addSingleVariant = () => {
   errors.variants = '';
-  form.variants.push({ colorName: 'Mới', option2Value: '', imageUrl: '', price: 0, salePrice: null, stockQuantity: 0 });
+  form.variants.push({ 
+     // Đổi price thành ''
+     colorName: 'Mới', option2Value: '', price: '', salePrice: '', stockQuantity: 0, 
+     imageUrl: '', imageUrls: [] 
+  });
 };
 
 const removeVariant = (index) => { form.variants.splice(index, 1); };
@@ -423,7 +456,8 @@ const openAddModal = () => {
   isEditing.value = false; currentId.value = null;
   setupColors.value = ''; setupOption2s.value = '';
   Object.keys(errors).forEach(k => delete errors[k]);
-  Object.assign(form, { name: '', categoryId: null, brandId: null, price: 0, salePrice: null, imageUrl: '', description: '', variants: [] });
+  // Đổi giá trị khởi tạo price và salePrice thành chuỗi rỗng
+  Object.assign(form, { name: '', categoryId: null, brandId: null, price: '', salePrice: '', imageUrl: '', description: '', variants: [] });
   showModal.value = true;
 };
 
@@ -431,10 +465,18 @@ const openEditModal = (p) => {
   isEditing.value = true; currentId.value = p.id || p.productId; 
   Object.keys(errors).forEach(k => delete errors[k]);
   Object.assign(form, p); 
-  form.categoryId = p.categoryId; form.brandId = p.brandId; form.salePrice = p.salePrice || null; 
+  // Chuyển null/0 thành chuỗi rỗng để ô input không bị dư số 0
+  form.salePrice = p.salePrice || ''; 
+  form.price = p.price || '';
   
   if (p.variants && p.variants.length > 0) {
-    form.variants = JSON.parse(JSON.stringify(p.variants));
+    form.variants = p.variants.map(v => ({
+       ...v,
+       price: v.price || '',
+       salePrice: v.salePrice || '',
+       imageUrls: v.imageUrls ? [...v.imageUrls] : [] 
+    }));
+    
     const uniqueColors = [...new Set(p.variants.map(v => v.colorName).filter(Boolean))];
     const uniqueOpts = [...new Set(p.variants.map(v => v.option2Value).filter(Boolean))];
     setupColors.value = uniqueColors.join(', ');
@@ -445,6 +487,43 @@ const openEditModal = (p) => {
   showModal.value = true;
 };
 
+// ==========================================
+// THÊM MỚI: HÀM TẠO BẢN SAO SẢN PHẨM
+// ==========================================
+const duplicateProduct = (p) => {
+  isEditing.value = false; // Mở modal ở chế độ THÊM MỚI
+  currentId.value = null;
+  Object.keys(errors).forEach(k => delete errors[k]);
+
+  // Copy thông tin cơ bản, thêm chữ Bản sao để tránh lỗi trùng tên
+  Object.assign(form, p); 
+  form.name = p.name + ' - Bản sao'; 
+  form.salePrice = p.salePrice || ''; 
+  form.price = p.price || '';
+  
+  // Xóa các ID của biến thể để Backend hiểu đây là các biến thể mới hoàn toàn
+  if (p.variants && p.variants.length > 0) {
+    form.variants = p.variants.map(v => ({
+       ...v,
+       variantId: null, // Rất quan trọng: Bỏ ID đi!
+       skuCode: null,   // Bỏ SKU để Backend tự gen mã mới
+       price: v.price || '',
+       salePrice: v.salePrice || '',
+       imageUrls: v.imageUrls ? [...v.imageUrls] : [] 
+    }));
+    
+    const uniqueColors = [...new Set(p.variants.map(v => v.colorName).filter(Boolean))];
+    const uniqueOpts = [...new Set(p.variants.map(v => v.option2Value).filter(Boolean))];
+    setupColors.value = uniqueColors.join(', ');
+    setupOption2s.value = uniqueOpts.join(', ');
+  } else {
+    form.variants = []; setupColors.value = ''; setupOption2s.value = '';
+  }
+  
+  showModal.value = true;
+};
+// ==========================================
+
 const saveProduct = async () => {
   Object.keys(errors).forEach(k => delete errors[k]);
   let isValid = true;
@@ -452,7 +531,8 @@ const saveProduct = async () => {
   if (!form.name || form.name.trim() === '') { errors.name = "Vui lòng nhập tên sản phẩm!"; isValid = false; }
   if (!form.categoryId) { errors.categoryId = "Vui lòng chọn danh mục!"; isValid = false; }
   if (!form.brandId) { errors.brandId = "Vui lòng chọn thương hiệu!"; isValid = false; }
-  if (form.price === null || form.price === undefined || form.price < 0) { errors.price = "Giá bán phải lớn hơn hoặc bằng 0!"; isValid = false; }
+  // Cập nhật điều kiện bắt lỗi trống
+  if (form.price === '' || form.price === null || form.price === undefined || Number(form.price) < 0) { errors.price = "Giá bán không được để trống và phải >= 0!"; isValid = false; }
   if (form.variants.length === 0) { errors.variants = "Bạn phải tạo ít nhất 1 biến thể cho sản phẩm!"; isValid = false; }
 
   if (!isValid) return;
@@ -460,7 +540,7 @@ const saveProduct = async () => {
   let finalVariants = form.variants.filter(v => v.colorName && v.colorName.trim() !== '').map(v => ({
       ...v,
       option2Value: v.option2Value && v.option2Value.trim() !== '' ? v.option2Value.trim() : null,
-      price: Number(v.price) || 0,
+      price: v.price === '' ? 0 : Number(v.price),
       salePrice: v.salePrice && Number(v.salePrice) > 0 ? Number(v.salePrice) : null,
       stockQuantity: v.stockQuantity || 0 
   }));
@@ -473,11 +553,9 @@ const saveProduct = async () => {
     };
 
     if (isEditing.value) {
-      // Dùng api thay vì axios
       await api.put(`/product/${currentId.value}`, payload);
       showToast("Cập nhật sản phẩm thành công!");
     } else {
-      // Dùng api thay vì axios
       await api.post('/product', payload);
       showToast("Thêm mới sản phẩm thành công!");
     }
@@ -485,19 +563,25 @@ const saveProduct = async () => {
     fetchProducts();
     fetchStats(); 
   } catch (error) {
-    showToast("Không thể thực hiện. Vui lòng kiểm tra lại!", "error");
+    let errorMsg = "Lỗi hệ thống. Vui lòng kiểm tra lại!";
+    if (error.response && error.response.data) {
+       errorMsg = typeof error.response.data === 'string' 
+                  ? error.response.data 
+                  : (error.response.data.message || errorMsg);
+    }
+    showToast(errorMsg, "error");
+    console.error("CHI TIẾT LỖI 400:", error.response.data);
   }
 };
 
 const deleteProduct = async (id) => {
   if (confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) {
     try {
-      // Dùng api thay vì axios
       await api.delete(`/product/${id}`);
       fetchProducts(); fetchStats(); 
       showToast("Xóa sản phẩm thành công!");
     } catch (error) { 
-      showToast("Lỗi khi xóa sản phẩm!", "error"); 
+      showToast("Lỗi khi xóa sản phẩm! (Có thể do dữ liệu đã phát sinh hóa đơn)", "error"); 
     }
   }
 };

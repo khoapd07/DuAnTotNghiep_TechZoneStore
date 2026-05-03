@@ -35,4 +35,5 @@ public class ProductDTO {
     // ĐÃ XÓA: capacities
 
     private List<ProductVariant> variants;
+    List<String> imageUrls;
 }

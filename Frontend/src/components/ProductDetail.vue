@@ -23,6 +23,7 @@
           
           <div class="d-flex gap-2 thumbnail-list flex-wrap">
             <div v-for="(imgUrl, index) in uniqueThumbnails" :key="'thumb-'+index"
+                 @mouseover="setMainImage(getImageUrl(imgUrl))"
                  @click="setMainImage(getImageUrl(imgUrl))" 
                  class="thumb-item border rounded-2 cursor-pointer overflow-hidden" 
                  :class="{'border-dark border-2': currentImage === getImageUrl(imgUrl)}">
@@ -165,22 +166,31 @@
         
         <div class="row g-3">
           <div class="col-md-6 col-lg-3" v-for="item in similarProducts" :key="item.productId || item.id">
-            <div class="card h-100 border-0 product-card rounded-3 overflow-hidden shadow-sm">
+            <div class="card h-100 border product-card rounded-3 overflow-hidden shadow-sm">
               <router-link :to="'/product/' + (item.productId || item.id)" class="text-decoration-none">
                 <div class="img-wrapper position-relative d-flex justify-content-center align-items-center p-3" style="background-color:#F8F9FA;height:180px;">
                   <span v-if="item.salePrice" class="badge bg-danger text-white position-absolute top-0 start-0 m-2 z-1 fw-bold fs-9 px-2 py-1">GIẢM GIÁ</span>
                   <img :src="getImageUrl(item.imageUrl)" class="img-fluid object-fit-contain" style="height:140px; mix-blend-mode: multiply;" :alt="item.name" @error="handleImageError">
                 </div>
               </router-link>
-              <div class="info-wrapper p-3 d-flex flex-column flex-grow-1" style="background-color:#111111;">
+              <div class="info-wrapper p-3 d-flex flex-column flex-grow-1 bg-white border-top">
                 <router-link :to="'/product/' + (item.productId || item.id)" class="text-decoration-none">
-                  <h6 class="fw-bold mb-1 text-uppercase fs-8 text-white line-clamp-1">{{ item.name }}</h6>
+                  <h6 class="fw-bold mb-1 text-uppercase fs-8 text-dark line-clamp-1">{{ item.name }}</h6>
                 </router-link>
                 <div class="mt-auto mb-3">
-                  <h6 class="fw-black m-0 d-inline-block fs-6 text-white">{{ formatCurrency(item.salePrice || item.price) }}</h6>
+                  <h6 class="fw-black m-0 text-primary fs-6">{{ formatCurrency(item.salePrice || item.price) }}</h6>
+                  
+                  <div v-if="item.salePrice && item.salePrice < item.price" class="d-flex align-items-center gap-2 mt-1">
+                    <span class="text-muted text-decoration-line-through" style="font-size: 0.75rem;">{{ formatCurrency(item.price) }}</span>
+                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-1 py-0" style="font-size: 0.65rem;">
+                      -{{ calculateDiscount(item.price, item.salePrice) }}%
+                    </span>
+                  </div>
+                  
+                  <div v-else class="mt-1" style="height: 19px;"></div>
                 </div>
                 <div class="d-flex gap-2">
-                  <button @click="addToCartSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-outline-light btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1" style="width: 40px;">
+                  <button @click="addToCartSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-outline-dark btn-cart-icon d-flex align-items-center justify-content-center rounded-2 p-1" style="width: 40px;">
                     <i class="bi bi-cart-plus fs-6"></i>
                   </button>
                   <button @click="buyNowSimilar(item)" :disabled="item.stockQuantity <= 0" class="btn btn-neon fw-bold flex-grow-1 fs-8 p-2 rounded-2 text-dark">
@@ -218,7 +228,6 @@
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
 import api from '../utils/axios';
 
 const route = useRoute();
@@ -233,24 +242,11 @@ const selectedColor = ref('');
 const selectedOption2 = ref('');
 const lastClicked = ref('none');
 
-// State (trạng thái) để quản lý hiển thị Modal
 const showSuccessModal = ref(false);
 
 const closeSuccessModal = () => {
   showSuccessModal.value = false;
 };
-
-const uniqueThumbnails = computed(() => {
-  if (!product.value) return [];
-  const urls = new Set();
-  if (product.value.imageUrl) urls.add(product.value.imageUrl);
-  if (product.value.variants) {
-    product.value.variants.forEach(v => {
-      if (v.imageUrl) urls.add(v.imageUrl);
-    });
-  }
-  return Array.from(urls);
-});
 
 const uniqueColors = computed(() => {
   if (!product.value || !product.value.variants) return [];
@@ -268,6 +264,30 @@ const selectedVariantData = computed(() => {
     v.colorName === selectedColor.value && 
     ((!v.option2Value && !selectedOption2.value) || v.option2Value === selectedOption2.value)
   );
+});
+
+// FIX LOGIC: THUMBNAIL TÌM BIẾN THỂ CÓ MÀU ĐANG CHỌN VÀ "CÓ ẢNH"
+const uniqueThumbnails = computed(() => {
+  if (!product.value || !selectedColor.value) return [];
+  const urls = new Set();
+  
+  const colorVariant = product.value.variants.find(v => 
+      v.colorName === selectedColor.value && 
+      (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+  );
+  
+  if (colorVariant) {
+    if (colorVariant.imageUrl) urls.add(colorVariant.imageUrl);
+    if (colorVariant.imageUrls && colorVariant.imageUrls.length > 0) {
+      colorVariant.imageUrls.forEach(img => urls.add(img));
+    }
+  }
+  
+  if (urls.size === 0 && product.value.imageUrl) {
+    urls.add(product.value.imageUrl);
+  }
+  
+  return Array.from(urls);
 });
 
 const displayName = computed(() => {
@@ -302,8 +322,9 @@ const stockStatusText = computed(() => {
 });
 
 const getColorImage = (color) => {
-   const match = product.value.variants.find(v => v.colorName === color && v.imageUrl);
-   return match ? match.imageUrl : null;
+   const match = product.value.variants.find(v => v.colorName === color && (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0)));
+   if (match) return match.imageUrl || match.imageUrls[0];
+   return null;
 };
 
 const calculateDiscount = (price, salePrice) => {
@@ -314,8 +335,8 @@ const calculateDiscount = (price, salePrice) => {
 const getImageUrl = (url) => {
   if (!url) return 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image';
   if (url.startsWith('http')) return url;
-  // Vẫn giữ lại Base URL này vì nó dùng để fetch file ảnh tĩnh từ Backend thay vì gọi REST API
-  return `http://localhost:8080${url.startsWith('/') ? '' : '/'}${url}`;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const handleImageError = (e) => { e.target.src = 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image'; };
@@ -336,25 +357,44 @@ const setMainImage = (url) => {
   currentImage.value = url;
 };
 
+// FIX LOGIC: TÌM VARIANT CÓ MÀU ĐANG CHỌN VÀ "PHẢI CÓ ẢNH"
 const selectColor = (color) => {
   selectedColor.value = color;
   lastClicked.value = 'color';
-  const img = getColorImage(color);
-  if (img) currentImage.value = getImageUrl(img);
-  else currentImage.value = getImageUrl(product.value.imageUrl);
+  
+  const colorVariant = product.value.variants.find(v => 
+      v.colorName === color && 
+      (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+  );
+  
+  if (colorVariant) {
+      currentImage.value = getImageUrl(colorVariant.imageUrl || colorVariant.imageUrls[0]);
+  } else {
+      currentImage.value = getImageUrl(product.value.imageUrl);
+  }
 };
 
 const fetchProductDetail = async (id) => {
   try {
-    // Thay đổi axios.get thành api.get
     const res = await api.get(`/product/${id}`);
     product.value = res.data;
     
-    currentImage.value = getImageUrl(product.value.imageUrl);
     lastClicked.value = 'none';
 
     if (uniqueColors.value.length > 0) selectedColor.value = uniqueColors.value[0];
     if (uniqueOption2s.value.length > 0) selectedOption2.value = uniqueOption2s.value[0];
+
+    // TÌM ẢNH ĐẦU TIÊN KHI LOAD TRANG (PHẢI LÀ VARIANT CÓ ẢNH)
+    const firstColorVariant = product.value.variants.find(v => 
+        v.colorName === selectedColor.value && 
+        (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+    );
+    
+    if (firstColorVariant) {
+        currentImage.value = getImageUrl(firstColorVariant.imageUrl || firstColorVariant.imageUrls[0]);
+    } else {
+        currentImage.value = getImageUrl(product.value.imageUrl);
+    }
 
     await Promise.all([fetchSimilarProducts(), fetchReviews()]);
   } catch (e) { console.error(e); }
@@ -362,16 +402,22 @@ const fetchProductDetail = async (id) => {
 
 const fetchSimilarProducts = async () => {
   try {
-    // Thay đổi axios.get thành api.get
-    const res = await api.get(`/product`, { params: { categoryId: product.value.categoryId, page: 0, size: 4 } });
-    const all = res.data.content || res.data;
-    similarProducts.value = all.filter(item => (item.productId || item.id) !== (product.value.productId || product.value.id));
-  } catch (e) {}
+    const res = await api.get(`/product`, { 
+      params: { categoryId: product.value.categoryId, page: 0, size: 10 } 
+    });
+    let all = res.data.content || res.data;
+    let filtered = all.filter(item => (item.productId || item.id) !== (product.value.productId || product.value.id));
+    filtered.sort((a, b) => {
+      const isSameBrandA = a.brandId === product.value.brandId ? 1 : 0;
+      const isSameBrandB = b.brandId === product.value.brandId ? 1 : 0;
+      return isSameBrandB - isSameBrandA; 
+    });
+    similarProducts.value = filtered.slice(0, 4);
+  } catch (e) { console.error("Lỗi tải sản phẩm tương tự:", e); }
 };
 
 const fetchReviews = async () => {
   try {
-    // Thay đổi axios.get thành api.get
     const res = await api.get(`/reviews/product/${product.value.productId || product.value.id}`);
     reviews.value = res.data;
   } catch (e) { reviews.value = []; }
@@ -380,16 +426,11 @@ const fetchReviews = async () => {
 const getCurrentUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
   if (userInfoString) {
-    try {
-      return JSON.parse(userInfoString).userId;
-    } catch (e) { return null; }
+    try { return JSON.parse(userInfoString).userId; } catch (e) { return null; }
   }
   return null;
 };
 
-// ==========================================
-// CẬP NHẬT: THÊM parameter (tham số) showNotification
-// ==========================================
 const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, showNotification = true) => {
   if (!productObj) return;
   const pId = productObj.productId || productObj.id;
@@ -406,19 +447,29 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
     vColor = selectedVariantData.value.colorName;
     vOpt2 = selectedVariantData.value.option2Value;
     vPrice = currentSalePrice.value || currentPrice.value;
-    vImg = selectedVariantData.value.imageUrl || vImg;
+    
+    // --- ĐÃ VÁ LỖI TRƯỜNG HỢP VARIANT 512GB KHÔNG CÓ ẢNH TRONG DB ---
+    const colorVariantWithImage = productObj.variants.find(v => 
+        v.colorName === vColor && 
+        (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+    );
+    
+    if (colorVariantWithImage) {
+        vImg = colorVariantWithImage.imageUrl || colorVariantWithImage.imageUrls[0];
+    }
   } else if (isSimilarProduct && productObj.variants && productObj.variants.length > 0) {
-    const firstVariant = productObj.variants[0];
+    const firstVariant = productObj.variants.find(v => v.imageUrl || (v.imageUrls && v.imageUrls.length > 0)) || productObj.variants[0];
     vId = firstVariant.variantId;
     vColor = firstVariant.colorName;
     vOpt2 = firstVariant.option2Value;
     vPrice = firstVariant.salePrice || firstVariant.price;
-    vImg = firstVariant.imageUrl || vImg;
+    vImg = firstVariant.imageUrl || (firstVariant.imageUrls && firstVariant.imageUrls[0]) || vImg;
   }
+
+  vImg = getImageUrl(vImg);
 
   if (userId) {
     try {
-      // Thay đổi axios.post thành api.post
       await api.post(`/cart/${userId}/add`, { 
           productId: pId, 
           variantId: vId, 
@@ -444,7 +495,7 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
         option2Value: vOpt2,
         price: vPrice,
         quantity: qtyToAdd,
-        img: vImg
+        img: vImg // Lưu chết URL ảnh đúng vào localStorage
       });
     }
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));
@@ -453,7 +504,6 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
   }
 };
 
-// Cập nhật lại các hàm gọi: Thêm argument (đối số) tương ứng
 const addToCartMain = () => handleAddToCart(product.value, quantity.value, false, true);
 
 const buyNowMain = async () => { 
@@ -468,8 +518,6 @@ const buyNowSimilar = async (item) => {
   router.push('/cart'); 
 };
 
-//////////////////////////////////////
-
 watch(() => route.params.id, (newId) => { if (newId) fetchProductDetail(newId); });
 onMounted(() => fetchProductDetail(route.params.id));
 </script>
@@ -479,70 +527,16 @@ onMounted(() => fetchProductDetail(route.params.id));
 .hover-bg-light:hover { background-color: #f8f9fa !important; }
 .hover-border-dark:hover { border-color: #212529 !important; }
 .transition-all { transition: all 0.2s ease-in-out; }
-
 .text-primary { color: #0047FF !important; }
 .border-primary { border-color: #0047FF !important; }
-
-.attr-box {
-  word-break: break-word;
-  overflow-wrap: break-word;
-  min-width: 100px;
-}
-
-.thumbnail-list .thumb-item {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  background-color: white; 
-}
-.thumbnail-list .thumb-item:hover {
-  border-color: #212529 !important;
-}
-
+.attr-box { word-break: break-word; overflow-wrap: break-word; min-width: 100px; }
+.thumbnail-list .thumb-item { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; background-color: white; }
+.thumbnail-list .thumb-item:hover { border-color: #212529 !important; }
 .btn-neon { background-color: #00FF33; border: none; }
 .btn-neon:hover { background-color: #00e62e; }
-
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* --- CSS THÊM MỚI CHO MODAL --- */
-.custom-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5); /* Lớp nền đen mờ */
-  z-index: 1050; /* Z-index (chỉ mục chiều Z) cao hơn để đè lên UI */
-  animation: fadeIn 0.2s ease-in-out;
-}
-
-.custom-modal {
-  width: 90%;
-  max-width: 400px;
-  animation: slideDown 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
+.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.5); z-index: 1050; animation: fadeIn 0.2s ease-in-out; }
+.custom-modal { width: 90%; max-width: 400px; animation: slideDown 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
