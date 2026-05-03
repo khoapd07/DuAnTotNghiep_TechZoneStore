@@ -362,10 +362,6 @@ const saveReceipt = async () => {
       closeModal(); // Đóng Modal mượt mà
       fetchReceipts(); // Load lại bảng danh sách
     });
-
-    alert("Tạo phiếu nhập kho thành công!");
-    closeModal(); 
-    fetchReceipts(); 
   } catch (error) {
     console.error("Lỗi khi tạo phiếu:", error);
     const errorMsg = error.response?.data?.message || error.response?.data || "Có lỗi xảy ra, vui lòng thử lại!";
@@ -400,7 +396,7 @@ onMounted(() => {
   box-shadow: 0 0 0 0.2rem rgba(0, 223, 58, 0.25);
 }
 
-/* --- CSS THÊM MỚI CHO MODAL THÔNG BÁO --- */
+/* --- CSS CHO MODAL THÔNG BÁO --- */
 .custom-modal-overlay {
   position: fixed;
   top: 0;
@@ -408,8 +404,9 @@ onMounted(() => {
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 2000; /* Cao hơn Bootstrap modal mặc định (1050) */
+  z-index: 3000; 
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
 .custom-modal {

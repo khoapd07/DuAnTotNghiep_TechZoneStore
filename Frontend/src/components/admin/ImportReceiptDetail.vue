@@ -149,6 +149,33 @@
       </div>
 
     </main>
+
+    <!-- CUSTOM MODAL THÔNG BÁO -->
+    <div v-if="customModal.show" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg mx-3">
+        <div class="mb-3">
+          <i v-if="customModal.icon === 'success'" class="bi bi-check-circle-fill text-success" style="font-size: 3.5rem;"></i>
+          <i v-else-if="customModal.icon === 'error'" class="bi bi-x-circle-fill text-danger" style="font-size: 3.5rem;"></i>
+          <i v-else-if="customModal.icon === 'warning'" class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3.5rem;"></i>
+          <i v-else-if="customModal.icon === 'prompt'" class="bi bi-pencil-square text-primary" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2 text-dark">{{ customModal.title }}</h5>
+        <p class="text-muted small mb-3" v-html="customModal.message"></p>
+        
+        <div v-if="customModal.icon === 'prompt'" class="mb-4">
+          <input type="text" class="form-control shadow-none border-primary" v-model="customModal.inputValue" placeholder="Nhập nội dung...">
+        </div>
+
+        <div class="d-flex justify-content-center gap-2">
+          <button v-if="customModal.icon === 'warning' || customModal.icon === 'prompt'" @click="handleModalCancel" class="btn btn-light fw-bold px-4 py-2 rounded-3 flex-grow-1 text-uppercase" style="font-size: 13px;">
+            Hủy
+          </button>
+          <button @click="handleModalConfirm" class="btn btn-dark fw-bold px-4 py-2 rounded-3 flex-grow-1 text-uppercase" style="font-size: 13px;">
+            {{ customModal.icon === 'warning' || customModal.icon === 'prompt' ? 'Xác nhận' : 'Đóng' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -160,10 +187,44 @@ export default {
   name: "ImportReceiptDetail",
   data() {
     return {
-      receiptData: null
+      receiptData: null,
+      customModal: {
+        show: false,
+        icon: 'success', // 'success', 'error', 'warning', 'confirm', 'prompt'
+        title: '',
+        message: '',
+        inputValue: '',
+        onConfirm: null,
+        onCancel: null
+      }
     };
   },
   methods: {
+    showNotification(icon, title, message, onConfirm = null, onCancel = null, isPrompt = false, defaultValue = '') {
+      this.customModal = { 
+        show: true, 
+        icon, 
+        title, 
+        message, 
+        inputValue: defaultValue,
+        onConfirm, 
+        onCancel 
+      };
+    },
+    closeCustomModal() {
+      this.customModal.show = false;
+    },
+    handleModalConfirm() {
+      const value = this.customModal.inputValue;
+      const callback = this.customModal.onConfirm;
+      this.closeCustomModal();
+      if (callback) callback(value);
+    },
+    handleModalCancel() {
+      const callback = this.customModal.onCancel;
+      this.closeCustomModal();
+      if (callback) callback();
+    },
     formatCurrency(value) {
       if (!value) return "0 ₫";
       return new Intl.NumberFormat("vi-VN", {
@@ -181,65 +242,63 @@ export default {
     async fetchReceiptDetail() {
       const receiptId = this.$route.params.id;
       if (!receiptId) {
-        alert("Không tìm thấy ID phiếu nhập!");
-        this.goBack();
+        this.showNotification('error', 'Lỗi', 'Không tìm thấy ID phiếu nhập!', () => this.goBack());
         return;
       }
       try {
-        // Sử dụng api.get và xóa /api phía trước
         const response = await api.get(`/admin/import-receipts/${receiptId}`);
         this.receiptData = response.data;
       } catch (error) {
         console.error("Lỗi khi tải chi tiết phiếu nhập:", error);
-        alert("Có lỗi xảy ra hoặc phiếu nhập không tồn tại!");
-        this.goBack();
+        this.showNotification('error', 'Lỗi hệ thống', 'Có lỗi xảy ra hoặc phiếu nhập không tồn tại!', () => this.goBack());
       }
     },
 
     // GỌI API XÓA PHIẾU NHẬP
     async cancelReceipt() {
-      if (confirm('Bạn có chắc chắn muốn hủy phiếu nhập này không? Hành động này không thể hoàn tác!')) {
-        try {
-          const receiptId = this.$route.params.id;
-          // Sử dụng api.delete và xóa /api phía trước
-          const response = await api.delete(`/admin/import-receipts/${receiptId}`);
-          
-          alert(response.data || 'Đã hủy phiếu nhập thành công!');
-          this.goBack(); 
-        } catch (error) {
-          console.error("Lỗi khi hủy phiếu:", error);
-          if (error.response && error.response.data) {
-             alert("Lỗi: " + error.response.data);
-          } else {
-             alert('Không thể hủy phiếu nhập này!');
+      this.showNotification(
+        'warning', 
+        'Xác nhận hủy', 
+        'Bạn có chắc chắn muốn hủy phiếu nhập này không? Hành động này không thể hoàn tác!',
+        async () => {
+          try {
+            const receiptId = this.$route.params.id;
+            const response = await api.delete(`/admin/import-receipts/${receiptId}`);
+            this.showNotification('success', 'Thành công', response.data || 'Đã hủy phiếu nhập thành công!', () => this.goBack());
+          } catch (error) {
+            console.error("Lỗi khi hủy phiếu:", error);
+            const errorMsg = error.response?.data || 'Không thể hủy phiếu nhập này!';
+            this.showNotification('error', 'Lỗi', typeof errorMsg === 'string' ? errorMsg : 'Không thể hủy phiếu nhập này!');
           }
         }
-      }
+      );
     },
 
     // GỌI API SỬA GHI CHÚ
     async editReceipt() {
-      const newNote = prompt("Nhập nội dung Ghi chú mới cho phiếu nhập này:", this.receiptData.note || "");
-      
-      if (newNote !== null) {
-        try {
-          const receiptId = this.$route.params.id;
-          
-          const payload = { ...this.receiptData, note: newNote };
-          
-          // Sử dụng api.put và xóa /api phía trước
-          await api.put(`/admin/import-receipts/${receiptId}`, payload);
-          alert('Cập nhật ghi chú thành công!');
-          this.receiptData.note = newNote; 
-        } catch (error) {
-          console.error("Lỗi khi cập nhật phiếu:", error);
-          if (error.response && error.response.data) {
-             alert("Lỗi: " + error.response.data);
-          } else {
-             alert('Có lỗi xảy ra khi cập nhật!');
+      this.showNotification(
+        'prompt',
+        'Cập nhật ghi chú',
+        'Nhập nội dung Ghi chú mới cho phiếu nhập này:',
+        async (newNote) => {
+          if (newNote !== null) {
+            try {
+              const receiptId = this.$route.params.id;
+              const payload = { ...this.receiptData, note: newNote };
+              await api.put(`/admin/import-receipts/${receiptId}`, payload);
+              this.showNotification('success', 'Thành công', 'Cập nhật ghi chú thành công!');
+              this.receiptData.note = newNote; 
+            } catch (error) {
+              console.error("Lỗi khi cập nhật phiếu:", error);
+              const errorMsg = error.response?.data || 'Có lỗi xảy ra khi cập nhật!';
+              this.showNotification('error', 'Lỗi', typeof errorMsg === 'string' ? "Lỗi: " + errorMsg : 'Có lỗi xảy ra khi cập nhật!');
+            }
           }
-        }
-      }
+        },
+        null,
+        true,
+        this.receiptData.note || ""
+      );
     }
   },
   mounted() {
@@ -259,5 +318,28 @@ export default {
   .print-container { padding-top: 0 !important; margin-top: 0 !important; }
   .card { box-shadow: none !important; border: 1px solid #dee2e6 !important; }
   .bg-light { background-color: transparent !important; }
+}
+
+/* --- CSS CHO MODAL THÔNG BÁO --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 3000; 
+  backdrop-filter: blur(4px);
+}
+
+.custom-modal {
+  width: 100%;
+  max-width: 400px;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
 }
 </style>
