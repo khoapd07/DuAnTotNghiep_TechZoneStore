@@ -32,7 +32,7 @@
                 </div>
 
                 <div class="product-img-box bg-light rounded-3 d-flex align-items-center justify-content-center p-2" style="width: 100px; height: 100px;">
-                  <img :src="item.img" class="img-fluid object-fit-contain" alt="Product">
+                  <img :src="item.img" @error="handleImageError" class="img-fluid object-fit-contain" alt="Product">
                 </div>
 
                 <div class="flex-grow-1">
@@ -129,13 +129,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
 import api from '../utils/axios'; 
 import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2'; 
 
 const router = useRouter();
-// Thay đổi hằng số API_URL (địa chỉ URL giao diện lập trình) chỉ còn path tương đối
 const API_URL = '/cart';
 
 const cartItems = ref([]);
@@ -153,47 +151,78 @@ const getCurrentUserId = () => {
   return null;
 };
 
+const getImageUrl = (url) => {
+  if (!url) return 'https://via.placeholder.com/150/eeeeee/000000?text=No+Image';
+  if (url.startsWith('http')) return url;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
+const handleImageError = (e) => { 
+  e.target.src = 'https://via.placeholder.com/150/eeeeee/000000?text=No+Image'; 
+};
+
 const fetchCart = async () => {
   const userId = getCurrentUserId();
+  let rawItems = [];
   
   if (!userId) {
     const guestCart = localStorage.getItem('guest_cart');
     if (guestCart) {
-      const parsedCart = JSON.parse(guestCart);
-      cartItems.value = parsedCart.map(item => ({
+      rawItems = JSON.parse(guestCart).map(item => ({
         ...item,
         selected: item.selected !== undefined ? item.selected : true 
       }));
-    } else {
-      cartItems.value = [];
     }
-    return;
+  } else {
+    try {
+      const response = await api.get(`${API_URL}/${userId}`);
+      const backendItems = response.data.items || response.data;
+
+      rawItems = backendItems.map(bItem => {
+        const existingItem = cartItems.value.find(i => i.productId === bItem.productId && i.variantId === bItem.variantId);
+        return {
+          productId: bItem.productId,
+          variantId: bItem.variantId,
+          colorName: bItem.colorName,
+          option2Value: bItem.option2Value,
+          name: bItem.productName,
+          desc: 'Sản phẩm chính hãng TechZone',
+          price: bItem.salePrice || bItem.price,
+          oldPrice: bItem.salePrice ? bItem.price : null,
+          quantity: bItem.quantity,
+          selected: existingItem ? existingItem.selected : true,
+          img: bItem.imageUrl // Tạm thời hứng ảnh từ API
+        };
+      });
+    } catch (error) {
+      console.error('Lỗi khi tải giỏ hàng:', error);
+    }
   }
 
-  try {
-    // Thay đổi axios.get thành api.get
-    const response = await api.get(`${API_URL}/${userId}`);
-    const backendItems = response.data.items || response.data;
-
-    cartItems.value = backendItems.map(bItem => {
-      const existingItem = cartItems.value.find(i => i.productId === bItem.productId && i.variantId === bItem.variantId);
-      return {
-        productId: bItem.productId,
-        variantId: bItem.variantId,
-        colorName: bItem.colorName,
-        option2Value: bItem.option2Value,
-        name: bItem.productName,
-        desc: 'Sản phẩm chính hãng TechZone',
-        price: bItem.salePrice || bItem.price,
-        oldPrice: bItem.salePrice ? bItem.price : null,
-        quantity: bItem.quantity,
-        selected: existingItem ? existingItem.selected : true,
-        img: bItem.imageUrl
-      };
-    });
-  } catch (error) {
-    console.error('Lỗi khi tải giỏ hàng:', error);
-  }
+  // --- VÁ LỖI HIỂN THỊ ẢNH TRÊN GIỎ HÀNG BẤT CHẤP API TRẢ VỀ SAI ---
+  cartItems.value = await Promise.all(rawItems.map(async (item) => {
+      let correctImg = item.img;
+      if (item.productId && item.colorName) {
+          try {
+              // Gọi lấy thông tin product để tra cứu chính xác variant của màu đó
+              const res = await api.get(`/product/${item.productId}`);
+              if (res.data && res.data.variants) {
+                  // Ép buộc lấy variant CÓ ẢNH của ĐÚNG MÀU ĐÓ
+                  const match = res.data.variants.find(v => v.colorName === item.colorName && (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0)));
+                  if (match) {
+                      correctImg = match.imageUrl || match.imageUrls[0];
+                  } else if (res.data.imageUrl) {
+                      correctImg = res.data.imageUrl;
+                  }
+              }
+          } catch (e) {
+              console.warn('Lỗi đồng bộ hình ảnh giỏ hàng:', e);
+          }
+      }
+      return { ...item, img: getImageUrl(correctImg) };
+  }));
+  // --- KẾT THÚC VÁ LỖI ---
 };
 
 onMounted(() => {
@@ -219,9 +248,6 @@ const subtotal = computed(() => {
     .reduce((total, item) => total + (item.price * item.quantity), 0);
 });
 
-// ==========================================
-// 1. LOGIC XỬ LÝ SỐ LƯỢNG KHI CÓ LỖI TỒN KHO
-// ==========================================
 const syncQuantityWithBackend = (item, newQuantity) => {
   const userId = getCurrentUserId();
 
@@ -238,7 +264,6 @@ const syncQuantityWithBackend = (item, newQuantity) => {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(async () => {
     try {
-      // Thay đổi axios.put thành api.put
       await api.put(`${API_URL}/${userId}/update`, { 
         productId: item.productId,
         variantId: item.variantId,
@@ -247,9 +272,7 @@ const syncQuantityWithBackend = (item, newQuantity) => {
       await fetchCart();
       window.dispatchEvent(new Event('cart-updated'));
     } catch (error) {
-      // Axios trả về lỗi trực tiếp ở error.response.data
       const errorMsg = error.response?.data || 'Cập nhật thất bại';
-      
       const match = typeof errorMsg === 'string' ? errorMsg.match(/Kho chỉ còn (\d+)/i) : null;
       
       if (match && match[1]) {
@@ -268,7 +291,6 @@ const syncQuantityWithBackend = (item, newQuantity) => {
         item.quantity = maxStock;
 
         try {
-          // Thay đổi axios.put thành api.put
           await api.put(`${API_URL}/${userId}/update`, { 
             productId: item.productId,
             variantId: item.variantId,
@@ -333,7 +355,6 @@ const removeItem = async (productId) => {
     }
 
     try {
-      // Thay đổi axios.delete thành api.delete
       await api.delete(`${API_URL}/${userId}/remove/${productId}`);
       await fetchCart();
       window.dispatchEvent(new Event('cart-updated'));
@@ -366,7 +387,6 @@ const clearCart = async () => {
     }
 
     try {
-      // Thay đổi axios.delete thành api.delete
       await api.delete(`${API_URL}/${userId}/clear`);
       cartItems.value = [];
       window.dispatchEvent(new Event('cart-updated')); 
@@ -380,9 +400,6 @@ const formatCurrency = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value || 0).replace('₫', 'đ');
 };
 
-// ==========================================
-// 2. CHỐT CHẶN DOUBLE-CHECK TỒN KHO KHI THANH TOÁN
-// ==========================================
 const goToCheckout = async () => {
   const userId = getCurrentUserId();
   const selectedItems = cartItems.value.filter(item => item.selected);
@@ -393,7 +410,6 @@ const goToCheckout = async () => {
 
   try {
     for (const item of selectedItems) {
-      // Thay đổi URL gọi đến product API
       const res = await api.get(`/product/${item.productId}`);
       const productData = res.data;
 
@@ -416,7 +432,6 @@ const goToCheckout = async () => {
         item.quantity = maxStock;
 
         if (userId) {
-           // Thay đổi axios.put thành api.put
            await api.put(`${API_URL}/${userId}/update`, {
              productId: item.productId,
              variantId: item.variantId,
@@ -450,7 +465,6 @@ const goToCheckout = async () => {
 </script>
 
 <style scoped>
-/* Toàn bộ CSS của bạn được giữ nguyên 100% */
 .fw-black { font-weight: 900; }
 .fs-7 { font-size: 0.85rem; }
 .fs-8 { font-size: 0.75rem; }

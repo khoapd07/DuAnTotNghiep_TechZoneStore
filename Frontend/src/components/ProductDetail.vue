@@ -266,24 +266,23 @@ const selectedVariantData = computed(() => {
   );
 });
 
-// FIX LOGIC: THUMBNAIL CHỈ PHỤ THUỘC VÀO MÀU SẮC, BỎ QUA OPTION 2
+// FIX LOGIC: THUMBNAIL TÌM BIẾN THỂ CÓ MÀU ĐANG CHỌN VÀ "CÓ ẢNH"
 const uniqueThumbnails = computed(() => {
   if (!product.value || !selectedColor.value) return [];
   const urls = new Set();
   
-  // Tìm variant ĐẦU TIÊN khớp với MÀU đang chọn (Không quan tâm là 64GB hay 128GB)
-  const colorVariant = product.value.variants.find(v => v.colorName === selectedColor.value);
+  const colorVariant = product.value.variants.find(v => 
+      v.colorName === selectedColor.value && 
+      (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+  );
   
   if (colorVariant) {
-    if (colorVariant.imageUrl) {
-      urls.add(colorVariant.imageUrl);
-    }
+    if (colorVariant.imageUrl) urls.add(colorVariant.imageUrl);
     if (colorVariant.imageUrls && colorVariant.imageUrls.length > 0) {
       colorVariant.imageUrls.forEach(img => urls.add(img));
     }
   }
   
-  // Nếu lỡ màu đó không có tấm ảnh nào thì show tạm ảnh gốc
   if (urls.size === 0 && product.value.imageUrl) {
     urls.add(product.value.imageUrl);
   }
@@ -323,8 +322,9 @@ const stockStatusText = computed(() => {
 });
 
 const getColorImage = (color) => {
-   const match = product.value.variants.find(v => v.colorName === color && v.imageUrl);
-   return match ? match.imageUrl : null;
+   const match = product.value.variants.find(v => v.colorName === color && (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0)));
+   if (match) return match.imageUrl || match.imageUrls[0];
+   return null;
 };
 
 const calculateDiscount = (price, salePrice) => {
@@ -332,7 +332,6 @@ const calculateDiscount = (price, salePrice) => {
   return Math.round(((price - salePrice) / price) * 100);
 };
 
-// ĐÃ SỬA: SỬ DỤNG BIẾN MÔI TRƯỜNG THAY VÌ LOCALHOST CỨNG
 const getImageUrl = (url) => {
   if (!url) return 'https://via.placeholder.com/300x200/eeeeee/000000?text=No+Image';
   if (url.startsWith('http')) return url;
@@ -358,22 +357,18 @@ const setMainImage = (url) => {
   currentImage.value = url;
 };
 
-// FIX LOGIC: ẢNH CHÍNH CHỈ ĐỔI KHI ĐỔI MÀU
+// FIX LOGIC: TÌM VARIANT CÓ MÀU ĐANG CHỌN VÀ "PHẢI CÓ ẢNH"
 const selectColor = (color) => {
   selectedColor.value = color;
   lastClicked.value = 'color';
   
-  // Tìm variant ĐẦU TIÊN khớp với MÀU đang chọn
-  const colorVariant = product.value.variants.find(v => v.colorName === color);
+  const colorVariant = product.value.variants.find(v => 
+      v.colorName === color && 
+      (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+  );
   
   if (colorVariant) {
-      if (colorVariant.imageUrl) {
-          currentImage.value = getImageUrl(colorVariant.imageUrl);
-      } else if (colorVariant.imageUrls && colorVariant.imageUrls.length > 0) {
-          currentImage.value = getImageUrl(colorVariant.imageUrls[0]);
-      } else {
-          currentImage.value = getImageUrl(product.value.imageUrl);
-      }
+      currentImage.value = getImageUrl(colorVariant.imageUrl || colorVariant.imageUrls[0]);
   } else {
       currentImage.value = getImageUrl(product.value.imageUrl);
   }
@@ -389,17 +384,14 @@ const fetchProductDetail = async (id) => {
     if (uniqueColors.value.length > 0) selectedColor.value = uniqueColors.value[0];
     if (uniqueOption2s.value.length > 0) selectedOption2.value = uniqueOption2s.value[0];
 
-    // GÁN ẢNH CHÍNH LÚC VỪA LOAD TRANG DỰA VÀO MÀU SẮC ĐẦU TIÊN
-    const firstColorVariant = product.value.variants.find(v => v.colorName === selectedColor.value);
+    // TÌM ẢNH ĐẦU TIÊN KHI LOAD TRANG (PHẢI LÀ VARIANT CÓ ẢNH)
+    const firstColorVariant = product.value.variants.find(v => 
+        v.colorName === selectedColor.value && 
+        (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+    );
     
     if (firstColorVariant) {
-        if (firstColorVariant.imageUrl) {
-            currentImage.value = getImageUrl(firstColorVariant.imageUrl);
-        } else if (firstColorVariant.imageUrls && firstColorVariant.imageUrls.length > 0) {
-            currentImage.value = getImageUrl(firstColorVariant.imageUrls[0]);
-        } else {
-            currentImage.value = getImageUrl(product.value.imageUrl);
-        }
+        currentImage.value = getImageUrl(firstColorVariant.imageUrl || firstColorVariant.imageUrls[0]);
     } else {
         currentImage.value = getImageUrl(product.value.imageUrl);
     }
@@ -410,32 +402,18 @@ const fetchProductDetail = async (id) => {
 
 const fetchSimilarProducts = async () => {
   try {
-    // 1. Gọi lấy dư ra (VD: 10 cái) để trừ hao cái đang xem và có đủ data để lọc thương hiệu
     const res = await api.get(`/product`, { 
       params: { categoryId: product.value.categoryId, page: 0, size: 10 } 
     });
-    
     let all = res.data.content || res.data;
-
-    // 2. Loại bỏ sản phẩm ĐANG XEM ra khỏi danh sách
-    let filtered = all.filter(item => 
-      (item.productId || item.id) !== (product.value.productId || product.value.id)
-    );
-
-    // 3. SẮP XẾP: Cùng Thương hiệu (Brand) thì đẩy lên đầu
+    let filtered = all.filter(item => (item.productId || item.id) !== (product.value.productId || product.value.id));
     filtered.sort((a, b) => {
       const isSameBrandA = a.brandId === product.value.brandId ? 1 : 0;
       const isSameBrandB = b.brandId === product.value.brandId ? 1 : 0;
-      // Trả về số âm thì xếp trước, số dương thì xếp sau
       return isSameBrandB - isSameBrandA; 
     });
-
-    // 4. Cắt đúng 4 cái trên cùng (đã được ưu tiên) để hiển thị
     similarProducts.value = filtered.slice(0, 4);
-
-  } catch (e) {
-    console.error("Lỗi tải sản phẩm tương tự:", e);
-  }
+  } catch (e) { console.error("Lỗi tải sản phẩm tương tự:", e); }
 };
 
 const fetchReviews = async () => {
@@ -448,9 +426,7 @@ const fetchReviews = async () => {
 const getCurrentUserId = () => {
   const userInfoString = localStorage.getItem('user_info');
   if (userInfoString) {
-    try {
-      return JSON.parse(userInfoString).userId;
-    } catch (e) { return null; }
+    try { return JSON.parse(userInfoString).userId; } catch (e) { return null; }
   }
   return null;
 };
@@ -471,15 +447,26 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
     vColor = selectedVariantData.value.colorName;
     vOpt2 = selectedVariantData.value.option2Value;
     vPrice = currentSalePrice.value || currentPrice.value;
-    vImg = selectedVariantData.value.imageUrl || vImg;
+    
+    // --- ĐÃ VÁ LỖI TRƯỜNG HỢP VARIANT 512GB KHÔNG CÓ ẢNH TRONG DB ---
+    const colorVariantWithImage = productObj.variants.find(v => 
+        v.colorName === vColor && 
+        (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0))
+    );
+    
+    if (colorVariantWithImage) {
+        vImg = colorVariantWithImage.imageUrl || colorVariantWithImage.imageUrls[0];
+    }
   } else if (isSimilarProduct && productObj.variants && productObj.variants.length > 0) {
-    const firstVariant = productObj.variants[0];
+    const firstVariant = productObj.variants.find(v => v.imageUrl || (v.imageUrls && v.imageUrls.length > 0)) || productObj.variants[0];
     vId = firstVariant.variantId;
     vColor = firstVariant.colorName;
     vOpt2 = firstVariant.option2Value;
     vPrice = firstVariant.salePrice || firstVariant.price;
-    vImg = firstVariant.imageUrl || vImg;
+    vImg = firstVariant.imageUrl || (firstVariant.imageUrls && firstVariant.imageUrls[0]) || vImg;
   }
+
+  vImg = getImageUrl(vImg);
 
   if (userId) {
     try {
@@ -508,7 +495,7 @@ const handleAddToCart = async (productObj, qtyToAdd, isSimilarProduct = false, s
         option2Value: vOpt2,
         price: vPrice,
         quantity: qtyToAdd,
-        img: vImg
+        img: vImg // Lưu chết URL ảnh đúng vào localStorage
       });
     }
     localStorage.setItem('guest_cart', JSON.stringify(guestCart));
@@ -540,70 +527,16 @@ onMounted(() => fetchProductDetail(route.params.id));
 .hover-bg-light:hover { background-color: #f8f9fa !important; }
 .hover-border-dark:hover { border-color: #212529 !important; }
 .transition-all { transition: all 0.2s ease-in-out; }
-
 .text-primary { color: #0047FF !important; }
 .border-primary { border-color: #0047FF !important; }
-
-.attr-box {
-  word-break: break-word;
-  overflow-wrap: break-word;
-  min-width: 100px;
-}
-
-.thumbnail-list .thumb-item {
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  background-color: white; 
-}
-.thumbnail-list .thumb-item:hover {
-  border-color: #212529 !important;
-}
-
+.attr-box { word-break: break-word; overflow-wrap: break-word; min-width: 100px; }
+.thumbnail-list .thumb-item { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; transition: all 0.2s ease; background-color: white; }
+.thumbnail-list .thumb-item:hover { border-color: #212529 !important; }
 .btn-neon { background-color: #00FF33; border: none; }
 .btn-neon:hover { background-color: #00e62e; }
-
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* --- CSS THÊM MỚI CHO MODAL --- */
-.custom-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5); /* Lớp nền đen mờ */
-  z-index: 1050; /* Z-index (chỉ mục chiều Z) cao hơn để đè lên UI */
-  animation: fadeIn 0.2s ease-in-out;
-}
-
-.custom-modal {
-  width: 90%;
-  max-width: 400px;
-  animation: slideDown 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideDown {
-  from {
-    transform: translateY(-20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
+.line-clamp-1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.5); z-index: 1050; animation: fadeIn 0.2s ease-in-out; }
+.custom-modal { width: 90%; max-width: 400px; animation: slideDown 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
