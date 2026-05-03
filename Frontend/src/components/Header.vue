@@ -47,8 +47,8 @@
               </div>
 
               <div v-else>
-                <div v-for="item in cartItems" :key="item.maGH || item.id" class="cart-item d-flex align-items-center py-2 border-bottom">
-                  <img :src="item.img" class="rounded object-fit-cover me-2" style="width: 50px; height: 50px;" alt="SP">
+                <div v-for="item in cartItems" :key="item.maGH || item.id || item.variantId" class="cart-item d-flex align-items-center py-2 border-bottom">
+                  <img :src="item.img" @error="handleImageError" class="rounded object-fit-cover me-2" style="width: 50px; height: 50px;" alt="SP">
                   <div class="flex-grow-1">
                     <div class="fw-bold fs-7 text-truncate" style="max-width: 180px;">{{ item.name }}</div>
                     <div class="d-flex justify-content-between align-items-center mt-1">
@@ -126,7 +126,6 @@
 //commit (thêm phần tra cứu đơn hàng vào Header.vue) - 20/03/2026
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
-// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể)
 import api from '../utils/axios';
 const router = useRouter();
 const isLoggedIn = ref(false);
@@ -135,28 +134,33 @@ const cartItems = ref([]);
 const isAdmin = ref(false);
 const isShipper = ref(false);
 
-// Biến quản lý tra cứu đơn hàng
 const searchOrderCode = ref('');
-
-// biến tìm kiếm sản phẩm
 const searchKeyword = ref('');
+
+// --- THÊM HÀM XỬ LÝ ẢNH CHUẨN MỰC ---
+const getImageUrl = (url) => {
+  if (!url) return 'https://via.placeholder.com/150/eeeeee/000000?text=No+Image';
+  if (url.startsWith('http')) return url;
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+  return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
+const handleImageError = (e) => { 
+  e.target.src = 'https://via.placeholder.com/150/eeeeee/000000?text=No+Image'; 
+};
+// --- KẾT THÚC ---
 
 const handleSearchProduct = () => {
   if (searchKeyword.value.trim()) {
-    // Chuyển hướng đến trang sản phẩm và truyền từ khóa lên URL
     router.push({ path: '/products', query: { keyword: searchKeyword.value.trim() } });
-    searchKeyword.value = ''; // Reset ô tìm kiếm sau khi enter (tùy chọn)
+    searchKeyword.value = '';
   }
 };
 
 const handleSearchOrder = () => {
   if (!searchOrderCode.value.trim()) return;
-
-  // Đóng modal
   const closeBtn = document.getElementById('closeTrackModalBtn');
   if (closeBtn) closeBtn.click();
-
-  // Chuyển hướng đến trang chi tiết đơn hàng
   router.push(`/order/${searchOrderCode.value.trim()}`);
   searchOrderCode.value = '';
 };
@@ -214,6 +218,7 @@ const checkLoginStatus = () => {
 const fetchMiniCart = async () => {
   try {
     const token = localStorage.getItem('jwt_token');
+    let rawItems = [];
     
     if (token) {
       const userInfoString = localStorage.getItem('user_info');
@@ -224,12 +229,10 @@ const fetchMiniCart = async () => {
 
       if (!customerId) return;
 
-      // Thay đổi axios.get thành api.get, xóa phần base URL và bỏ headers Authorization (vì đã có interceptor)
       const response = await api.get(`/cart/${customerId}`);
-      
       const backendItems = response.data.items || response.data; 
       
-      cartItems.value = backendItems.map(bItem => ({
+      rawItems = backendItems.map(bItem => ({
         productId: bItem.productId,
         variantId: bItem.variantId,       
         colorName: bItem.colorName,       
@@ -243,11 +246,34 @@ const fetchMiniCart = async () => {
     } else {
       const guestCart = localStorage.getItem('guest_cart');
       if (guestCart) {
-        cartItems.value = JSON.parse(guestCart);
-      } else {
-        cartItems.value = [];
+        rawItems = JSON.parse(guestCart);
       }
     }
+
+    // --- VÁ LỖI HIỂN THỊ ẢNH TRÊN MINI CART Y HỆT CART TỔNG ---
+    cartItems.value = await Promise.all(rawItems.map(async (item) => {
+        let correctImg = item.img;
+        if (item.productId && item.colorName) {
+            try {
+                // Gọi lấy thông tin product để tra cứu chính xác variant của màu đó
+                const res = await api.get(`/product/${item.productId}`);
+                if (res.data && res.data.variants) {
+                    // Ép buộc lấy variant CÓ ẢNH của ĐÚNG MÀU ĐÓ
+                    const match = res.data.variants.find(v => v.colorName === item.colorName && (v.imageUrl || (v.imageUrls && v.imageUrls.length > 0)));
+                    if (match) {
+                        correctImg = match.imageUrl || match.imageUrls[0];
+                    } else if (res.data.imageUrl) {
+                        correctImg = res.data.imageUrl;
+                    }
+                }
+            } catch (e) {
+                console.warn('Lỗi đồng bộ hình ảnh mini cart:', e);
+            }
+        }
+        return { ...item, img: getImageUrl(correctImg) };
+    }));
+    // --- KẾT THÚC VÁ LỖI ---
+
   } catch (error) {
     console.error("Lỗi tải mini cart:", error);
     cartItems.value = []; 
