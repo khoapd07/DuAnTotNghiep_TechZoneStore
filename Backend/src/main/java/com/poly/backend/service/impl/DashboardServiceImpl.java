@@ -41,7 +41,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         double orderGrowth = calculateGrowth(ordersThisPeriod.doubleValue(), ordersLastPeriod.doubleValue());
 
-        // --- TÍNH SẢN PHẨM HẾT HÀNG (Lấy ở hiện tại) ---
+        // --- TÍNH SẢN PHẨM HẾT HÀNG (Lấy ở hiện tại) --- ko dùng đến nữa
         Long outOfStock = productRepository.countByTotalStockLessThan(16);
 
         return DashboardStatsDTO.builder()
@@ -49,11 +49,11 @@ public class DashboardServiceImpl implements DashboardService {
                 .revenueGrowth(revenueGrowth)
                 .newOrdersCount(ordersThisPeriod)          // Trả về số đơn 7 ngày qua
                 .orderGrowth(orderGrowth)
-                .outOfStockCount(outOfStock)               // Hết hàng hiện tại
+//                .outOfStockCount(outOfStock)               // Hết hàng hiện tại
                 .build();
     }
 
-    // Hàm Helper tính toán % tăng trưởng
+    // Hàm Helper tính toán tăng trưởng
     private double calculateGrowth(double current, double previous) {
         if (previous == 0) {
             return current > 0 ? 100.0 : 0.0;
@@ -99,7 +99,7 @@ public class DashboardServiceImpl implements DashboardService {
         return chartDataList;
     }
 
-    // Hàm Helper (Nếu bạn dùng tùy chọn "T2, T3...")
+    // Hàm Helper (Nếu bạn dùng tùy chọn "T2, T3...") ko dùng đến
     private String getVietnameseDayOfWeek(int dayValue) {
         switch (dayValue) {
             case 1: return "T2";

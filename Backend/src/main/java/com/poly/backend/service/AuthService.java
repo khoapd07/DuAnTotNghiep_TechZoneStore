@@ -169,6 +169,7 @@ public class AuthService {
         emailService.sendPasswordResetEmail(user.getEmail(), resetLink);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public void resetPassword(String token, String newPassword) {
         User user = userRepository.findByResetPasswordToken(token)
                 .orElseThrow(() -> new RuntimeException("Token không hợp lệ hoặc đã hết hạn!"));
@@ -176,7 +177,7 @@ public class AuthService {
         // Cập nhật mật khẩu mới và xóa token
         user.setPassword(passwordEncoder.encode(newPassword));
         user.setResetPasswordToken(null);
-        userRepository.save(user);
+        userRepository.saveAndFlush(user);
     }
 
 }
