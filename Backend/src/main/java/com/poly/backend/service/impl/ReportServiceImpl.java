@@ -1,6 +1,6 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.ReportRepository;
+import com.poly.backend.repository.ReportRepository;
 import com.poly.backend.service.ReportService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

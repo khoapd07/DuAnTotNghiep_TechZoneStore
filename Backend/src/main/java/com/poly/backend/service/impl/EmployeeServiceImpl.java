@@ -1,11 +1,12 @@
 package com.poly.backend.service.impl;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.EmployeeRepository;
-import com.poly.backend.dao.RoleRepository;
+import com.poly.backend.repository.EmployeeRepository;
+import com.poly.backend.repository.RoleRepository;
 import com.poly.backend.entity.Employee;
 import com.poly.backend.entity.Role;
 import com.poly.backend.dto.EmployeeDTO;
@@ -40,8 +41,31 @@ public class EmployeeServiceImpl implements EmployeeService {
             if (employee == null) return null;
         } else {
             employee = new Employee();
+            // Kiểm tra trùng username khi tạo mới
+            Optional<Employee> existingUsername = employeeRepository.findByUsername(dto.getUsername());
+            if (existingUsername.isPresent()) {
+                throw new RuntimeException("Tên đăng nhập đã tồn tại!");
+            }
             employee.setUsername(dto.getUsername());
             employee.setPassword(passwordEncoder.encode("123456")); // Pass mặc định
+        }
+
+        // Validate (Xác thực) Email duy nhất
+        if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+            Optional<Employee> existingEmail = employeeRepository.findByEmail(dto.getEmail().trim());
+            // Nếu email đã tồn tại và ID khác với ID của nhân viên đang được cập nhật
+            if (existingEmail.isPresent() && !existingEmail.get().getUserId().equals(dto.getUserId())) {
+                throw new RuntimeException("Email đã tồn tại trong hệ thống!");
+            }
+        }
+
+        // Validate (Xác thực) Số điện thoại duy nhất
+        if (dto.getPhoneNumber() != null && !dto.getPhoneNumber().trim().isEmpty()) {
+            Optional<Employee> existingPhone = employeeRepository.findByPhoneNumber(dto.getPhoneNumber().trim());
+            // Nếu SĐT đã tồn tại và ID khác với ID của nhân viên đang được cập nhật
+            if (existingPhone.isPresent() && !existingPhone.get().getUserId().equals(dto.getUserId())) {
+                throw new RuntimeException("Số điện thoại đã tồn tại trong hệ thống!");
+            }
         }
 
         // Cập nhật Quyền (Role) dựa trên ID gửi từ Frontend

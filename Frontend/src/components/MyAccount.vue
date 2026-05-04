@@ -116,7 +116,7 @@
                       <span v-if="isChangingPwd" class="spinner-border spinner-border-sm me-2"></span>
                       {{ isChangingPwd ? 'ĐANG XỬ LÝ...' : 'CẬP NHẬT MẬT KHẨU' }}
                     </button>
-                    <a href="#" class="text-neon fw-bold text-decoration-none fs-7">QUÊN MẬT KHẨU?</a>
+                    <!-- <a href="#" class="text-neon fw-bold text-decoration-none fs-7">QUÊN MẬT KHẨU?</a> -->
                   </div>
                 </form>
               </div>

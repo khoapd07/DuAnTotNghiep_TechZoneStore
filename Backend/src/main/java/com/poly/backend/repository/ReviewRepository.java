@@ -1,4 +1,4 @@
-package com.poly.backend.dao;
+package com.poly.backend.repository;
 
 import com.poly.backend.entity.Review;
 import org.springframework.data.jpa.repository.JpaRepository;

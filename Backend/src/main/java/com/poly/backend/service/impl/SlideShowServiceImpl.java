@@ -1,6 +1,6 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.SlideShowRepository;
+import com.poly.backend.repository.SlideShowRepository;
 import com.poly.backend.dto.SlideShowDTO;
 import com.poly.backend.entity.SlideShow;
 import com.poly.backend.service.SlideShowService;

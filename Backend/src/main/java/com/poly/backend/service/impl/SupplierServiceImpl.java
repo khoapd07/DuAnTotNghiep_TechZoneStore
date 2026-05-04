@@ -1,7 +1,7 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.ImportReceiptRepository;
-import com.poly.backend.dao.SupplierRepository;
+import com.poly.backend.repository.ImportReceiptRepository;
+import com.poly.backend.repository.SupplierRepository;
 import com.poly.backend.dto.SupplierDTO;
 import com.poly.backend.entity.Supplier;
 import com.poly.backend.service.SupplierService;

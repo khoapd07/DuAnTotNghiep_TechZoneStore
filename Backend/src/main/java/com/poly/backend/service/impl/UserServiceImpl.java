@@ -7,7 +7,7 @@ import com.poly.backend.dto.UserProfileDTO;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.UserRepository;
+import com.poly.backend.repository.UserRepository;
 import com.poly.backend.entity.User;
 import com.poly.backend.service.UserService;
 

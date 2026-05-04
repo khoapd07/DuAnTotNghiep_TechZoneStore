@@ -3,14 +3,14 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.poly.backend.dao.ProductRepository;
-import com.poly.backend.dao.UserRepository;
+import com.poly.backend.repository.ProductRepository;
+import com.poly.backend.repository.UserRepository;
 import com.poly.backend.dto.ReviewDTO;
 import com.poly.backend.entity.Product;
 import com.poly.backend.entity.User;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.ReviewRepository;
+import com.poly.backend.repository.ReviewRepository;
 import com.poly.backend.entity.Review;
 import com.poly.backend.service.ReviewService;
 

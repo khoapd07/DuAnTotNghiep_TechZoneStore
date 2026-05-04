@@ -320,7 +320,8 @@ const saveEmployee = async () => {
     document.getElementById('employeeModal').querySelector('.btn-close').click();
   } catch (error) {
     console.error(error);
-    alert('Lưu thất bại! Hãy kiểm tra lại Tên đăng nhập hoặc Mã nhân viên có bị trùng không.');
+    const backendErrorMsg = error.response?.data?.message || error.response?.data || 'Lưu thất bại! Vui lòng kiểm tra lại dữ liệu.';
+    alert(`Lỗi: ${backendErrorMsg}`);
   }
 };
 

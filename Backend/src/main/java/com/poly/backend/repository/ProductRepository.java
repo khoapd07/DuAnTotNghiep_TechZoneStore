@@ -1,4 +1,4 @@
-package com.poly.backend.dao;
+package com.poly.backend.repository;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

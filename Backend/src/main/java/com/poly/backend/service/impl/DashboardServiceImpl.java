@@ -1,8 +1,8 @@
 package com.poly.backend.service.impl;
 
 import com.poly.backend.dto.DashboardStatsDTO;
-import com.poly.backend.dao.OrderRepository;
-import com.poly.backend.dao.ProductRepository;
+import com.poly.backend.repository.OrderRepository;
+import com.poly.backend.repository.ProductRepository;
 import com.poly.backend.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

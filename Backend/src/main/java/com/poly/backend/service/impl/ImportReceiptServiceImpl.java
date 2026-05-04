@@ -1,8 +1,8 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.ImportReceiptRepository;
-import com.poly.backend.dao.ProductRepository;
-import com.poly.backend.dao.ProductVariantRepository;
+import com.poly.backend.repository.ImportReceiptRepository;
+import com.poly.backend.repository.ProductRepository;
+import com.poly.backend.repository.ProductVariantRepository;
 import com.poly.backend.dto.ImportReceiptDetailDTO;
 import com.poly.backend.dto.ImportReceiptListDTO;
 import com.poly.backend.entity.ImportReceipt;

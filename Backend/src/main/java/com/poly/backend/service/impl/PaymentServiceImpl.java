@@ -1,8 +1,8 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.OrderRepository;
-import com.poly.backend.dao.OrderStatusRepository;
-import com.poly.backend.dao.ProductVariantRepository;
+import com.poly.backend.repository.OrderRepository;
+import com.poly.backend.repository.OrderStatusRepository;
+import com.poly.backend.repository.ProductVariantRepository;
 import com.poly.backend.dto.CreatePaymentLinkRequestBody;
 import com.poly.backend.service.CartService;
 import com.poly.backend.service.PaymentService;

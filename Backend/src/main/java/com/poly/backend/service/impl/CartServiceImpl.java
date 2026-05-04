@@ -1,6 +1,6 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.*;
+import com.poly.backend.repository.*;
 import com.poly.backend.dto.CartItemRequestDTO;
 import com.poly.backend.dto.CartItemResponseDTO;
 import com.poly.backend.dto.CartResponseDTO;
