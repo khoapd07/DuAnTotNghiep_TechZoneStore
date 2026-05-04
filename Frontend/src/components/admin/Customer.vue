@@ -114,9 +114,6 @@
                     <button v-else @click="confirmToggle(user.userId)" class="btn btn-link p-0 text-success shadow-none" title="Mở khóa tài khoản">
                       <i class="bi bi-check-circle-fill"></i>
                     </button>
-                    <button @click="confirmDelete(user.userId)" class="btn btn-link p-0 text-danger shadow-none" title="Xóa khách hàng">
-                      <i class="bi bi-trash-fill"></i>
-                    </button>
                   </div>
                 </td>
               </tr>
@@ -141,20 +138,6 @@
         <div class="d-flex gap-2 justify-content-center">
           <button @click="showToggleModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
           <button @click="executeToggle" class="btn btn-warning text-dark fs-8 fw-bold px-4 py-2 rounded-2">Đồng ý</button>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
-      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
-        <div class="mb-3">
-          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
-        </div>
-        <h5 class="fw-bold mb-2">Cảnh báo xóa?</h5>
-        <p class="text-muted fs-8 mb-4">Hành động này sẽ xóa vĩnh viễn khách hàng. Bạn chắc chắn muốn tiếp tục?</p>
-        <div class="d-flex gap-2 justify-content-center">
-          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
-          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2">Xóa vĩnh viễn</button>
         </div>
       </div>
     </div>
@@ -264,10 +247,8 @@ const showToast = (message, type = 'success') => {
   setTimeout(() => { toast.show = false; }, 3000);
 };
 
-// THÊM BIẾN CHO MODAL XÓA & KHÓA TÀI KHOẢN
-const showDeleteModal = ref(false);
+// THÊM BIẾN CHO MODAL KHÓA TÀI KHOẢN
 const showToggleModal = ref(false);
-const idToDelete = ref(null);
 const idToToggle = ref(null);
 
 const API_URL = '/admin/customers';
@@ -296,7 +277,7 @@ const newCustomersThisMonth = computed(() => {
   }).length;
 });
 
-// --- LOGIC MỚI CHO MODAL ĐỔI TRẠNG THÁI ---
+// --- LOGIC CHO MODAL ĐỔI TRẠNG THÁI ---
 const confirmToggle = (id) => {
   idToToggle.value = id;
   showToggleModal.value = true;
@@ -312,25 +293,6 @@ const executeToggle = async () => {
   } catch (error) { 
     showToast("Có lỗi xảy ra khi đổi trạng thái!", "error"); 
     showToggleModal.value = false;
-  }
-};
-
-// --- LOGIC MỚI CHO MODAL XÓA ---
-const confirmDelete = (id) => {
-  idToDelete.value = id;
-  showDeleteModal.value = true;
-};
-
-const executeDelete = async () => {
-  try {
-    await api.delete(`${API_URL}/${idToDelete.value}`);
-    showDeleteModal.value = false;
-    idToDelete.value = null;
-    showToast("Đã xóa khách hàng thành công!");
-    fetchCustomers();
-  } catch (error) { 
-    showToast("Không thể xóa! Có thể tài khoản này đang dính khóa ngoại tới đơn hàng.", "error"); 
-    showDeleteModal.value = false;
   }
 };
 
@@ -391,10 +353,10 @@ const saveCustomer = async () => {
   try {
     if (isEditing.value) {
       await api.put(`${API_URL}/${form.value.userId}`, form.value);
-      showToast("Cập nhật khách hàng thành công!"); // Sửa từ alert
+      showToast("Cập nhật khách hàng thành công!"); 
     } else {
       await api.post(API_URL, form.value);
-      showToast("Tạo khách hàng mới thành công!"); // Sửa từ alert
+      showToast("Tạo khách hàng mới thành công!"); 
     }
     
     fetchCustomers(); 
@@ -452,7 +414,7 @@ onMounted(() => {
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
 
-/* CSS MODAL CUSTOM (Dùng chung cho Xóa & Khóa) */
+/* CSS MODAL CUSTOM (Dùng chung) */
 .custom-modal-overlay {
   position: fixed;
   top: 0; left: 0;
