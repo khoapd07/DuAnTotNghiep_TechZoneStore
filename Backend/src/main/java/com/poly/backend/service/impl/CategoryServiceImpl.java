@@ -3,7 +3,7 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.CategoryRepository;
+import com.poly.backend.repository.CategoryRepository;
 import com.poly.backend.entity.Category;
 import com.poly.backend.service.CategoryService;
 
