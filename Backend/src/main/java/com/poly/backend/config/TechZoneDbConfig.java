@@ -22,7 +22,7 @@ import java.util.HashMap;
 @EnableJpaRepositories(
         entityManagerFactoryRef = "techzoneEntityManagerFactory",
         transactionManagerRef = "techzoneTransactionManager",
-        basePackages = {"com.poly.backend.dao"} // Chỉ quét thư mục DAO chính
+        basePackages = {"com.poly.backend.repository"}
 )
 public class TechZoneDbConfig {
 
