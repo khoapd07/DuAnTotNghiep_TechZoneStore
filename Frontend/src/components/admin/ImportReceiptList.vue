@@ -7,7 +7,6 @@
           <div class="text-muted fw-semibold small mb-1">
             Admin <span class="mx-1">/</span> <span class="text-dark fw-bold">Nhập kho</span>
           </div>
-          <h2 class="fw-bolder text-dark mb-0" style="font-size: 1.8rem; letter-spacing: -0.5px;">Quản Lý Phiếu Nhập</h2>
         </div>
         <div class="d-flex gap-2">
           <button class="btn btn-white border fw-bold text-dark shadow-sm px-3 py-2">
@@ -119,11 +118,17 @@
                 </div>
               </div>
 
+              <!-- KHU VỰC BUTTON THÊM SẢN PHẨM -->
               <div class="d-flex justify-content-between align-items-center mb-3">
                 <h6 class="fw-bold text-primary mb-0"><i class="bi bi-box-seam"></i> Chi Tiết Hàng Nhập</h6>
-                <button type="button" @click="addItem" class="btn btn-sm btn-outline-primary fw-bold rounded-pill">
-                  <i class="bi bi-plus"></i> Thêm Mặt Hàng
-                </button>
+                <div class="d-flex gap-2">
+                  <button type="button" @click="addAllProducts" class="btn btn-sm btn-outline-success fw-bold rounded-pill">
+                    <i class="bi bi-list-check"></i> Thêm Tất Cả Cùng Lúc
+                  </button>
+                  <button type="button" @click="addItem" class="btn btn-sm btn-outline-primary fw-bold rounded-pill">
+                    <i class="bi bi-plus"></i> Thêm Dòng Trống
+                  </button>
+                </div>
               </div>
 
               <div class="table-responsive mb-4 border rounded-3">
@@ -139,7 +144,7 @@
                   </thead>
                   <tbody class="border-top-0">
                     <tr v-if="newReceipt.items.length === 0">
-                      <td colspan="5" class="text-center py-4 text-muted fst-italic">Chưa có sản phẩm nào. Vui lòng bấm "Thêm Mặt Hàng".</td>
+                      <td colspan="5" class="text-center py-4 text-muted fst-italic">Chưa có sản phẩm nào. Vui lòng thêm mặt hàng.</td>
                     </tr>
                     <tr v-for="(item, index) in newReceipt.items" :key="index" class="border-bottom-dashed">
                       <td class="py-3">
@@ -217,7 +222,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-// Import api instance thay vì axios gốc
 import api from '../../utils/axios';
 
 const router = useRouter(); 
@@ -227,11 +231,10 @@ const suppliers = ref([]);
 const products = ref([]); 
 const showModal = ref(false); 
 
-
 // --- CẤU HÌNH CUSTOM MODAL THÔNG BÁO ---
 const customModal = ref({
   show: false,
-  icon: 'success', // 'success', 'error', 'warning'
+  icon: 'success', 
   title: '',
   message: '',
   onClose: null
@@ -246,14 +249,12 @@ const closeCustomModal = () => {
   if (customModal.value.onClose) customModal.value.onClose();
 };
 
-// Object chứa dữ liệu của Phiếu nhập mới đang được tạo
 const newReceipt = ref({
   supplierId: '',
   note: '',
   items: []
 });
 
-// Computed properties
 const filteredReceipts = computed(() => {
   if (!searchQuery.value) return receipts.value;
   const lowerQuery = searchQuery.value.toLowerCase();
@@ -268,7 +269,6 @@ const totalAmount = computed(() => {
   return newReceipt.value.items.reduce((total, item) => total + (item.quantity * item.price), 0);
 });
 
-// UI Helpers
 const formatCurrency = (value) => {
   if (!value) return "0 ₫";
   return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(value);
@@ -287,10 +287,9 @@ const getVariantsForProduct = (productId) => {
   return product && product.variants ? product.variants : [];
 };
 
-// Modal Logic
 const openAddModal = () => {
   newReceipt.value = { supplierId: '', note: '', items: [] };
-  addItem(); 
+  // Khi mở form mặc định để trống, không add sẵn 1 dòng nữa để tránh rối
   showModal.value = true;
 };
 
@@ -302,14 +301,57 @@ const addItem = () => {
   newReceipt.value.items.push({ productId: '', variantId: '', quantity: 1, price: 0 });
 };
 
+// LOGIC XỬ LÝ: THÊM TẤT CẢ SẢN PHẨM VÀ BIẾN THỂ
+const addAllProducts = () => {
+  if (!products.value || products.value.length === 0) {
+    showNotification('warning', 'Lỗi', 'Chưa có sản phẩm nào trong hệ thống!');
+    return;
+  }
+
+  // Xác nhận nếu danh sách hiện tại đang có dữ liệu để tránh ghi đè nhầm
+  if (newReceipt.value.items.length > 0) {
+    const confirmOverride = confirm("Hành động này sẽ xóa các dòng đang nhập dở và nạp lại toàn bộ sản phẩm. Bạn có muốn tiếp tục?");
+    if (!confirmOverride) return;
+  }
+
+  const allItems = [];
+
+  // Duyệt qua toàn bộ sản phẩm
+  products.value.forEach(prod => {
+    const pId = prod.id || prod.productId;
+    const variants = getVariantsForProduct(pId);
+
+    if (variants && variants.length > 0) {
+      // Nếu có biến thể -> tạo mỗi biến thể 1 dòng riêng biệt
+      variants.forEach(v => {
+        allItems.push({
+          productId: pId,
+          variantId: v.variantId || v.id,
+          quantity: 1,
+          price: 0
+        });
+      });
+    } else {
+      // Nếu không có biến thể -> chỉ tạo 1 dòng cho sản phẩm đó
+      allItems.push({
+        productId: pId,
+        variantId: '',
+        quantity: 1,
+        price: 0
+      });
+    }
+  });
+
+  // Gán mảng vừa tạo vào danh sách của phiếu nhập
+  newReceipt.value.items = allItems;
+};
+
 const removeItem = (index) => {
   newReceipt.value.items.splice(index, 1);
 };
 
-// API Functions
 const fetchReceipts = async () => {
   try {
-    // Dùng api thay vì axios
     const response = await api.get('/admin/import-receipts');
     receipts.value = response.data;
   } catch (error) { console.error("Lỗi khi tải phiếu nhập:", error); }
@@ -317,7 +359,6 @@ const fetchReceipts = async () => {
 
 const fetchSuppliers = async () => {
   try {
-    // Dùng api thay vì axios
     const response = await api.get('/admin/suppliers');
     suppliers.value = response.data.filter(s => s.status === true);
   } catch (error) { console.error("Lỗi tải NCC:", error); }
@@ -325,7 +366,6 @@ const fetchSuppliers = async () => {
 
 const fetchProducts = async () => {
   try {
-    // Dùng api thay vì axios
     const response = await api.get('/product?size=9999');
     products.value = (response.data && response.data.content) ? response.data.content : response.data;
   } catch (error) { console.error("Lỗi tải Sản phẩm:", error); }
@@ -354,13 +394,10 @@ const saveReceipt = async () => {
   };
 
   try {
-    // Dùng api thay vì axios
     await api.post('/admin/import-receipts', payload);
-    
-
     showNotification('success', 'Thành công', 'Tạo phiếu nhập kho thành công!', () => {
-      closeModal(); // Đóng Modal mượt mà
-      fetchReceipts(); // Load lại bảng danh sách
+      closeModal(); 
+      fetchReceipts(); 
     });
   } catch (error) {
     console.error("Lỗi khi tạo phiếu:", error);
@@ -373,7 +410,6 @@ const viewDetail = (id) => {
   router.push({ name: 'ImportReceiptDetail', params: { id: id } });
 };
 
-// Lifecycle
 onMounted(() => {
   fetchReceipts();
   fetchSuppliers();
@@ -396,7 +432,6 @@ onMounted(() => {
   box-shadow: 0 0 0 0.2rem rgba(0, 223, 58, 0.25);
 }
 
-/* --- CSS CHO MODAL THÔNG BÁO --- */
 .custom-modal-overlay {
   position: fixed;
   top: 0;
@@ -404,9 +439,8 @@ onMounted(() => {
   width: 100vw;
   height: 100vh;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 3000; 
+  z-index: 2000;
   backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
 }
 
 .custom-modal {

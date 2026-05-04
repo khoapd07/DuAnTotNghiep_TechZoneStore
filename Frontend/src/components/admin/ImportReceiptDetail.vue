@@ -6,7 +6,6 @@
           <button class="btn btn-light rounded-circle" @click="goBack">
             <i class="bi bi-arrow-left fs-5"></i>
           </button>
-          <h4 class="mb-0 fw-bold">Chi Tiết Phiếu Nhập</h4>
         </div>
 
         <div class="d-flex align-items-center gap-2">
@@ -17,12 +16,14 @@
       </div>
     </header>
 
+    <!-- LOADING SPINNER -->
     <div v-if="!receiptData" class="d-flex justify-content-center align-items-center min-vh-100">
       <div class="spinner-border text-success" role="status">
         <span class="visually-hidden">Đang tải...</span>
       </div>
     </div>
 
+    <!-- MAIN CONTENT -->
     <main v-if="receiptData" class="container-fluid pt-5 mt-5 px-4 print-container" style="max-width: 1200px;">
       <div class="card shadow-sm border-0 rounded-4 mb-4">
         <div class="card-body p-4 p-md-5">
@@ -147,7 +148,6 @@
           </div>
         </div>
       </div>
-
     </main>
 
     <!-- CUSTOM MODAL THÔNG BÁO -->
@@ -161,7 +161,7 @@
         </div>
         <h5 class="fw-bold mb-2 text-dark">{{ customModal.title }}</h5>
         <p class="text-muted small mb-3" v-html="customModal.message"></p>
-        
+
         <div v-if="customModal.icon === 'prompt'" class="mb-4">
           <input type="text" class="form-control shadow-none border-primary" v-model="customModal.inputValue" placeholder="Nhập nội dung...">
         </div>
@@ -176,11 +176,11 @@
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
 <script>
-// Thay thế import axios từ thư viện gốc bằng instance api đã cấu hình
 import api from '../../utils/axios';
 
 export default {
@@ -188,43 +188,21 @@ export default {
   data() {
     return {
       receiptData: null,
+      // Khai báo state cho Custom Modal để không bị lỗi undefined
       customModal: {
         show: false,
-        icon: 'success', // 'success', 'error', 'warning', 'confirm', 'prompt'
         title: '',
         message: '',
-        inputValue: '',
-        onConfirm: null,
-        onCancel: null
+        icon: '', 
+        inputValue: ''
       }
     };
   },
+  mounted() {
+    // Gọi hàm fetch dữ liệu khi component được mount
+    this.fetchReceiptDetail();
+  },
   methods: {
-    showNotification(icon, title, message, onConfirm = null, onCancel = null, isPrompt = false, defaultValue = '') {
-      this.customModal = { 
-        show: true, 
-        icon, 
-        title, 
-        message, 
-        inputValue: defaultValue,
-        onConfirm, 
-        onCancel 
-      };
-    },
-    closeCustomModal() {
-      this.customModal.show = false;
-    },
-    handleModalConfirm() {
-      const value = this.customModal.inputValue;
-      const callback = this.customModal.onConfirm;
-      this.closeCustomModal();
-      if (callback) callback(value);
-    },
-    handleModalCancel() {
-      const callback = this.customModal.onCancel;
-      this.closeCustomModal();
-      if (callback) callback();
-    },
     formatCurrency(value) {
       if (!value) return "0 ₫";
       return new Intl.NumberFormat("vi-VN", {
@@ -242,7 +220,8 @@ export default {
     async fetchReceiptDetail() {
       const receiptId = this.$route.params.id;
       if (!receiptId) {
-        this.showNotification('error', 'Lỗi', 'Không tìm thấy ID phiếu nhập!', () => this.goBack());
+        alert("Không tìm thấy ID phiếu nhập!");
+        this.goBack();
         return;
       }
       try {
@@ -250,59 +229,61 @@ export default {
         this.receiptData = response.data;
       } catch (error) {
         console.error("Lỗi khi tải chi tiết phiếu nhập:", error);
-        this.showNotification('error', 'Lỗi hệ thống', 'Có lỗi xảy ra hoặc phiếu nhập không tồn tại!', () => this.goBack());
+        alert("Có lỗi xảy ra hoặc phiếu nhập không tồn tại!");
+        this.goBack();
       }
     },
 
-    // GỌI API XÓA PHIẾU NHẬP
     async cancelReceipt() {
-      this.showNotification(
-        'warning', 
-        'Xác nhận hủy', 
-        'Bạn có chắc chắn muốn hủy phiếu nhập này không? Hành động này không thể hoàn tác!',
-        async () => {
-          try {
-            const receiptId = this.$route.params.id;
-            const response = await api.delete(`/admin/import-receipts/${receiptId}`);
-            this.showNotification('success', 'Thành công', response.data || 'Đã hủy phiếu nhập thành công!', () => this.goBack());
-          } catch (error) {
-            console.error("Lỗi khi hủy phiếu:", error);
-            const errorMsg = error.response?.data || 'Không thể hủy phiếu nhập này!';
-            this.showNotification('error', 'Lỗi', typeof errorMsg === 'string' ? errorMsg : 'Không thể hủy phiếu nhập này!');
+      if (confirm('Bạn có chắc chắn muốn hủy phiếu nhập này không? Hành động này không thể hoàn tác!')) {
+        try {
+          const receiptId = this.$route.params.id;
+          const response = await api.delete(`/admin/import-receipts/${receiptId}`);
+          
+          alert(response.data || 'Đã hủy phiếu nhập thành công!');
+          this.goBack(); 
+        } catch (error) {
+          console.error("Lỗi khi hủy phiếu:", error);
+          if (error.response && error.response.data) {
+             alert("Lỗi: " + error.response.data);
+          } else {
+             alert('Không thể hủy phiếu nhập này!');
           }
         }
-      );
+      }
     },
 
-    // GỌI API SỬA GHI CHÚ
     async editReceipt() {
-      this.showNotification(
-        'prompt',
-        'Cập nhật ghi chú',
-        'Nhập nội dung Ghi chú mới cho phiếu nhập này:',
-        async (newNote) => {
-          if (newNote !== null) {
-            try {
-              const receiptId = this.$route.params.id;
-              const payload = { ...this.receiptData, note: newNote };
-              await api.put(`/admin/import-receipts/${receiptId}`, payload);
-              this.showNotification('success', 'Thành công', 'Cập nhật ghi chú thành công!');
-              this.receiptData.note = newNote; 
-            } catch (error) {
-              console.error("Lỗi khi cập nhật phiếu:", error);
-              const errorMsg = error.response?.data || 'Có lỗi xảy ra khi cập nhật!';
-              this.showNotification('error', 'Lỗi', typeof errorMsg === 'string' ? "Lỗi: " + errorMsg : 'Có lỗi xảy ra khi cập nhật!');
-            }
+      const newNote = prompt("Nhập nội dung Ghi chú mới cho phiếu nhập này:", this.receiptData.note || "");
+      
+      if (newNote !== null) {
+        try {
+          const receiptId = this.$route.params.id;
+          const payload = { ...this.receiptData, note: newNote };
+          
+          await api.put(`/admin/import-receipts/${receiptId}`, payload);
+          alert('Cập nhật ghi chú thành công!');
+          this.receiptData.note = newNote; 
+        } catch (error) {
+          console.error("Lỗi khi cập nhật phiếu:", error);
+          if (error.response && error.response.data) {
+             alert("Lỗi: " + error.response.data);
+          } else {
+             alert('Có lỗi xảy ra khi cập nhật!');
           }
-        },
-        null,
-        true,
-        this.receiptData.note || ""
-      );
+        }
+      } // Đóng if(newNote !== null)
+    }, // Đóng hàm editReceipt
+
+    // Hàm xử lý cho Custom Modal
+    handleModalCancel() {
+      this.customModal.show = false;
+    },
+    
+    handleModalConfirm() {
+      this.customModal.show = false;
+      // Thêm logic xử lý confirm của Modal tại đây nếu bạn có ý định dùng Modal thay cho alert/prompt
     }
-  },
-  mounted() {
-    this.fetchReceiptDetail();
   }
 };
 </script>
