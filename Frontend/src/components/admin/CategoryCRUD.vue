@@ -60,7 +60,7 @@
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
                     <button @click="openEditModal(cat)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
-                    <button @click="deleteCategory(cat.categoryId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
+                    <button @click="confirmDelete(cat.categoryId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
@@ -100,12 +100,25 @@
         </div>
       </div>
     </div>
+    
+    <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Xác nhận xóa?</h5>
+        <p class="text-muted fs-8 mb-4">Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa dữ liệu này?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
+          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2">Xác nhận xóa</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue';
-// Sử dụng Axios Instance đã cấu hình dùng chung
 import api from '../../utils/axios';
 
 const categoryList = ref([]);
@@ -114,6 +127,10 @@ const isEditing = ref(false);
 const currentId = ref(null);
 const form = reactive({ categoryName: '' });
 const errors = reactive({});
+
+// BIẾN CHO MODAL XÓA
+const showDeleteModal = ref(false);
+const idToDelete = ref(null);
 
 const toast = reactive({ show: false, message: '', type: 'success' });
 const showToast = (message, type = 'success') => {
@@ -126,11 +143,8 @@ const getStockCount = (cat) => cat.totalStock !== undefined ? cat.totalStock : (
 const totalProducts = computed(() => categoryList.value.reduce((total, cat) => total + getProductCount(cat), 0));
 const totalStock = computed(() => categoryList.value.reduce((total, cat) => total + getStockCount(cat), 0));
 
-// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm qua utils/axios
-
 const fetchCategories = async () => {
   try {
-    // Đã thay thế axios bằng api và đổi sang đường dẫn tương đối
     const res = await api.get('/categories');
     categoryList.value = res.data;
   } catch (e) { console.error(e); }
@@ -156,11 +170,9 @@ const saveCategory = async () => {
 
   try {
     if (isEditing.value) {
-      // Sử dụng api instance, không cần header thủ công
       await api.put(`/categories/${currentId.value}`, form);
       showToast("Cập nhật danh mục thành công!");
     } else {
-      // Sử dụng api instance, không cần header thủ công
       await api.post('/categories', form);
       showToast("Thêm danh mục mới thành công!");
     }
@@ -176,21 +188,27 @@ const saveCategory = async () => {
   }
 };
 
-const deleteCategory = async (id) => {
-  if (confirm("Bạn có chắc chắn muốn xóa danh mục này không?")) {
-    try {
-      // Sử dụng api instance, không cần header thủ công
-      await api.delete(`/categories/${id}`);
-      fetchCategories();
-      showToast("Xóa thành công!");
-    } catch (error) {
-      const errorMsg = error.response?.data?.message;
-      if (errorMsg) {
-        showToast(errorMsg, "error"); 
-      } else {
-        showToast("Lỗi khi xóa! Vui lòng thử lại sau.", "error"); 
-      }
+// HÀM XÓA BẰNG MODAL
+const confirmDelete = (id) => {
+  idToDelete.value = id;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  try {
+    await api.delete(`/categories/${idToDelete.value}`);
+    fetchCategories();
+    showDeleteModal.value = false;
+    idToDelete.value = null;
+    showToast("Xóa thành công!");
+  } catch (error) {
+    const errorMsg = error.response?.data?.message;
+    if (errorMsg) {
+      showToast(errorMsg, "error"); 
+    } else {
+      showToast("Lỗi khi xóa! Vui lòng thử lại sau.", "error"); 
     }
+    showDeleteModal.value = false;
   }
 };
 
@@ -212,4 +230,21 @@ onMounted(() => fetchCategories());
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
 .table-hover tbody tr:hover td { background-color: #f8f9fa; }
+
+/* --- CSS MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

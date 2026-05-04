@@ -69,7 +69,7 @@
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
                     <button @click="openEditModal(brand)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
-                    <button @click="deleteBrand(brand.brandId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
+                    <button @click="confirmDelete(brand.brandId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
@@ -109,12 +109,25 @@
         </div>
       </div>
     </div>
+    
+    <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Xác nhận xóa?</h5>
+        <p class="text-muted fs-8 mb-4">Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa dữ liệu này?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
+          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2">Xác nhận xóa</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue';
-// Sử dụng Axios Instance đã cấu hình dùng chung
 import api from '../../utils/axios';
 
 const brandList = ref([]);
@@ -122,9 +135,12 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const form = reactive({ brandName: '' });
-const errors = reactive({}); // Dùng để bắt lỗi đỏ dưới ô input
+const errors = reactive({}); 
 
-// Toast Notification
+// BIẾN CHO MODAL XÓA
+const showDeleteModal = ref(false);
+const idToDelete = ref(null);
+
 const toast = reactive({ show: false, message: '', type: 'success' });
 const showToast = (message, type = 'success') => {
   toast.message = message; toast.type = type; toast.show = true;
@@ -136,11 +152,8 @@ const getStockCount = (brand) => brand.totalStock !== undefined ? brand.totalSto
 const totalProducts = computed(() => brandList.value.reduce((total, brand) => total + getProductCount(brand), 0));
 const totalStock = computed(() => brandList.value.reduce((total, brand) => total + getStockCount(brand), 0));
 
-// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm qua utils/axios
-
 const fetchBrands = async () => {
   try {
-    // Đã thay thế axios bằng api và đổi sang đường dẫn tương đối
     const res = await api.get('/brands');
     brandList.value = res.data;
   } catch (e) { console.error(e); }
@@ -148,7 +161,7 @@ const fetchBrands = async () => {
 
 const openAddModal = () => {
   isEditing.value = false; currentId.value = null; form.brandName = ''; 
-  Object.keys(errors).forEach(k => delete errors[k]); // Xóa lỗi cũ
+  Object.keys(errors).forEach(k => delete errors[k]); 
   showModal.value = true;
 };
 
@@ -167,11 +180,9 @@ const saveBrand = async () => {
 
   try {
     if (isEditing.value) {
-      // Sử dụng api instance, không cần header thủ công
       await api.put(`/brands/${currentId.value}`, form);
       showToast("Cập nhật thương hiệu thành công!");
     } else {
-      // Sử dụng api instance, không cần header thủ công
       await api.post('/brands', form);
       showToast("Thêm thương hiệu mới thành công!");
     }
@@ -180,28 +191,34 @@ const saveBrand = async () => {
   } catch (error) {
     const errorMsg = error.response?.data?.message || error.response?.data || "Lỗi hệ thống!";
     if (typeof errorMsg === 'string') {
-      errors.brandName = errorMsg; // Đẩy lỗi từ backend xuống dưới ô input
+      errors.brandName = errorMsg;
     } else {
       showToast("Không thể thực hiện! Vui lòng thử lại.", "error");
     }
   }
 };
 
-const deleteBrand = async (id) => {
-  if (confirm("Bạn có chắc chắn muốn xóa thương hiệu này không?")) {
-    try {
-      // Sử dụng api instance, không cần header thủ công
-      await api.delete(`/brands/${id}`);
-      fetchBrands();
-      showToast("Xóa thành công!");
-    } catch (error) {
-      const errorMsg = error.response?.data?.message || error.response?.data;
-      if (typeof errorMsg === 'string') {
-        showToast(errorMsg, "error"); 
-      } else {
-        showToast("Không thể xóa thương hiệu này vì đang chứa sản phẩm!", "error"); 
-      }
+// HÀM XÓA BẰNG MODAL
+const confirmDelete = (id) => {
+  idToDelete.value = id;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  try {
+    await api.delete(`/brands/${idToDelete.value}`);
+    fetchBrands();
+    showDeleteModal.value = false;
+    idToDelete.value = null;
+    showToast("Xóa thành công!");
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || error.response?.data;
+    if (typeof errorMsg === 'string') {
+      showToast(errorMsg, "error"); 
+    } else {
+      showToast("Không thể xóa thương hiệu này vì đang chứa sản phẩm!", "error"); 
     }
+    showDeleteModal.value = false;
   }
 };
 
@@ -223,4 +240,21 @@ onMounted(() => fetchBrands());
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
 .table-hover tbody tr:hover td { background-color: #f8f9fa; }
+
+/* --- CSS MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

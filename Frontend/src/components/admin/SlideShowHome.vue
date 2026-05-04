@@ -55,7 +55,7 @@
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
                     <button @click="openEditModal(slide)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
-                    <button @click="deleteSlide(slide.slideId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
+                    <button @click="confirmDelete(slide.slideId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
@@ -69,6 +69,20 @@
     <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
       <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-neon' : 'bi-exclamation-triangle-fill'"></i>
       <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
+
+    <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Xác nhận xóa?</h5>
+        <p class="text-muted fs-8 mb-4">Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa slide này?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
+          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2">Xác nhận xóa</button>
+        </div>
+      </div>
     </div>
 
     <div v-if="showModal" class="modal-backdrop fade show"></div>
@@ -153,7 +167,6 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-// Xóa import axios, sử dụng api đã được thiết lập sẵn
 import api from '../../utils/axios';
 
 const slideShows = ref([]);
@@ -161,6 +174,10 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const errors = reactive({});
+
+// BIẾN MODAL XÓA
+const showDeleteModal = ref(false);
+const idToDelete = ref(null);
 
 const toast = reactive({ show: false, message: '', type: 'success' });
 const showToast = (message, type = 'success') => {
@@ -173,18 +190,15 @@ const form = reactive({
   badgeClass: '#00FF33', highlightClass: '#00FF33', description: '', displayOrder: 1, active: true
 });
 
-// Hàm getAuthHeader() không còn cần thiết
-
 const fetchSlides = async () => {
   try {
-    // Gọi API thông qua instance 'api'
     const response = await api.get('/slideshows');
     slideShows.value = response.data;
   } catch (error) { console.error("Lỗi lấy slide:", error); }
 };
 
 const uploadImage = async (event) => {
-  errors.imageUrl = ''; // Xóa lỗi khi bắt đầu upload
+  errors.imageUrl = ''; 
   const file = event.target.files[0];
   if (!file) return;
 
@@ -192,7 +206,6 @@ const uploadImage = async (event) => {
   formData.append('file', file);
 
   try {
-    // Gọi API thông qua instance 'api' và bổ sung Header
     const response = await api.post('/upload', formData, { 
       headers: { 'Content-Type': 'multipart/form-data' } 
     });
@@ -233,11 +246,9 @@ const saveSlide = async () => {
 
   try {
     if (isEditing.value) {
-      // Gọi API thông qua instance 'api'
       await api.put(`/slideshows/${currentId.value}`, payload);
       showToast("Cập nhật Slide thành công!");
     } else {
-      // Gọi API thông qua instance 'api'
       await api.post('/slideshows', payload);
       showToast("Thêm Slide mới thành công!");
     }
@@ -248,16 +259,22 @@ const saveSlide = async () => {
   }
 };
 
-const deleteSlide = async (id) => {
-  if (confirm("Bạn có chắc chắn muốn xóa slide này?")) {
-    try {
-      // Gọi API thông qua instance 'api'
-      await api.delete(`/slideshows/${id}`);
-      fetchSlides();
-      showToast("Xóa thành công!");
-    } catch (error) {
-      showToast("Lỗi xóa slide!", "error");
-    }
+// HÀM XÓA DÙNG MODAL
+const confirmDelete = (id) => {
+  idToDelete.value = id;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  try {
+    await api.delete(`/slideshows/${idToDelete.value}`);
+    fetchSlides();
+    showDeleteModal.value = false;
+    idToDelete.value = null;
+    showToast("Xóa slide thành công!");
+  } catch (error) {
+    showToast("Lỗi khi xóa slide!", "error");
+    showDeleteModal.value = false;
   }
 };
 
@@ -279,4 +296,21 @@ onMounted(() => { fetchSlides(); });
 .table th { letter-spacing: 0.5px; }
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
+
+/* --- CSS MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

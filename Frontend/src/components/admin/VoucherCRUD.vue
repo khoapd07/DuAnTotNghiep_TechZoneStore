@@ -48,7 +48,7 @@
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
                     <button @click="openEditModal(voucher)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
-                    <button @click="deleteVoucher(voucher.voucherId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
+                    <button @click="confirmDelete(voucher.voucherId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
@@ -62,6 +62,20 @@
     <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
       <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-neon' : 'bi-exclamation-triangle-fill'"></i>
       <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
+
+    <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Xác nhận xóa?</h5>
+        <p class="text-muted fs-8 mb-4">Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa voucher này?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
+          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2">Xác nhận xóa</button>
+        </div>
+      </div>
     </div>
 
     <div v-if="showModal" class="modal-backdrop fade show"></div>
@@ -140,7 +154,6 @@
 
 <script setup>
 import { ref, onMounted, reactive, computed } from 'vue';
-// Xóa import axios mặc định, thay bằng instance api dùng chung
 import api from '../../utils/axios';
 
 const voucherList = ref([]);
@@ -149,6 +162,10 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const currentId = ref(null);
 const errors = reactive({});
+
+// BIẾN MODAL XÓA
+const showDeleteModal = ref(false);
+const idToDelete = ref(null);
 
 const toast = reactive({ show: false, message: '', type: 'success' });
 const showToast = (message, type = 'success') => {
@@ -161,11 +178,8 @@ const form = reactive({
   quantity: 1, startDate: '', endDate: '', description: '', isHomepage: false, status: true 
 });
 
-// Hàm getAuthHeader() đã bị loại bỏ vì token được tự động đính kèm thông qua interceptors của api
-
 const fetchVouchers = async () => {
   try {
-    // Thay đổi axios.get thành api.get và xóa bỏ base URL tĩnh
     const res = await api.get('/vouchers');
     voucherList.value = res.data;
   } catch (e) { console.error(e); }
@@ -248,11 +262,9 @@ const saveVoucher = async () => {
     const payload = { ...form, code: form.code.trim().toUpperCase(), name: form.name.trim() };
 
     if (isEditing.value) {
-      // Thay đổi axios thành api instance
       await api.put(`/vouchers/${currentId.value}`, payload);
       showToast("Cập nhật voucher thành công!");
     } else {
-      // Thay đổi axios thành api instance
       await api.post('/vouchers', payload);
       showToast("Thêm voucher mới thành công!");
     }
@@ -261,23 +273,29 @@ const saveVoucher = async () => {
   } catch (error) {
     const errorMsg = error.response?.data?.message || "Lỗi hệ thống!";
     if (typeof errorMsg === 'string') {
-       errors.code = errorMsg; // Thường lỗi backend trả về là do trùng mã voucher
+       errors.code = errorMsg; 
     } else {
        showToast("Không thể thực hiện!", "error");
     }
   }
 };
 
-const deleteVoucher = async (id) => {
-  if (confirm("Bạn có chắc chắn muốn xóa voucher này không?")) {
-    try {
-      // Thay đổi axios.delete thành api.delete và loại bỏ getAuthHeader
-      await api.delete(`/vouchers/${id}`);
-      fetchVouchers();
-      showToast("Xóa thành công!");
-    } catch (error) {
-      showToast("Lỗi khi xóa! Vui lòng thử lại sau.", "error");
-    }
+// HÀM XÓA BẰNG MODAL
+const confirmDelete = (id) => {
+  idToDelete.value = id;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  try {
+    await api.delete(`/vouchers/${idToDelete.value}`);
+    fetchVouchers();
+    showDeleteModal.value = false;
+    idToDelete.value = null;
+    showToast("Xóa voucher thành công!");
+  } catch (error) {
+    showToast("Lỗi khi xóa! Vui lòng thử lại sau.", "error");
+    showDeleteModal.value = false;
   }
 };
 
@@ -299,4 +317,21 @@ onMounted(() => fetchVouchers());
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
 .table-hover tbody tr:hover td { background-color: #f8f9fa; }
+
+/* --- CSS MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

@@ -267,6 +267,23 @@
       </div>
     </div>
   </div>
+  <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Xác nhận xóa</h5>
+        <p class="text-muted fs-8 mb-4">Bạn có chắc chắn muốn xóa dữ liệu này không? Hành động này không thể hoàn tác.</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">
+            Hủy bỏ
+          </button>
+          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2 text-white shadow-sm">
+            Xóa ngay
+          </button>
+        </div>
+      </div>
+    </div>
 </template>
 
 <script setup>
@@ -290,6 +307,9 @@ const errors = reactive({});
 
 const setupColors = ref('');
 const setupOption2s = ref('');
+
+const showDeleteModal = ref(false);
+const itemToDeleteId = ref(null);
 
 // Đổi 0 thành chuỗi rỗng '' để ô input tự hiện placeholder
 const form = reactive({ 
@@ -575,14 +595,26 @@ const saveProduct = async () => {
 };
 
 const deleteProduct = async (id) => {
-  if (confirm("Bạn có chắc chắn muốn xóa sản phẩm này không?")) {
-    try {
-      await api.delete(`/product/${id}`);
-      fetchProducts(); fetchStats(); 
-      showToast("Xóa sản phẩm thành công!");
-    } catch (error) { 
-      showToast("Lỗi khi xóa sản phẩm! (Có thể do dữ liệu đã phát sinh hóa đơn)", "error"); 
-    }
+  itemToDeleteId.value = id; // Lưu nháp ID
+  showDeleteModal.value = true; // Bật Modal lên
+};
+
+const executeDelete = async () => {
+  try {
+    // Gọi API xóa bằng cái ID đã lưu nháp
+    await api.delete(`/product/${itemToDeleteId.value}`);
+    
+    // Đóng modal và reset ID
+    showDeleteModal.value = false;
+    itemToDeleteId.value = null;
+    
+    // Cập nhật lại danh sách và báo thành công
+    fetchProducts(); 
+    fetchStats(); 
+    showToast("Xóa thành công!");
+  } catch (error) { 
+    showToast("Lỗi khi xóa! Dữ liệu có thể đang được sử dụng.", "error"); 
+    showDeleteModal.value = false;
   }
 };
 
@@ -622,4 +654,38 @@ onMounted(() => {
 
 .page-link { border: 1px solid #dee2e6; color: #333; }
 .page-link:hover { background-color: #e9ecef; }
+
+/* --- CSS CHO MODAL XÓA BAY LÊN GIỮA MÀN HÌNH --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5); /* Lớp nền đen mờ */
+  z-index: 9999; /* Đảm bảo nó đè lên tất cả mọi thứ */
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
 </style>

@@ -108,13 +108,13 @@
                     <button @click="openEditModal(user)" class="btn btn-link p-0 text-primary shadow-none" title="Chỉnh sửa" data-bs-toggle="modal" data-bs-target="#customerModal">
                       <i class="bi bi-pencil-fill"></i>
                     </button>
-                    <button v-if="user.status" @click="toggleStatus(user.userId)" class="btn btn-link p-0 text-warning shadow-none" title="Khóa tài khoản">
+                    <button v-if="user.status" @click="confirmToggle(user.userId)" class="btn btn-link p-0 text-warning shadow-none" title="Khóa tài khoản">
                       <i class="bi bi-slash-circle"></i>
                     </button>
-                    <button v-else @click="toggleStatus(user.userId)" class="btn btn-link p-0 text-success shadow-none" title="Mở khóa tài khoản">
+                    <button v-else @click="confirmToggle(user.userId)" class="btn btn-link p-0 text-success shadow-none" title="Mở khóa tài khoản">
                       <i class="bi bi-check-circle-fill"></i>
                     </button>
-                    <button @click="deleteCustomer(user.userId)" class="btn btn-link p-0 text-danger shadow-none" title="Xóa khách hàng">
+                    <button @click="confirmDelete(user.userId)" class="btn btn-link p-0 text-danger shadow-none" title="Xóa khách hàng">
                       <i class="bi bi-trash-fill"></i>
                     </button>
                   </div>
@@ -125,6 +125,39 @@
         </div>
       </div>
     </main>
+
+    <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
+      <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-neon' : 'bi-exclamation-triangle-fill'"></i>
+      <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
+
+    <div v-if="showToggleModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-shield-exclamation text-warning" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Xác nhận thay đổi</h5>
+        <p class="text-muted fs-8 mb-4">Bạn có chắc chắn muốn thay đổi trạng thái (Khóa/Mở khóa) của tài khoản này không?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showToggleModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
+          <button @click="executeToggle" class="btn btn-warning text-dark fs-8 fw-bold px-4 py-2 rounded-2">Đồng ý</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Cảnh báo xóa?</h5>
+        <p class="text-muted fs-8 mb-4">Hành động này sẽ xóa vĩnh viễn khách hàng. Bạn chắc chắn muốn tiếp tục?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
+          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2">Xóa vĩnh viễn</button>
+        </div>
+      </div>
+    </div>
 
     <div class="modal fade" id="customerModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
@@ -203,7 +236,6 @@
 
 <script setup>
 import { ref, onMounted, computed, reactive } from 'vue';
-// Sử dụng Axios Instance đã cấu hình dùng chung
 import api from '../../utils/axios';
 
 const customers = ref([]);
@@ -212,7 +244,7 @@ const searchQuery = ref('');
 const statusFilter = ref('ALL');
 const isEditing = ref(false);
 
-const errors = reactive({}); // Đối tượng quản lý lỗi hiển thị
+const errors = reactive({}); 
 
 const form = ref({
   userId: null,
@@ -225,15 +257,24 @@ const form = ref({
   status: true 
 });
 
-// Thay đổi API_URL thành dạng relative path (đường dẫn tương đối)
-const API_URL = '/admin/customers';
+// THÊM BIẾN TOAST
+const toast = reactive({ show: false, message: '', type: 'success' });
+const showToast = (message, type = 'success') => {
+  toast.message = message; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
 
-// Hàm getAuthConfig() đã được loại bỏ vì interceptor xử lý tự động
+// THÊM BIẾN CHO MODAL XÓA & KHÓA TÀI KHOẢN
+const showDeleteModal = ref(false);
+const showToggleModal = ref(false);
+const idToDelete = ref(null);
+const idToToggle = ref(null);
+
+const API_URL = '/admin/customers';
 
 const fetchCustomers = async () => {
   isLoading.value = true;
   try {
-    // Sử dụng api instance, không truyền auth config thủ công
     const response = await api.get(API_URL);
     customers.value = response.data;
   } catch (error) {
@@ -243,11 +284,8 @@ const fetchCustomers = async () => {
   }
 };
 
-// --- LOGIC TÍNH TOÁN THỐNG KÊ ---
 const totalCustomers = computed(() => customers.value.length);
-
 const lockedCustomers = computed(() => customers.value.filter(c => !c.status).length);
-
 const newCustomersThisMonth = computed(() => {
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -258,35 +296,53 @@ const newCustomersThisMonth = computed(() => {
   }).length;
 });
 
-// --- CÁC HÀM CRUD ---
-const toggleStatus = async (id) => {
-  if(!confirm('Bạn có chắc chắn muốn thay đổi trạng thái tài khoản này?')) return;
-  try {
-    // Sử dụng api instance
-    await api.put(`${API_URL}/${id}/toggle-status`);
-    fetchCustomers();
-  } catch (error) { alert('Có lỗi xảy ra!'); }
+// --- LOGIC MỚI CHO MODAL ĐỔI TRẠNG THÁI ---
+const confirmToggle = (id) => {
+  idToToggle.value = id;
+  showToggleModal.value = true;
 };
 
-const deleteCustomer = async (id) => {
-  if(!confirm('Cảnh báo: Hành động này sẽ xóa vĩnh viễn khách hàng. Bạn có chắc chắn?')) return;
+const executeToggle = async () => {
   try {
-    // Sử dụng api instance
-    await api.delete(`${API_URL}/${id}`);
-    alert('Đã xóa thành công!');
+    await api.put(`${API_URL}/${idToToggle.value}/toggle-status`);
+    showToggleModal.value = false;
+    idToToggle.value = null;
     fetchCustomers();
-  } catch (error) { alert('Không thể xóa! Có thể tài khoản này đang dính khóa ngoại tới đơn hàng.'); }
+    showToast("Đã thay đổi trạng thái thành công!");
+  } catch (error) { 
+    showToast("Có lỗi xảy ra khi đổi trạng thái!", "error"); 
+    showToggleModal.value = false;
+  }
+};
+
+// --- LOGIC MỚI CHO MODAL XÓA ---
+const confirmDelete = (id) => {
+  idToDelete.value = id;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  try {
+    await api.delete(`${API_URL}/${idToDelete.value}`);
+    showDeleteModal.value = false;
+    idToDelete.value = null;
+    showToast("Đã xóa khách hàng thành công!");
+    fetchCustomers();
+  } catch (error) { 
+    showToast("Không thể xóa! Có thể tài khoản này đang dính khóa ngoại tới đơn hàng.", "error"); 
+    showDeleteModal.value = false;
+  }
 };
 
 const openAddModal = () => {
   isEditing.value = false;
-  Object.keys(errors).forEach(k => delete errors[k]); // Reset lỗi
+  Object.keys(errors).forEach(k => delete errors[k]); 
   form.value = { userId: null, username: '', password: '', fullName: '', email: '', phoneNumber: '', shippingAddress: '', status: true };
 };
 
 const openEditModal = (user) => {
   isEditing.value = true;
-  Object.keys(errors).forEach(k => delete errors[k]); // Reset lỗi
+  Object.keys(errors).forEach(k => delete errors[k]); 
   form.value = {
     userId: user.userId,
     username: user.username || '',
@@ -299,7 +355,6 @@ const openEditModal = (user) => {
 };
 
 const saveCustomer = async () => {
-  // --- 1. VALIDATE FRONTEND (Xác thực phía giao diện) ---
   Object.keys(errors).forEach(k => delete errors[k]);
   let isValid = true;
 
@@ -313,21 +368,18 @@ const saveCustomer = async () => {
     isValid = false;
   }
 
-  // Validate (Xác thực) Email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (form.value.email && form.value.email.trim() !== '' && !emailRegex.test(form.value.email)) {
     errors.email = "Email không đúng định dạng! (Ví dụ: abc@gmail.com)";
     isValid = false;
   }
 
-  // Validate (Xác thực) SĐT Việt Nam
   const phoneRegex = /(84|0[3|5|7|8|9])+([0-9]{8})\b/;
   if (form.value.phoneNumber && form.value.phoneNumber.trim() !== '' && !phoneRegex.test(form.value.phoneNumber)) {
     errors.phoneNumber = "SĐT không hợp lệ! Vui lòng nhập SĐT Việt Nam gồm 10 số.";
     isValid = false;
   }
 
-  // Validate Contact (Xác thực liên hệ): Phải có ít nhất 1 trong 2
   if ((!form.value.email || form.value.email.trim() === '') && 
       (!form.value.phoneNumber || form.value.phoneNumber.trim() === '')) {
     errors.contact = "Vui lòng nhập ít nhất Email hoặc Số điện thoại!";
@@ -336,16 +388,13 @@ const saveCustomer = async () => {
 
   if (!isValid) return;
 
-  // --- 2. GỌI API (Giao diện lập trình ứng dụng) ---
   try {
     if (isEditing.value) {
-      // Sử dụng api instance
       await api.put(`${API_URL}/${form.value.userId}`, form.value);
-      alert('Cập nhật thành công!');
+      showToast("Cập nhật khách hàng thành công!"); // Sửa từ alert
     } else {
-      // Sử dụng api instance
       await api.post(API_URL, form.value);
-      alert('Tạo khách hàng thành công!');
+      showToast("Tạo khách hàng mới thành công!"); // Sửa từ alert
     }
     
     fetchCustomers(); 
@@ -358,10 +407,11 @@ const saveCustomer = async () => {
     
   } catch (error) {
     console.error('Lỗi khi lưu:', error);
-    // Nhận câu thông báo lỗi từ backend (hệ thống máy chủ)
     const errorMsg = error.response?.data?.message || error.response?.data || 'Thao tác thất bại. Vui lòng kiểm tra lại!';
     if (typeof errorMsg === 'string') {
-      errors.general = errorMsg; // Gán lỗi chung để hiển thị đỏ trên form
+      errors.general = errorMsg; 
+    } else {
+      showToast("Thao tác thất bại. Vui lòng kiểm tra lại!", "error");
     }
   }
 };
@@ -401,4 +451,21 @@ onMounted(() => {
 .text-decoration-line-through { text-decoration: line-through; }
 .border-bottom-dashed { border-bottom: 1px dashed #EAEAEA; }
 .border-bottom-dashed:last-child { border-bottom: none; }
+
+/* CSS MODAL CUSTOM (Dùng chung cho Xóa & Khóa) */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>

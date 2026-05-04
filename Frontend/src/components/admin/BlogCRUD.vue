@@ -78,7 +78,7 @@
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
                     <button @click="openEditModal(blog)" class="btn btn-link p-0 text-primary shadow-none"><i class="bi bi-pencil-square fs-6"></i></button>
-                    <button @click="deleteBlog(blog.blogId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
+                    <button @click="confirmDelete(blog.blogId)" class="btn btn-link p-0 text-danger shadow-none"><i class="bi bi-trash fs-6"></i></button>
                   </div>
                 </td>
               </tr>
@@ -173,15 +173,27 @@
         </div>
       </div>
     </div>
+    
+    <div v-if="showDeleteModal" class="custom-modal-overlay d-flex justify-content-center align-items-center">
+      <div class="custom-modal bg-white rounded-4 p-4 text-center shadow-lg">
+        <div class="mb-3">
+          <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size: 3.5rem;"></i>
+        </div>
+        <h5 class="fw-bold mb-2">Xác nhận xóa?</h5>
+        <p class="text-muted fs-8 mb-4">Hành động này không thể hoàn tác. Bạn chắc chắn muốn xóa dữ liệu này?</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <button @click="showDeleteModal = false" class="btn btn-light border fs-8 fw-bold px-4 py-2 rounded-2">Hủy bỏ</button>
+          <button @click="executeDelete" class="btn btn-danger fs-8 fw-bold px-4 py-2 rounded-2">Xác nhận xóa</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, reactive, watch } from "vue";
-// Xóa import axios từ thư viện gốc, thay bằng api instance của bạn
 import api from "../../utils/axios";
 
-// Thay đổi API_BLOG thành dạng relative path
 const API_BLOG = "/blogs";
 
 const blogList = ref([]);
@@ -197,6 +209,10 @@ const saving = ref(false);
 const errors = reactive({});
 const stats = reactive({ total: 0, active: 0, views: 0 });
 
+// BIẾN CHO MODAL XÓA
+const showDeleteModal = ref(false);
+const idToDelete = ref(null);
+
 const toast = reactive({ show: false, message: '', type: 'success' });
 const showToast = (message, type = 'success') => {
   toast.message = message; toast.type = type; toast.show = true;
@@ -205,15 +221,12 @@ const showToast = (message, type = 'success') => {
 
 const form = reactive({ title: "", summary: "", content: "", thumbnailUrl: "", authorId: null, views: 0, active: true });
 
-// Hàm getAuthHeader() đã bị loại bỏ vì interceptor xử lý việc gắn Token tự động.
-
 const uploadImage = async (event) => {
   errors.thumbnailUrl = '';
   const file = event.target.files[0];
   if (!file) return;
   const formData = new FormData(); formData.append('file', file);
   try {
-    // Thay axios thành api và cấu hình Header cho Upload
     const response = await api.post('/upload', formData, { 
       headers: { 'Content-Type': 'multipart/form-data' }
     });
@@ -237,7 +250,6 @@ const calcStats = () => {
 
 const fetchBlogs = async () => {
   try {
-    // Thay axios thành api, loại bỏ header thủ công
     const response = await api.get(API_BLOG);
     const data = response.data;
     const arr = Array.isArray(data) ? data : (data.content || data.data || []);
@@ -295,11 +307,9 @@ const saveBlog = async () => {
     };
 
     if (isEditing.value) {
-      // Thay axios thành api
       await api.put(`${API_BLOG}/${currentId.value}`, payload);
       showToast("Cập nhật bài viết thành công!");
     } else {
-      // Thay axios thành api
       await api.post(API_BLOG, payload);
       showToast("Thêm bài viết thành công!");
     }
@@ -313,16 +323,22 @@ const saveBlog = async () => {
   }
 };
 
-const deleteBlog = async (id) => {
-  if (confirm("Bạn có chắc chắn muốn xóa bài viết này?")) {
-    try {
-      // Thay axios thành api, loại bỏ header thủ công
-      await api.delete(`${API_BLOG}/${id}`);
-      await fetchBlogs();
-      showToast("Xóa bài viết thành công!");
-    } catch (error) {
-      showToast(error?.response?.data?.message || "Lỗi khi xóa bài viết!", "error");
-    }
+// HÀM XÓA BẰNG MODAL
+const confirmDelete = (id) => {
+  idToDelete.value = id;
+  showDeleteModal.value = true;
+};
+
+const executeDelete = async () => {
+  try {
+    await api.delete(`${API_BLOG}/${idToDelete.value}`);
+    showDeleteModal.value = false;
+    idToDelete.value = null;
+    await fetchBlogs();
+    showToast("Xóa bài viết thành công!");
+  } catch (error) {
+    showToast(error?.response?.data?.message || "Lỗi khi xóa bài viết!", "error");
+    showDeleteModal.value = false;
   }
 };
 
@@ -348,4 +364,21 @@ onMounted(() => { fetchBlogs(); });
 .summary-cell { max-width: 420px; }
 .page-link { border: 1px solid #dee2e6; color: #333; }
 .page-link:hover { background-color: #e9ecef; }
+
+/* --- CSS MODAL --- */
+.custom-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  animation: fadeIn 0.2s ease-in-out;
+}
+.custom-modal {
+  width: 90%;
+  max-width: 400px;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 </style>
