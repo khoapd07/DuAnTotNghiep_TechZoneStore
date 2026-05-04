@@ -1,4 +1,4 @@
-package com.poly.backend.dao;
+package com.poly.backend.repository;
 
 import com.poly.backend.dto.CategoryDTO;
 import com.poly.backend.entity.Category;

@@ -1,6 +1,6 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.*;
+import com.poly.backend.repository.*;
 import com.poly.backend.dto.*;
 import com.poly.backend.entity.*;
 import com.poly.backend.service.EmailService;

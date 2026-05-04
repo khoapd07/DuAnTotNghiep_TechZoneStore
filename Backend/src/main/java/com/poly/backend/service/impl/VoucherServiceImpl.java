@@ -3,7 +3,7 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.VoucherRepository;
+import com.poly.backend.repository.VoucherRepository;
 import com.poly.backend.entity.Voucher;
 import com.poly.backend.service.VoucherService;
 

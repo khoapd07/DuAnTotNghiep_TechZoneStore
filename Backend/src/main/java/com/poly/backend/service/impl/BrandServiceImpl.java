@@ -3,7 +3,7 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.BrandRepository;
+import com.poly.backend.repository.BrandRepository;
 import com.poly.backend.entity.Brand;
 import com.poly.backend.dto.BrandDTO;
 import com.poly.backend.service.BrandService;

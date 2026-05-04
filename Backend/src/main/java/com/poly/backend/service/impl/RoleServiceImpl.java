@@ -3,7 +3,7 @@ package com.poly.backend.service.impl;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import lombok.RequiredArgsConstructor;
-import com.poly.backend.dao.RoleRepository;
+import com.poly.backend.repository.RoleRepository;
 import com.poly.backend.entity.Role;
 import com.poly.backend.service.RoleService;
 

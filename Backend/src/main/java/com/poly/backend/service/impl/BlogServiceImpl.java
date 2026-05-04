@@ -1,6 +1,6 @@
 package com.poly.backend.service.impl;
 
-import com.poly.backend.dao.BlogRepository;
+import com.poly.backend.repository.BlogRepository;
 import com.poly.backend.dto.BlogDTO;
 import com.poly.backend.entity.Blog;
 import com.poly.backend.service.BlogService;
