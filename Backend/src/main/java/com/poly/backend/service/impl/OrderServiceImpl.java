@@ -49,7 +49,7 @@ public class OrderServiceImpl implements OrderService {
         // Lấy thời gian (Năm/Tháng/Ngày/Giờ/Phút/Giây) -> VD: 20260324143045
         String dateStamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        // Ép cứng KHÔNG CÓ DẤU GẠCH NGANG (VD: TZ20260324143045)
+        //(VD: TZ20260324143045)
         order.setOrderCode("TZ" + dateStamp + String.format("%04d", (int)(Math.random() * 10000)));
 
         OrderStatus status = orderStatusRepository.findById(0).orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống"));
@@ -119,7 +119,7 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalMoney(totalMoney);
         order.setOrderDetails(orderDetails);
 
-        // Voucher logic... (Giữ nguyên)
+        // Voucher logic...
         BigDecimal discountAmount = BigDecimal.ZERO;
         if (request.getVoucherCode() != null && !request.getVoucherCode().trim().isEmpty()) {
             Voucher voucher = voucherRepository.findByCode(request.getVoucherCode()).orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mã giảm giá không hợp lệ"));

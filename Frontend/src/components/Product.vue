@@ -193,7 +193,6 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-// Xóa import axios từ thư viện gốc, thay bằng Instance (thực thể) api của bạn
 import api from '../utils/axios';
 
 const router = useRouter();
@@ -334,7 +333,6 @@ const getCurrentUserId = () => {
   return null;
 };
 
-// Cập nhật: Thêm parameter (tham số) showNotification để không hiển thị khi dùng "Mua ngay"
 const addToCart = async (productId, showNotification = true) => {
   const userId = getCurrentUserId();
   const productToAdd = products.value.find(p => p.productId === productId);
@@ -348,7 +346,6 @@ const addToCart = async (productId, showNotification = true) => {
 
   if (userId) {
     try {
-      // Thay đổi axios.post thành api.post
       await api.post(`/cart/${userId}/add`, {
         productId: productId,
         variantId: vId, 

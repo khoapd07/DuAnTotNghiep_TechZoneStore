@@ -90,8 +90,9 @@
                 <td class="text-center py-3">
                   <div class="d-flex justify-content-center gap-3">
                     <button @click="openEditModal(emp)" class="btn btn-link p-0 text-primary shadow-none" data-bs-toggle="modal" data-bs-target="#employeeModal"><i class="bi bi-pencil-fill"></i></button>
-                    <button v-if="emp.status" @click="toggleStatus(emp.userId)" class="btn btn-link p-0 text-danger shadow-none" title="Khóa tài khoản"><i class="bi bi-slash-circle"></i></button>
-                    <button v-else @click="toggleStatus(emp.userId)" class="btn btn-link p-0 text-success shadow-none" title="Mở khóa tài khoản"><i class="bi bi-check-circle-fill"></i></button>
+                    <!-- Sửa sự kiện click để mở modal xác nhận -->
+                    <button v-if="emp.status" @click="selectedEmployeeId = emp.userId" class="btn btn-link p-0 text-danger shadow-none" title="Khóa tài khoản" data-bs-toggle="modal" data-bs-target="#confirmToggleModal"><i class="bi bi-slash-circle"></i></button>
+                    <button v-else @click="selectedEmployeeId = emp.userId" class="btn btn-link p-0 text-success shadow-none" title="Mở khóa tài khoản" data-bs-toggle="modal" data-bs-target="#confirmToggleModal"><i class="bi bi-check-circle-fill"></i></button>
                   </div>
                 </td>
               </tr>
@@ -101,6 +102,29 @@
       </div>
     </main>
 
+    <div v-if="toast.show" class="position-fixed top-0 start-50 translate-middle-x mt-4 px-4 py-3 rounded-3 shadow-lg d-flex align-items-center gap-2" :class="toast.type === 'success' ? 'bg-dark text-white' : 'bg-danger text-white'" style="z-index: 9999; min-width: 300px; transition: all 0.3s;">
+      <i class="bi fs-5" :class="toast.type === 'success' ? 'bi-check-circle-fill text-success' : 'bi-exclamation-triangle-fill'"></i>
+      <span class="fw-bold fs-7">{{ toast.message }}</span>
+    </div>
+
+    <!-- Modal Xác nhận Khóa/Mở khóa -->
+    <div class="modal fade" id="confirmToggleModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content rounded-4 border-0 shadow">
+          <div class="modal-body text-center p-4">
+            <i class="bi bi-exclamation-circle text-warning mb-3" style="font-size: 3rem;"></i>
+            <h5 class="fw-bold text-dark">Xác nhận</h5>
+            <p class="text-muted fs-7 mb-0">Bạn có chắc chắn muốn thay đổi trạng thái làm việc của nhân viên này?</p>
+            <div class="d-flex justify-content-center gap-2 mt-4">
+              <button type="button" class="btn btn-light fw-bold fs-7" data-bs-dismiss="modal">Hủy</button>
+              <button type="button" class="btn btn-warning fw-bold fs-7 text-dark" @click="executeToggleStatus">Đồng ý</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Thêm/Sửa Nhân viên -->
     <div class="modal fade" id="employeeModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content rounded-4 border-0 shadow">
@@ -111,6 +135,11 @@
           <div class="modal-body">
             <form @submit.prevent="saveEmployee">
               
+              <!-- Hiển thị lỗi từ server chung cho form -->
+              <div class="alert alert-danger fs-8 py-2" v-if="errors.general">
+                <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ errors.general }}
+              </div>
+
               <div class="row mb-3">
                 <div class="col-md-6" v-if="!isEditMode">
                   <label class="form-label fs-8 fw-bold text-muted">Tên đăng nhập (*)</label>
@@ -196,7 +225,6 @@
 
 <script setup>
 import { ref, onMounted, computed, reactive } from 'vue';
-// Import api instance thay cho axios
 import api from '../../utils/axios';
 
 const employees = ref([]);
@@ -207,6 +235,18 @@ const roleFilter = ref('ALL');
 
 const isEditMode = ref(false);
 const errors = reactive({}); // Khởi tạo object (đối tượng) chứa lỗi
+
+// Thêm state (trạng thái) để lưu trữ ID của nhân viên cần thay đổi trạng thái
+const selectedEmployeeId = ref(null);
+
+// Setup Toast Notification
+const toast = reactive({ show: false, message: '', type: 'success' });
+const showToast = (message, type = 'success') => {
+  toast.message = message;
+  toast.type = type;
+  toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
 
 const form = ref({
   userId: null,
@@ -221,15 +261,11 @@ const form = ref({
   status: true
 });
 
-// Sửa lại API_URL thành đường dẫn tương đối
 const API_URL = '/admin/employees';
-
-// Hàm getAuthConfig() đã được loại bỏ
 
 const fetchEmployees = async () => {
   isLoading.value = true;
   try {
-    // Dùng api thay vì axios
     const response = await api.get(API_URL);
     employees.value = response.data;
   } catch (error) {
@@ -239,20 +275,31 @@ const fetchEmployees = async () => {
   }
 };
 
-const toggleStatus = async (id) => {
-  if(!confirm('Xác nhận thay đổi trạng thái làm việc của nhân viên này?')) return;
+// Đã cập nhật lại function (hàm) thực thi khóa/mở khóa
+const executeToggleStatus = async () => {
+  if (!selectedEmployeeId.value) return;
+  
   try {
-    // Dùng api thay vì axios
-    await api.put(`${API_URL}/${id}/toggle-status`);
+    await api.put(`${API_URL}/${selectedEmployeeId.value}/toggle-status`);
+    showToast('Cập nhật trạng thái thành công!');
     fetchEmployees();
+    
+    // Đóng modal (hộp thoại) xác nhận
+    const confirmModalEl = document.getElementById('confirmToggleModal');
+    if (confirmModalEl) {
+      confirmModalEl.querySelector('[data-bs-dismiss="modal"]').click();
+    }
   } catch (error) {
-    alert('Có lỗi xảy ra!');
+    showToast('Có lỗi xảy ra khi thay đổi trạng thái!', 'error');
+  } finally {
+    // Reset (đặt lại) ID sau khi hoàn tất
+    selectedEmployeeId.value = null; 
   }
 };
 
 const openAddModal = () => {
   isEditMode.value = false;
-  Object.keys(errors).forEach(k => delete errors[k]); // Reset (Đặt lại) lỗi khi mở form
+  Object.keys(errors).forEach(k => delete errors[k]); // Reset (Đặt lại) lỗi
   form.value = {
     userId: null, username: '', fullName: '', email: '', phoneNumber: '', 
     employeeCode: '', roleId: 1, hireDate: new Date().toISOString().split('T')[0], 
@@ -262,7 +309,7 @@ const openAddModal = () => {
 
 const openEditModal = (emp) => {
   isEditMode.value = true;
-  Object.keys(errors).forEach(k => delete errors[k]); // Reset (Đặt lại) lỗi khi mở form
+  Object.keys(errors).forEach(k => delete errors[k]); // Reset (Đặt lại) lỗi
   form.value = { 
     ...emp,
     roleId: emp.roleId || 1 
@@ -291,7 +338,7 @@ const saveEmployee = async () => {
     isValid = false;
   }
   
-  // Validate Contact (Xác thực Liên hệ): Ít nhất 1 trong 2
+  // Validate Contact (Xác thực Liên hệ)
   if ((!form.value.email || form.value.email.trim() === '') && 
       (!form.value.phoneNumber || form.value.phoneNumber.trim() === '')) {
     errors.contact = "Vui lòng nhập ít nhất Email hoặc Số điện thoại!";
@@ -304,24 +351,24 @@ const saveEmployee = async () => {
     isValid = false;
   }
 
-  // Dừng lại nếu có lỗi
   if (!isValid) return;
 
   try {
     if (isEditMode.value) {
-      // Dùng api thay vì axios
       await api.put(`${API_URL}/${form.value.userId}`, form.value);
     } else {
-      // Dùng api thay vì axios
       await api.post(API_URL, form.value);
     }
-    alert(isEditMode.value ? 'Cập nhật thành công!' : 'Thêm mới thành công! (Mật khẩu mặc định: 123456)');
+    
+    showToast(isEditMode.value ? 'Cập nhật nhân viên thành công!' : 'Thêm mới thành công! (Mật khẩu mặc định: 123456)');
     fetchEmployees(); 
+    
+    // Đóng Modal (Hộp thoại) sau khi lưu thành công
     document.getElementById('employeeModal').querySelector('.btn-close').click();
   } catch (error) {
     console.error(error);
     const backendErrorMsg = error.response?.data?.message || error.response?.data || 'Lưu thất bại! Vui lòng kiểm tra lại dữ liệu.';
-    alert(`Lỗi: ${backendErrorMsg}`);
+    errors.general = backendErrorMsg; // Gán lỗi chung để hiển thị trong form
   }
 };
 

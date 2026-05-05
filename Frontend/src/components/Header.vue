@@ -43,7 +43,7 @@
 
             <div class="cart-content">
               <div v-if="cartItems.length === 0" class="text-center py-4 text-muted fs-7">
-                Giỏ hàng trống 😢
+                Giỏ hàng trống...
               </div>
 
               <div v-else>
@@ -137,7 +137,7 @@ const isShipper = ref(false);
 const searchOrderCode = ref('');
 const searchKeyword = ref('');
 
-// --- THÊM HÀM XỬ LÝ ẢNH CHUẨN MỰC ---
+// --- HÀM XỬ LÝ ẢNH CHUẨN MỰC ---
 const getImageUrl = (url) => {
   if (!url) return 'https://via.placeholder.com/150/eeeeee/000000?text=No+Image';
   if (url.startsWith('http')) return url;
